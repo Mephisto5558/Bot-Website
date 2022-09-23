@@ -1,0 +1,28 @@
+{
+  "name": "teufelsbot-website",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Mephisto5558",
+  "license": "MIT",
+  "dependencies": {
+    "dbd-dark-dashboard": "^1.6.592",
+    "discord-dashboard": "^2.3.44",
+    "discord.js": "^14.4.0",
+    "express-rate-limit": "^6.6.0",
+    "node": "^18.9.0",
+    "serve-favicon": "^2.5.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Mephisto5558/Teufelsbot-Website.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Mephisto5558/Teufelsbot-Website/issues"
+  },
+  "homepage": "https://github.com/Mephisto5558/Teufelsbot-Website#readme"
+}
