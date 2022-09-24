@@ -3,9 +3,13 @@ console.time('Initializing time');
 
 const
   { Client, GatewayIntentBits } = require('discord.js'),
-  { Support, Website, Keys } = require('./config.json'),
   DBD = require('discord-dashboard'),
   { readFileSync, readdirSync, existsSync } = require('fs'),
+  { Support, Website, Keys } = Object.entries(process.env).filter(([k]) => /^(Support|Website|Keys)\./.test(k)).reduce((acc, [k, v]) => {
+    k = k.split('.');
+    acc[k[0]] = Object.assign({}, acc[k[0]], { [k[1]]: v });
+    return acc;
+  }, {}),
   DarkDashboard = require('dbd-dark-dashboard'),
   fetch = require('node-fetch').default,
   path = require('path'),

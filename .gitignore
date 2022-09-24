@@ -6,7 +6,6 @@ node_modules
 Temp
 .github
 tw
-config.json
 tw.js
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
