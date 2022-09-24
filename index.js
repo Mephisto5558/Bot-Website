@@ -6,15 +6,34 @@ process
   .on('uncaughtExceptionMonitor', console.error)
   .on('uncaughtException', console.error);
 
-import { Client, GatewayIntentBits } from 'discord.js';
-import { readFileSync, readdirSync, existsSync } from 'fs';
-import DBD from 'discord-dashboard';
 import DarkDashboard from 'dbd-dark-dashboard';
+import DBD from 'discord-dashboard';
+import { Client, GatewayIntentBits } from 'discord.js';
+import express from 'express';
+import rateLimit from 'express-rate-limit';
+import { existsSync, readdirSync, readFileSync } from 'fs';
 import fetch from 'node-fetch';
 import path from 'path';
-import express from 'express';
 import favicon from 'serve-favicon';
-import rateLimit from 'express-rate-limit';
+import DB from './db.js';
+import Settings from './settings.js';
+
+Object.prototype.fMerge = function fMerge(obj, mode, { ...output } = { ...this }) {
+  if (`${{}}` != this || `${{}}` != obj) return output;
+  for (const key of Object.keys({ ...this, ...obj })) {
+    if (`${{}}` == this[key]) output[key] = key in obj ? this[key].fMerge(obj[key], mode) : this[key];
+    else if (Array.isArray(this[key])) {
+      if (key in obj) {
+        if (mode == 'overwrite') output[key] = obj[key];
+        else if (mode == 'push') for (const e of obj[key]) output[key].push(e);
+        else for (let i = 0; i < this[key].length || i < obj[key].length; i++) output[key][i] = i in obj[key] ? obj[key][i] : this[key][i];
+      }
+      else output[key] = this[key];
+    }
+    else output = { ...output, [key]: key in obj ? obj[key] : this[key] };
+  }
+  return output;
+}
 
 const
   router = express.Router(),
@@ -29,19 +48,22 @@ client
   .on('debug', debug => debug.toLowerCase().includes('heartbeat') ? void 0 : console.log(debug))
   .on('error', console.error)
 
-let domain = Website.Domain || (process.env.SERVER_IP ?? 'http://localhost') + ':' + (process.env.PORT ?? process.env.SERVER_PORT ?? 8000);
+const port = process.env.PORT ?? process.env.SERVER_PORT ?? 8000;
+let domain = (Website.Domain || (process.env.SERVER_IP ?? process.env.IP ?? 'http://localhost')) + ':' + port;
 
 console.timeEnd('Initializing time');
 console.time('Starting time');
 
 if (!/^https?:\/\//.test(domain)) {
-  if (Website.Domain) throw new Error('The Website.Domain specified in config.json is invalid! It needs to start with "http" or "https"!');
+  if (Website.Domain) throw new Error('The Website.Domain specified in process.env is invalid! It needs to start with "http://" or "https://"!');
   domain = 'http://' + domain;
 }
 
 await DBD.useLicense(Keys.dbdLicense);
 client.login(Keys.token);
 
+client.db = await new DB(process.env['Keys.DBConnectionStr']).fetchAll();
+client.dashboardOptionCount = [];
 while (client.ws.status) await new Promise(r => setTimeout(r, 10));
 await client.application.fetch();
 
@@ -51,16 +73,15 @@ global.embedBuilder = DBD.formTypes.embedBuilder({
   defaultJson: {}
 });
 
-const data = { commands: [], settings: [] } //await fetch(`${Keys.BotIp}/api/list?key=${Keys.APIKey}`).then(r => r.json());
-
 const Dashboard = new (DBD.UpdatedClass())({
   acceptPrivacyPolicy: true,
   minimizedConsoleLogs: true,
   noCreateServer: true,
-  html404: readFileSync('./CustomSites/error/404.html', 'utf-8'),
   useUnderMaintenance: false,
-  port: (process.env.PORT ?? process.env.SERVER_PORT ?? 8000),
-  domain,
+  html403: readFileSync('./CustomSites/error/403.html', 'utf-8'),
+  html404: readFileSync('./CustomSites/error/404.html', 'utf-8'),
+  html500: readFileSync('./CustomSites/error/500.html', 'utf-8'),
+  port, domain,
   redirectUri: `${domain}/discord/callback`,
   bot: client,
   ownerIDs: [client.application.owner.id],
@@ -71,12 +92,6 @@ const Dashboard = new (DBD.UpdatedClass())({
   invite: {
     scopes: ['bot', 'applications.commands'],
     permissions: '412317240384'
-  },
-  rateLimits: {
-    manage: rateLimit,
-    guildPage: rateLimit,
-    settingsUpdatePostAPI: rateLimit,
-    discordOAuth2: rateLimit
   },
   theme: DarkDashboard({
     information: {
@@ -105,7 +120,7 @@ const Dashboard = new (DBD.UpdatedClass())({
       information: {},
       feeds: {},
     },
-    commands: data.commands
+    commands: []
   }),
   underMaintenance: {
     title: 'Under Maintenance',
@@ -126,34 +141,27 @@ const Dashboard = new (DBD.UpdatedClass())({
     craneCabinColor: '#8b8b8b',
     craneStandColors: ['#6a6a6a', , '#f29b8b']
   },
-  settings: data.settings
+  settings: await Settings.call(client)
 });
 
 await Dashboard.init();
 
 express()
   .use(rateLimit({
-    windowMs: 1 * 60 * 1000, // 1min
+    windowMs: 30000, // 30sec
     max: 30,
-    message: '<body style="background-color:#000 color: #ff0000"><p>Sorry, you have been ratelimited!</p></body>'
+    message: '<body style="background-color:#000; color: #ff0000"><p style="text-align: center;top: 50%;position: relative;font-size: 40;">Sorry, you have been ratelimited!</p></body>'
   }))
   .use(favicon(await fetch(client.user.displayAvatarURL()).then(e => e.body.read())))
   .use(express.json())
   .set('json spaces', 2)
   .use(router)
   .use(Dashboard.getApp())
-  .use((err, req, res, _) => {
-    console.error('\x1b[1;31m%s\x1b[0m', ' [Error Handling] :: Unhandled Website Error/Catch');
-    console.error(err);
-    console.error(req, res);
-    res.redirect(500, '/error/500');
-  })
-  .listen(process.env.PORT ?? process.env.SERVER_PORT ?? 8000, _ => console.log(`Website is online`));
+  .listen(port, _ => console.log(`Website is online on ${domain}.`));
 
 router.all('*', async (req, res, next) => {
   try {
     if (['/', '/dashboard'].includes(req.path)) return res.redirect(301, '/manage');
-    if (req.path.startsWith('/manage')) return next();
 
     const pathStr = path.join(process.cwd(), '/CustomSites', path.normalize(req.path).replace(/^(\.\.(\/|\\|$))+/, ''));
     const dir = pathStr.substring(0, pathStr.lastIndexOf(path.sep));
