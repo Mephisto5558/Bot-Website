@@ -146,32 +146,38 @@ express()
     console.error('\x1b[1;31m%s\x1b[0m', ' [Error Handling] :: Unhandled Website Error/Catch');
     console.error(err.stack);
     console.error(req, res);
-    res.status(500).sendFile(path.join(__dirname, './ErrorPages/50x.html'));
+    res.status(500).sendFile(`${process.cwd()}/ErrorPages/50x.html`);
   })
   .listen(process.env.PORT ?? process.env.SERVER_PORT ?? 8000, _ => console.log(`Website is online`));
 
 router.all('*', async (req, res, next) => {
-  if (['/', '/dashboard'].includes(req.path)) return res.redirect(301, '/manage');
-  if (req.path.startsWith('/manage')) return next();
+  try {
+    if (['/', '/dashboard'].includes(req.path)) return res.redirect(301, '/manage');
+    if (req.path.startsWith('/manage')) return next();
 
-  const pathStr = path.join(process.cwd(), '/CustomSites', path.normalize(req.path).replace(/^(\.\.(\/|\\|$))+/, ''));
-  const dir = pathStr.substring(0, pathStr.lastIndexOf(path.sep));
-  let data;
+    const pathStr = path.join(process.cwd(), '/CustomSites', path.normalize(req.path).replace(/^(\.\.(\/|\\|$))+/, ''));
+    const dir = pathStr.substring(0, pathStr.lastIndexOf(path.sep));
+    let data;
 
-  if (existsSync(dir)) {
-    const file = readdirSync(dir, { withFileTypes: true }).find(e => e.isFile() && e.name == pathStr.substring(pathStr.lastIndexOf(path.sep) + 1)) || '';
-    switch (file.split('.')[file.split('.').length - 1]) {
-      case '': return next();
-      case 'js':
-      case 'json': data = require(`${dir}/${file}`); break;
-      default: data = readFileSync(`${dir}/${file}`, 'utf-8'); break;
+    if (existsSync(dir)) {
+      const file = readdirSync(dir, { withFileTypes: true }).find(e => e.isFile() && e.name.split('.')[0] == pathStr.substring(pathStr.lastIndexOf(path.sep) + 1))?.name || '';
+      switch (file.split('.')[file.split('.').length - 1]) {
+        case '': return next();
+        case 'js':
+        case 'json': data = await import(`file://${dir}/${file}`); break;
+        default: data = readFileSync(`${dir}/${file}`, 'utf-8'); break;
+      }
     }
-  }
 
-  if (!data) return next();
-  if (data.permissionCheck && !data.permissionCheck.call(req)) return res.sendFile(path.join(__dirname, './ErrorPages/403.html'));
-  if (typeof (data.run ?? data) == 'function') return res.send(await (data.run ?? data).call(client, req, res, next));
-  res.send(data.run ?? data);
+    if (!data) return next();
+    if (data.permissionCheck && !data.permissionCheck.call(req)) return res.sendFile(`${process.cwd()}/ErrorPages/403.html`);
+    if (typeof (data.run ?? data) == 'function') return res.send(await (data.run ?? data).call(client, req, res, next));
+    res.send(data.run ?? data);
+  }
+  catch (err) {
+    res.status(500).sendFile(`${process.cwd()}/ErrorPages/50x.html`);
+    console.error(err, req, res);
+  }
 });
 
 console.timeEnd('Starting time');
