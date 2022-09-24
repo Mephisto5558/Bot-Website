@@ -1,3 +1,5 @@
-export function run(req, res) {
-  res.send(req.ip);
-} 
+export default {
+  run: function (req, res) {
+    res.send(req.ip);
+  }
+}

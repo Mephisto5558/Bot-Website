@@ -57,7 +57,7 @@ const Dashboard = new (DBD.UpdatedClass())({
   acceptPrivacyPolicy: true,
   minimizedConsoleLogs: true,
   noCreateServer: true,
-  html404: readFileSync('./ErrorPages/404.html', 'utf-8'),
+  html404: readFileSync('./CustomSites/error/404.html', 'utf-8'),
   useUnderMaintenance: false,
   port: (process.env.PORT ?? process.env.SERVER_PORT ?? 8000),
   domain,
@@ -144,9 +144,9 @@ express()
   .use(Dashboard.getApp())
   .use((err, req, res, _) => {
     console.error('\x1b[1;31m%s\x1b[0m', ' [Error Handling] :: Unhandled Website Error/Catch');
-    console.error(err.stack);
+    console.error(err);
     console.error(req, res);
-    res.status(500).sendFile(`${process.cwd()}/ErrorPages/50x.html`);
+    res.redirect(500, '/error/500');
   })
   .listen(process.env.PORT ?? process.env.SERVER_PORT ?? 8000, _ => console.log(`Website is online`));
 
@@ -161,22 +161,22 @@ router.all('*', async (req, res, next) => {
 
     if (existsSync(dir)) {
       const file = readdirSync(dir, { withFileTypes: true }).find(e => e.isFile() && e.name.split('.')[0] == pathStr.substring(pathStr.lastIndexOf(path.sep) + 1))?.name || '';
-      switch (file.split('.')[file.split('.').length - 1]) {
-        case '': return next();
-        case 'js':
-        case 'json': data = await import(`file://${dir}/${file}`); break;
-        default: data = readFileSync(`${dir}/${file}`, 'utf-8'); break;
-      }
+      const extention = file.split('.')[file.split('.').length - 1];
+      if (!file) return next();
+
+      if (extention == 'js') data = (await import(`file://${dir}/${file}`)).default;
+      else if (extention == 'json') data = JSON.parse(readFileSync(`${dir}/${file}`, 'utf-8'));
+      else data = readFileSync(`${dir}/${file}`, 'utf-8');
     }
 
     if (!data) return next();
-    if (data.permissionCheck && !data.permissionCheck.call(req)) return res.sendFile(`${process.cwd()}/ErrorPages/403.html`);
-    if (typeof (data.run ?? data) == 'function') return res.send(await (data.run ?? data).call(client, req, res, next));
-    res.send(data.run ?? data);
+    if (data.permissionCheck && !data.permissionCheck.call(req)) return res.redirect(403, '/error/403');
+    if (typeof data.run == 'function') return res.send(await data.run.call(client, req, res, next));
+    res.send(JSON.stringify(data.run ?? data));
   }
   catch (err) {
-    res.status(500).sendFile(`${process.cwd()}/ErrorPages/50x.html`);
     console.error(err, req, res);
+    res.redirect(500, '/error/500');
   }
 });
 
