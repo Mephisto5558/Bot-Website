@@ -1,3 +1,3 @@
-function run(req, res) {
+export function run(req, res) {
   res.send(req.ip);
 } 
