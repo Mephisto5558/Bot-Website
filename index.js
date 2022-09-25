@@ -1,22 +1,22 @@
 console.log('Starting...');
 console.time('Initializing time');
 
-process
-  .on('unhandledRejection', console.error)
-  .on('uncaughtExceptionMonitor', console.error)
-  .on('uncaughtException', console.error);
-
 import DarkDashboard from 'dbd-dark-dashboard';
 import DBD from 'discord-dashboard';
 import { Client, GatewayIntentBits } from 'discord.js';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
-import { existsSync, readdirSync, readFileSync } from 'fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'fs';
 import fetch from 'node-fetch';
 import path from 'path';
 import favicon from 'serve-favicon';
 import DB from './db.js';
 import Settings from './settings.js';
+
+function error(err, req, res) {
+  console.error(err);
+  writeFileSync('./errorLog.log', `[${new Date()}]\nErr: ${err}\nRrq: ${req}\nRes: ${res}`);
+}
 
 Object.prototype.fMerge = function fMerge(obj, mode, { ...output } = { ...this }) {
   if (`${{}}` != this || `${{}}` != obj) return output;
@@ -46,7 +46,7 @@ const
 
 client
   .on('debug', debug => debug.toLowerCase().includes('heartbeat') ? void 0 : console.log(debug))
-  .on('error', console.error);
+  .on('error', error);
 
 const port = process.env.PORT ?? process.env.SERVER_PORT ?? 8000;
 let domain = (Website.Domain || (process.env.SERVER_IP ?? process.env.IP ?? 'http://localhost')) + ':' + port;
@@ -161,8 +161,8 @@ express()
   .use(router)
   .use(Dashboard.getApp())
   .use((err, req, res, next) => {
-    if (res.headersSent) return next(err);
-    console.error(err, req, res);
+    error(err, req, res);
+    if (res.headersSent) try { return next(err); } catch { }
     res.status(500).sendFile('./CustomSites/error/500.html');
   })
   .listen(port, _ => console.log(`Website is online on ${domain}.`));
@@ -195,5 +195,10 @@ router.all('*', async (req, res, next) => {
     res.send(JSON.stringify(data.run ?? data));
   } catch (err) { next(err); }
 });
+
+process
+  .on('unhandledRejection', error)
+  .on('uncaughtExceptionMonitor', error)
+  .on('uncaughtException', error);
 
 console.timeEnd('Starting time');
