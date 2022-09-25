@@ -34,39 +34,12 @@ body {
   background-color: #000c2f
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  color: #fff
-}
-
 img {
   background-size: auto
 }
 
 .error {
   border-color: red !important
-}
-
-::-webkit-input-placeholder {
-  color: #fff
-}
-
-:-moz-placeholder {
-  color: #fff;
-  opacity: 1
-}
-
-::-moz-placeholder {
-  color: #fff;
-  opacity: 1
-}
-
-:-ms-input-placeholder {
-  color: #fff
 }
 
 .btn {
@@ -105,28 +78,8 @@ img {
   width: 100%
 }
 
-#dark {
-  display: block;
-  visibility: visible
-}
-
-#light {
-  display: none;
-  visibility: hidden
-}
-
 body.light {
   background-color: #eaff6f
-}
-
-body.light #light {
-  display: block;
-  visibility: visible
-}
-
-body.light #dark {
-  display: none;
-  visibility: hidden
 }
 
 .info {
@@ -151,17 +104,9 @@ body.light #dark {
   margin-top: 94px
 }
 
-.text-l {
-  display: none
-}
-
 .light .text-l,
 .text-d {
   display: inline-block
-}
-
-.light .text-d {
-  display: none
 }
 
 .switcher {
@@ -203,11 +148,7 @@ body.light #dark {
   z-index: 0
 }
 
-.switcher input.switcher-value {
-  display: none
-}
-
-.switcher input.switcher-value:checked~.sw_btn {
+.switcher input.switcher-value:checked ~ .sw_btn {
   margin-left: 55px
 }
 
@@ -243,6 +184,41 @@ body.light #dark {
   background-image: url(./assets/img/ajax-loader.gif);
   background-position: center;
   background-repeat: no-repeat
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+::-webkit-input-placeholder,
+:-ms-input-placeholder {
+  color: #fff
+}
+
+:-moz-placeholder,
+::-moz-placeholder {
+  color: #fff;
+  opacity: 1
+}
+
+#dark,
+body.light #light {
+  display: block;
+  visibility: visible
+}
+
+#light,
+body.light #dark {
+  display: none;
+  visibility: hidden
+}
+
+.text-l,
+.light .text-d,
+.switcher input.switcher-value {
+  display: none
 }
 
 @media (max-width:1200px) {
