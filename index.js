@@ -62,7 +62,7 @@ if (!/^https?:\/\//.test(domain)) {
 await DBD.useLicense(Keys.dbdLicense);
 client.login(Keys.token);
 
-client.db = await new DB(process.env['Keys.DBConnectionStr']).fetchAll();
+client.db = await new DB(Keys.dbConnectionStr).fetchAll();
 client.dashboardOptionCount = [];
 while (client.ws.status) await new Promise(r => setTimeout(r, 10));
 await client.application.fetch();
