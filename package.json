@@ -16,7 +16,7 @@
     "discord.js": "^14.4.0",
     "express-rate-limit": "^6.6.0",
     "mongoose": "^6.6.1",
-    "node": "^18.9.0",
+    "node": "^18.9.1",
     "serve-favicon": "^2.5.0"
   },
   "repository": {
