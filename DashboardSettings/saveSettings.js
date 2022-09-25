@@ -3,7 +3,9 @@ const updated = {};
 //!! TEST IF list update updates updated
 export default function saveSettings(index, setting, newData) {
   const list = updated[this.id];
-  list[index] ? list[index].push([setting, newData]) : list[index] = [[setting, newData]];
+  if (list[index]) list[index].push([setting, newData]);
+  else list[index] = [[setting, newData]];
+
   if (list[index].length < this.client.dashboardOptionCount[index]) return;
 
   let data = this.client.db.get('guildSettings');
