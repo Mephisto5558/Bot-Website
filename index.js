@@ -33,7 +33,7 @@ Object.prototype.fMerge = function fMerge(obj, mode, { ...output } = { ...this }
     else output = { ...output, [key]: key in obj ? obj[key] : this[key] };
   }
   return output;
-}
+};
 
 const
   router = express.Router(),
@@ -46,7 +46,7 @@ const
 
 client
   .on('debug', debug => debug.toLowerCase().includes('heartbeat') ? void 0 : console.log(debug))
-  .on('error', console.error)
+  .on('error', console.error);
 
 const port = process.env.PORT ?? process.env.SERVER_PORT ?? 8000;
 let domain = (Website.Domain || (process.env.SERVER_IP ?? process.env.IP ?? 'http://localhost')) + ':' + port;
@@ -66,6 +66,8 @@ client.db = await new DB(Keys.dbConnectionStr).fetchAll();
 client.dashboardOptionCount = [];
 while (client.ws.status) await new Promise(r => setTimeout(r, 10));
 await client.application.fetch();
+
+const avatar = (await fetch(client.user.displayAvatarURL())).body.read();
 
 global.embedBuilder = DBD.formTypes.embedBuilder({
   username: client.user.username,
@@ -147,16 +149,22 @@ const Dashboard = new (DBD.UpdatedClass())({
 await Dashboard.init();
 
 express()
+  .set('json spaces', 2)
+  .set('title', client.user.username)
   .use(rateLimit({
     windowMs: 30000, // 30sec
     max: 30,
     message: '<body style="background-color:#000; color: #ff0000"><p style="text-align: center;top: 50%;position: relative;font-size: 40;">Sorry, you have been ratelimited!</p></body>'
   }))
-  .use(favicon(await fetch(client.user.displayAvatarURL()).then(e => e.body.read())))
+  .use(favicon(avatar))
   .use(express.json())
-  .set('json spaces', 2)
   .use(router)
   .use(Dashboard.getApp())
+  .use((err, req, res, next) => {
+    if (res.headersSent) return next(err);
+    console.error(err, req, res);
+    res.status(500).sendFile('./CustomSites/error/500.html');
+  })
   .listen(port, _ => console.log(`Website is online on ${domain}.`));
 
 router.all('*', async (req, res, next) => {
@@ -172,20 +180,20 @@ router.all('*', async (req, res, next) => {
       const extention = file.split('.')[file.split('.').length - 1];
       if (!file) return next();
 
-      if (extention == 'js') data = (await import(`file://${dir}/${file}`)).default;
-      else if (extention == 'json') data = JSON.parse(readFileSync(`${dir}/${file}`, 'utf-8'));
-      else data = readFileSync(`${dir}/${file}`, 'utf-8');
+      switch (extention) {
+        case 'js': data = (await import(`file://${dir}/${file}`)).default; break;
+        case 'json': data = JSON.parse(readFileSync(`${dir}/${file}`, 'utf-8')); break;
+        case 'html': return res.sendFile(`${dir}/${file}`);
+        default: data = readFileSync(`${dir}/${file}`, 'utf-8');
+      }
     }
 
     if (!data) return next();
     if (data.permissionCheck && !data.permissionCheck.call(req)) return res.redirect(403, '/error/403');
-    if (typeof data.run == 'function') return res.send(await data.run.call(client, req, res, next));
+    if (data.title) res.set('title', data.title);
+    if (typeof data.run == 'function') return data.run.call(client, res, req, next);
     res.send(JSON.stringify(data.run ?? data));
-  }
-  catch (err) {
-    console.error(err, req, res);
-    res.redirect(500, '/error/500');
-  }
+  } catch (err) { next(err); }
 });
 
 console.timeEnd('Starting time');
