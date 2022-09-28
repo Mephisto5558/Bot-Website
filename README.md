@@ -45,7 +45,7 @@ MongoDB has to been set up with a document called `guildSettings` wich must have
   "default": {}
 }
 ```
-It will have default settings inside. Tey have the same structure as the guild specific settings.
+It will have default settings inside. They have the same structure as the guild specific settings.
 
 <details>
   <summary>Example</summary>
