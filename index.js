@@ -18,6 +18,18 @@ function error(err, req, res) {
   writeFileSync('./errorLog.log', `[${new Date()}]\nErr: ${err}\nRrq: ${req}\nRes: ${res}`);
 }
 
+async function getCommands() {
+  if (process.env.BotCommandListURL) {
+    try {
+      const data = await fetch(process.env.BotCommandListURL).then(e => e.json());
+      return Array.isArray(data) ? data : [];
+    }
+    catch (err) { console.error(err); }
+  }
+  else console.warn('process.env.BotCommandListURL is not defined. Not setting commands in the dashboard page.');
+  return [];
+}
+
 Object.prototype.fMerge = function fMerge(obj, mode, { ...output } = { ...this }) {
   if (`${{}}` != this || `${{}}` != obj) return output;
   for (const key of Object.keys({ ...this, ...obj })) {
@@ -49,7 +61,7 @@ client
   .on('error', error);
 
 const port = process.env.PORT ?? process.env.SERVER_PORT ?? 8000;
-let domain = (Website.Domain || (process.env.SERVER_IP ?? process.env.IP ?? 'http://localhost'));
+let domain = (Website.Domain || (process.env.SERVER_IP ?? process.env.IP ?? `http://localhost:${port}`));
 
 console.timeEnd('Initializing time');
 console.time('Starting time');
@@ -122,7 +134,7 @@ const Dashboard = new (DBD.UpdatedClass())({
       information: {},
       feeds: {},
     },
-    commands: []
+    commands: await getCommands()
   }),
   underMaintenance: {
     title: 'Under Maintenance',
@@ -149,6 +161,7 @@ const Dashboard = new (DBD.UpdatedClass())({
 await Dashboard.init();
 
 express()
+  .disable('x-powered-by')
   .set('json spaces', 2)
   .set('title', client.user.username)
   .use(rateLimit({
