@@ -49,7 +49,7 @@ client
   .on('error', error);
 
 const port = process.env.PORT ?? process.env.SERVER_PORT ?? 8000;
-let domain = (Website.Domain || (process.env.SERVER_IP ?? process.env.IP ?? 'http://localhost')) + ':' + port;
+let domain = (Website.Domain || (process.env.SERVER_IP ?? process.env.IP ?? 'http://localhost'));
 
 console.timeEnd('Initializing time');
 console.time('Starting time');
