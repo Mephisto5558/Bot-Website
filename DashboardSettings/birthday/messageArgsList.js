@@ -1,4 +1,4 @@
-export default (_ => ({
+export default (() => ({
   name: 'Possible Arguments for Messages',
   description: `The following args are possible for the messages:<br>
 <code>&lt;user.nickname&gt;</code> - The user nickname - <code>Peter</code><br>

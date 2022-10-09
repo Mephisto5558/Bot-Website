@@ -178,7 +178,7 @@ express()
     if (res.headersSent) try { return next(err); } catch { }
     res.status(500).sendFile('./CustomSites/error/500.html');
   })
-  .listen(port, _ => console.log(`Website is online on ${domain}.`));
+  .listen(port, () => console.log(`Website is online on ${domain}.`));
 
 router.all('*', async (req, res, next) => {
   try {
