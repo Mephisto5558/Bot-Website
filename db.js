@@ -1,5 +1,6 @@
 import Mongoose from 'mongoose';
 import { Collection } from 'discord.js';
+import { get } from 'http';
 
 export default class DB {
   constructor(dbConnectionString) {
@@ -34,6 +35,7 @@ export default class DB {
 
       data.save();
       this.collection.set(key, value);
+      if (process.env.BotUpdateDBURL) get(process.env.BotUpdateDBURL + `&db=${key}`);
     });
   }
 
@@ -45,6 +47,7 @@ export default class DB {
     });
 
     this.collection.delete(key);
+    if (process.env.BotUpdateDBURL) get(process.env.BotUpdateDBURL + `&db=${key}`);
   }
 
   push(key, ...pushValue) {
@@ -57,6 +60,7 @@ export default class DB {
     this.schema.findOne({ key }, (_, res) => {
       res.value = [...res.value, ...values];
       res.save();
+      if (process.env.BotUpdateDBURL) get(process.env.BotUpdateDBURL + `&db=${key}`);
     });
   }
 }
