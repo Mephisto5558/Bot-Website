@@ -32,6 +32,7 @@ MongoDB set up
 "Support.Discord": "a discord invite link" (optional)
 "Website.Domain": "the domain of your website" (optional, defaults to localhost),
 "BotCommandListURL": "The URL used to get the list of commands for the commands page" (optional, has to start with http:// or https://)
+"BotUpdateDBURL": "The URL used to tell the bot to fetch a specific db" (optional, has to start with http:// or https://)
 "Keys.token": "your discord bot token"
 "Keys.secret": "your discord bot client secret"
 "Keys.dbdLicense": "your discord-dashboard license" (https://assistantscenter.com/discord-dashboard/v2)
