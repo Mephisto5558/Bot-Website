@@ -1,27 +1,28 @@
 const updated = {};
 //Dynamically save, mapped by index and setting id
-//!! TEST IF list update updates updated
-export default function saveSettings(index, setting, newData) {
-  const list = updated[this.id];
-  if (list[index]) list[index].push([setting, newData]);
-  else list[index] = [[setting, newData]];
 
-  if (list[index].length < this.client.dashboardOptionCount[index]) return;
+function replaceAt(index, replacement) {
+  return this.substring(0, index) + replacement + this.substring(index + 1);
+}
 
-  let data = this.client.db.get('guildSettings');
+export default async function saveSettings(index, setting, newData) {
+  updated[this.id] = (updated[this.id] || {}).fMerge({ [index]: { [setting]: newData } });
+  if (Object.keys(updated[this.id][index]).length < this.client.dashboardOptionCount[index]) return;
 
-  for (let [key, value] of list[index]) {
+  let data = await this.client.db.get('guildSettings');
+
+  for (let [key, value] of Object.entries(updated[this.id][index])) {
     const indexes = [...(key.matchAll(/[A-Z]/g))];
+    let json = key;
 
-    for (const i of indexes) key[i.index] = `":{"${i[0].toLowerCase()}`;
+    for (const i of indexes) json = replaceAt.call(json, i.index, `":{"${i[0].toLowerCase()}`);
 
-    if (value.embed && !value.embed.description) entry.embed.description = ' ';
+    if (value.embed && !value.embed.description) value.embed.description = ' ';
 
-    const json = `{"${index}":{"${key}":${JSON.stringify(value)}`;
-
+    json = `{"${index}":{"${json}":${JSON.stringify(value)}`;
     data = data.fMerge({ [this.id]: JSON.parse(json.padEnd(json.length + indexes.length + 2, '}')) });
   }
 
   this.client.db.set('guildSettings', data);
-  updated[index].length = 0;
+  delete updated[index];
 }
