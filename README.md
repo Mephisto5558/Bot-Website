@@ -15,8 +15,6 @@
 
 A website & dashboard for my discord bot with an easy way for adding new settings & pages.
 
-# **THIS IS WIP AND MAYBE HAS BUGS**
-
 ## Requirements
 ```
 Node.js 16.9.0 or newer
