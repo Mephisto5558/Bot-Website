@@ -153,7 +153,7 @@ const Dashboard = new (DBD.UpdatedClass())({
     outerCraneColor: '#6a6a6a',
     craneLineColor: '#6a6a6a',
     craneCabinColor: '#8b8b8b',
-    craneStandColors: ['#6a6a6a', , '#f29b8b']
+    craneStandColors: ['#6a6a6a', undefined, '#f29b8b']
   },
   settings: await Settings.call(client)
 });
