@@ -1,5 +1,4 @@
 import Mongoose from 'mongoose';
-import { Collection } from 'discord.js';
 import { get } from 'http';
 
 export default class DB {
@@ -8,33 +7,23 @@ export default class DB {
       if (!dbConnectionString) throw new Error('A Connection String is required!');
       Mongoose.connect(dbConnectionString);
     }
-
-    this.fetchAll();
   }
+
   schema = Mongoose.model('db-collection', new Mongoose.Schema({
     key: String,
     value: Mongoose.SchemaTypes.Mixed
   }));
 
-  collection = new Collection();
-
-  async fetchAll() {
-    for (const { key, value } of await this.schema.find({})) this.collection.set(key, value);
-    return this;
-  }
-
-  get = key => this.collection.get(key);
+  get = key => this.schema.findOne({ key }).then(e => e.value);
 
   set(key, value) {
     if (!key) return;
-
     this.schema.findOne({ key }, (err, data) => {
       if (err) throw err;
       if (data) data.value = value;
       else data = new this.schema({ key, value });
 
       data.save();
-      this.collection.set(key, value);
       if (process.env.BotUpdateDBURL) get(process.env.BotUpdateDBURL + `&db=${key}`);
     });
   }
@@ -43,22 +32,20 @@ export default class DB {
     if (!key) return;
     this.schema.findOne({ key }, async (err, data) => {
       if (err) throw err;
-      if (data) await data.delete();
+      if (data) {
+        await data.delete();
+        if (process.env.BotUpdateDBURL) get(process.env.BotUpdateDBURL + `&db=${key}`);
+      }
     });
-
-    this.collection.delete(key);
-    if (process.env.BotUpdateDBURL) get(process.env.BotUpdateDBURL + `&db=${key}`);
   }
 
   push(key, ...pushValue) {
-    const data = this.collection.get(key);
-    const values = pushValue.flat();
+    if (!pushValue?.length) return;
+    this.schema.findOne({ key }, (err, res) => {
+      if (err) throw err;
+      if (!Array.isArray(res.value)) throw Error(`You cant push data to a ${typeof data} value!`);
 
-    if (!Array.isArray(data)) throw Error(`You cant push data to a ${typeof data} value!`);
-    data.push(pushValue);
-
-    this.schema.findOne({ key }, (_, res) => {
-      res.value = [...res.value, ...values];
+      res.value = [...res.value, ...pushValue.flat()];
       res.save();
       if (process.env.BotUpdateDBURL) get(process.env.BotUpdateDBURL + `&db=${key}`);
     });
