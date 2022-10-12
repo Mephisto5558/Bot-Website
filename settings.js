@@ -5,7 +5,7 @@ import saveSettings from './DashboardSettings/saveSettings.js';
 /** @returns {object[]} List of settings */
 export default async function getSettings() {
   const categoryOptionList = [];
-  const guildSettings = this.db.get('guildSettings');
+  const guildSettings = await this.db.get('guildSettings');
 
   for (const subFolder of readdirSync('./DashboardSettings', { withFileTypes: true }).filter(e => e.isDirectory()).map(e => e.name)) {
     const index = JSON.parse(readFileSync(`./DashboardSettings/${subFolder}/_index.json`, 'utf-8'));
