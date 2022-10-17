@@ -12,7 +12,7 @@
   "license": "MIT",
   "dependencies": {
     "dbd-dark-dashboard": "^1.6.592",
-    "discord-dashboard": "^2.3.45",
+    "discord-dashboard": "^2.3.46",
     "discord.js": "^14.6.0",
     "express-rate-limit": "^6.6.0",
     "mongoose": "^6.6.5",
