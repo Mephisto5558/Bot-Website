@@ -15,7 +15,7 @@
     "discord-dashboard": "^2.3.46",
     "discord.js": "^14.6.0",
     "express-rate-limit": "^6.6.0",
-    "mongoose": "^6.6.6",
+    "mongoose": "^6.6.7",
     "node": "^19.0.0",
     "serve-favicon": "^2.5.0"
   },
