@@ -16,9 +16,7 @@ export default async function getSettings() {
       position: -1,
     }];
 
-    this.dashboardOptionCount[index.id] = 0;
-
-    if (index.id != 'config') {
+    if (index.disableToggle) {
       optionList.push({
         optionId: `${index.id}.enable`,
         optionName: 'Enable Module',
@@ -30,7 +28,7 @@ export default async function getSettings() {
         setNew: async ({ guild, newData }) => saveSettings.call(guild.object, index.id, 'enable', newData),
       });
 
-      this.dashboardOptionCount[index.id]++
+      this.dashboardOptionCount[index.id]++;
     }
 
     for await (
@@ -68,7 +66,7 @@ export default async function getSettings() {
         allowedCheck: setting.auth
       });
 
-      this.dashboardOptionCount[index.id]++
+      this.dashboardOptionCount[index.id]++;
     }
 
     categoryOptionList.push({
@@ -77,7 +75,7 @@ export default async function getSettings() {
       categoryDescription: index.description,
       position: index.position,
       categoryOptionsList: optionList.sort((a, b) => a.position - b.position)
-    })
+    });
   }
 
   return categoryOptionList.sort((a, b) => a.position - b.position);
