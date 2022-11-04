@@ -92,9 +92,7 @@ const Dashboard = new (DBD.UpdatedClass())({
   minimizedConsoleLogs: true,
   noCreateServer: true,
   useUnderMaintenance: false,
-  html403: readFileSync('./CustomSites/error/403.html', 'utf-8'),
   html404: readFileSync('./CustomSites/error/404.html', 'utf-8'),
-  html500: readFileSync('./CustomSites/error/500.html', 'utf-8'),
   port, domain,
   redirectUri: `${domain}/discord/callback`,
   bot: client,
@@ -176,7 +174,7 @@ express()
   .use((err, req, res, next) => {
     error(err, req, res);
     if (res.headersSent) try { return next(err); } catch { }
-    res.status(500).sendFile('./CustomSites/error/500.html');
+    res.status(500).sendFile(path.join(process.cwd(), './CustomSites/error/500.html'));
   })
   .listen(port, () => console.log(`Website is online on ${domain}.`));
 
