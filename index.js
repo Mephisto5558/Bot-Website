@@ -24,7 +24,10 @@ async function getCommands() {
       const data = await fetch(process.env.BotCommandListURL).then(e => e.json());
       return Array.isArray(data) ? data : [];
     }
-    catch (err) { console.error(err); }
+    catch (err) {
+      if (err.constructor.name == 'FetchError') console.error(`FetchError: Couldn't connect to process.env.BotCommandListURL: ${err.code}`);
+      else throw err;
+    }
   }
   else console.warn('process.env.BotCommandListURL is not defined. Not setting commands in the dashboard page.');
   return [];
