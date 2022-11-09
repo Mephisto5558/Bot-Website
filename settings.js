@@ -1,34 +1,30 @@
 import DDB from 'discord-dashboard';
 import { readdirSync, readFileSync } from 'fs';
-import saveSettings from './DashboardSettings/saveSettings.js';
 
 /** @returns {object[]} List of settings */
 export default async function getSettings() {
-  const categoryOptionList = [];
-  const guildSettings = await this.db.get('guildSettings');
+  const
+    categoryOptionList = [],
+    { blacklist } = await this.db.get('botSettings');
 
   for (const subFolder of readdirSync('./DashboardSettings', { withFileTypes: true }).filter(e => e.isDirectory()).map(e => e.name)) {
     const index = JSON.parse(readFileSync(`./DashboardSettings/${subFolder}/_index.json`, 'utf-8'));
     const optionList = [{
+      optionId: `${index.id}.spacer`,
       title: 'Important!',
       description: 'You need to press the submit button on the bottom of the page to save settings!',
       optionType: 'spacer',
       position: -1,
     }];
 
-    if (index.disableToggle) {
+    if (!index.disableToggle) {
       optionList.push({
         optionId: `${index.id}.enable`,
         optionName: 'Enable Module',
         optionDescription: 'Enable this Module',
         position: 0,
-        optionType: DDB.formTypes.switch(),
-
-        getActualSet: async ({ guild }) => guildSettings[guild.id]?.[index.id]?.enable,
-        setNew: async ({ guild, newData }) => saveSettings.call(guild.object, index.id, 'enable', newData),
+        optionType: DDB.formTypes.switch()
       });
-
-      this.dashboardOptionCount[index.id]++;
     }
 
     for await (
@@ -36,6 +32,7 @@ export default async function getSettings() {
     ) {
       if (setting.type == 'spacer') {
         optionList.push({
+          optionId: `${index.id}.spacer`,
           title: setting.name,
           description: setting.description,
           optionType: setting.type,
@@ -50,23 +47,12 @@ export default async function getSettings() {
         optionDescription: setting.description,
         optionType: typeof setting.type == 'function' ? await setting.type.call(this) : setting.type,
         position: setting.position,
-        getActualSet: setting.get || (async ({ guild }) => {
-          let gSetting = guildSettings[guild.id]?.[index.id] || guildSettings.default?.[index.id];
-          const items = setting.id.replace(/([A-Z])/g, r => `.${r.toLowerCase()}`).split('.');
-
-          for (const entry of items) gSetting = gSetting?.[entry];
-          if (!gSetting) {
-            gSetting = guildSettings.default?.[index.id];
-            for (const entry of items) gSetting = gSetting?.[entry];
-          }
-
-          return gSetting;
-        }),
-        setNew: setting.set || (async ({ guild, newData }) => saveSettings.call(guild.object, index.id, setting.id, newData)),
-        allowedCheck: setting.auth
+        allowedCheck: async ({ guild, user }) => {
+          if (blacklist?.includes(user.id)) return { allowed: false, errorMessage: 'You have been blacklisted from using the bot.' };
+          if (setting.auth === false) return { allowed: false, errorMessage: 'This feature has been disabled.' };
+          return setting.auth?.(guild, user) ?? { allowed: true };
+        }
       });
-
-      this.dashboardOptionCount[index.id]++;
     }
 
     categoryOptionList.push({
@@ -74,6 +60,30 @@ export default async function getSettings() {
       categoryName: index.name,
       categoryDescription: index.description,
       position: index.position,
+      getActualSet: ({ guild }) => Promise.all(optionList.map(async e => {
+        if (e.get) return { optionId: e.optionId, data: e.get(arguments) };
+        const items = e.optionId.replace(/([A-Z])/g, r => `.${r.toLowerCase()}`).split('.');
+        if (items[items.length - 1] == 'spacer') return { optionId: e.optionId, data: e.description };
+
+        const guildSettings = await this.db.get('guildSettings');
+        const data = items.reduce((acc, e) => acc?.[e], guildSettings[guild.id]) ?? items.reduce((acc, e) => acc?.[e], guildSettings.default);
+        return { optionId: e.optionId, data };
+      })),
+      setNew: async ({ guild, data: dataArray }) => {
+        let guildSettings = await this.db.get('guildSettings');
+
+        for (const { optionId, data } of dataArray) {
+          if (data.embed && !data.embed.description) data.embed.description = ' ';
+
+          const indexes = [...optionId.replaceAll('.', '":{"').matchAll(/[A-Z]/g)];
+          let json = indexes.reduce((acc, e) => `${acc.substring(0, e.index)}":{"${e[0].toLowerCase()}${acc.substring(e.index + 1)}`, optionId.replaceAll('.', '":{"'));
+          json = `{"${json}":${JSON.stringify(data)}`;
+
+          guildSettings = guildSettings.fMerge({ [guild.id]: JSON.parse(json.padEnd(json.length + json.split('{').length - 1, '}')) });
+        }
+
+        return this.db.set('guildSettings', guildSettings);
+      },
       categoryOptionsList: optionList.sort((a, b) => a.position - b.position)
     });
   }
