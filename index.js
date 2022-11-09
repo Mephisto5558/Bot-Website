@@ -95,6 +95,7 @@ const Dashboard = new (DBD.UpdatedClass())({
   minimizedConsoleLogs: true,
   noCreateServer: true,
   useUnderMaintenance: false,
+  useCategorySet: true,
   html404: readFileSync('./CustomSites/error/404.html', 'utf-8'),
   port, domain,
   redirectUri: `${domain}/discord/callback`,
