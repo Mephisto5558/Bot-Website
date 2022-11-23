@@ -6,7 +6,7 @@ export default class DB {
   constructor(dbConnectionString) {
     if (Mongoose.connection.readyState !== 1) {
       if (!dbConnectionString) throw new Error('A Connection String is required!');
-      Mongoose.connect(dbConnectionString);
+      return Mongoose.connect(dbConnectionString);
     }
   }
 
