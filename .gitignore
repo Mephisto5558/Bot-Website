@@ -3,6 +3,7 @@ logs
 *.log
 env.json
 node_modules
+package-lock.json
 Temp
 .github
 tw
