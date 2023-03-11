@@ -4,19 +4,17 @@
   "description": "",
   "main": "index.js",
   "type": "module",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "engines": {
+    "node": ">=16.9.0"
   },
   "keywords": [],
   "author": "Mephisto5558",
   "license": "MIT",
   "dependencies": {
-    "dbd-dark-dashboard": "^1.6.592",
     "discord-dashboard": "^2.3.61",
     "discord.js": "^14.7.1",
     "express-rate-limit": "^6.7.0",
-    "mongoose": "^6.9.0",
-    "node": "^19.6.0",
+    "mongoose": "^6.10.2",
     "serve-favicon": "^2.5.0"
   },
   "repository": {
