@@ -11,9 +11,13 @@
   "author": "Mephisto5558",
   "license": "MIT",
   "dependencies": {
+    "body-parser": "^1.20.2",
+    "connect-mongodb-session": "^3.1.1",
     "discord-dashboard": "^2.3.61",
     "discord.js": "^14.7.1",
+    "escape-html": "^1.0.3",
     "express-rate-limit": "^6.7.0",
+    "express-xss-sanitizer": "^1.1.6",
     "mongoose": "^6.10.2",
     "serve-favicon": "^2.5.0"
   },
