@@ -9,8 +9,11 @@ import rateLimit from 'express-rate-limit';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'fs';
 // import fetch from 'node-fetch';
 import path from 'path';
-import favicon from 'serve-favicon';
+// import favicon from 'serve-favicon';
 import DB from './db.js';
+import bodyParser from 'body-parser';
+import { xss } from 'express-xss-sanitizer';
+import escapeHTML from 'escape-html';
 // import Settings from './settings.js';
 
 function error(err, req, res) {
@@ -173,23 +176,27 @@ express()
   .disable('x-powered-by')
   .set('json spaces', 2)
   .set('title', client.user.username)
-  .use(rateLimit({
-    windowMs: 60000, //1min
-    max: 100,
-    message: '<body style="background-color:#111;color:#ff0000"><p style="text-align:center;top:50%;position:relative;font-size:40;">Sorry, you have been ratelimited!</p></body>'
-  }))
-  // .use(favicon((await fetch(client.user.displayAvatarURL())).body.read()))
-  .use(express.json())
-  .use(router)
-  // .use(Dashboard.getApp())
-  .use((err, req, res, next) => {
-    error(err, req, res);
-    if (res.headersSent) try { return next(err); } catch { }
-    res.status(500).sendFile(path.join(process.cwd(), './CustomSites/error/500.html'));
-  })
-  .use((_, res) => {
-    try { res.status(404).sendFile(path.join(process.cwd(), './CustomSites/error/404.html')); } catch { }
-  })
+  .use(
+    rateLimit({
+      windowMs: 60000, //1min
+      max: 100,
+      message: '<body style="background-color:#111;color:#ff0000"><p style="text-align:center;top:50%;position:relative;font-size:40;">Sorry, you have been ratelimited!</p></body>'
+    }),
+    // favicon((await fetch(client.user.displayAvatarURL())).body.read()),
+    bodyParser.json({ limit: '1kb' }),
+    bodyParser.urlencoded({ extended: true, limit: '1kb' }),
+    xss(),
+    router,
+    // Dashboard.getApp(),
+    (err, req, res, next) => {
+      error(err, req, res);
+      if (res.headersSent) try { return next(err); } catch { }
+      res.status(500).sendFile(path.join(process.cwd(), './CustomSites/error/500.html'));
+    },
+    (_, res) => {
+      try { res.status(404).sendFile(path.join(process.cwd(), './CustomSites/error/404.html')); } catch { }
+    }
+  )
   .listen(port, () => console.log(`Website is online on ${domain}.`));
 
 router.all('*', async (req, res, next) => {
@@ -207,7 +214,7 @@ router.all('*', async (req, res, next) => {
 
       if (!filename || !subDirs.find(e => e.isFile() && e.name == filename)) {
         return !subDirs.find(e => e.isDirectory && e.name == path.basename(req.path)) ? next() : res.send(await readdirSync(pathStr, { withFileTypes: true }).reduce(async (acc, file) => {
-          const name = (file.isFile() ? file.name.split('.').slice(0, -1).join('.') : file.name);
+          const name = escapeHTML(file.isFile() ? file.name.split('.').slice(0, -1).join('.') : file.name);
           return `${await acc}<button class="button" onclick="window.location.href=\`\${window.location.pathname}/${name}\`;">${(await importFile(path.join(pathStr, file.name)))?.title || name[0].toUpperCase() + name.slice(1).replace(/[_-]/g, ' ')}</button>`;
         }, '<style>.button-container{align-items:strech;display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:2%}.button{background-color:#242724;border:none;border-radius:5px;color:#fff;cursor:pointer;display:inline-block;font-size:16px;min-width:100px;padding:15px 32px;text-align:center;text-decoration:none;transition:background-color .3s ease-in-out}.button:hover{background-color:#676867}@media (max-width: 480px){.button{flex-basis:calc(100% / 2 - 5px)}}@media (min-width: 481px) and (max-width: 768px){.button{flex-basis:calc(100% / 3 - 5px)}}@media (min-width: 769px) and (max-width: 1024px){.button{flex-basis:calc(100% / 4 - 5px)}}@media (min-width: 1025px){.button{flex-basis:calc(100% / 5 - 5px)}}</style><div class="button-container">') + '</div>');
       }
