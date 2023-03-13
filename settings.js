@@ -17,31 +17,22 @@ export default async function getSettings() {
       position: -1,
     }];
 
-    if (!index.disableToggle) {
-      optionList.push({
-        optionId: `${index.id}.enable`,
-        optionName: 'Enable Module',
-        optionDescription: 'Enable this Module',
-        position: 0,
-        optionType: DDB.formTypes.switch()
-      });
-    }
+    if (!index.disableToggle) optionList.push({
+      optionId: `${index.id}.enable`,
+      optionName: 'Enable Module',
+      optionDescription: 'Enable this Module',
+      position: 0,
+      optionType: DDB.formTypes.switch()
+    });
 
-    for await (
-      const { default: setting } of readdirSync(`./DashboardSettings/${subFolder}`).filter(e => e.endsWith('.js')).map(async e => import(`./DashboardSettings/${subFolder}/${e}`))
-    ) {
-      if (setting.type == 'spacer') {
-        optionList.push({
-          optionId: `${index.id}.spacer`,
-          title: setting.name,
-          description: setting.description,
-          optionType: setting.type,
-          position: setting.position
-        });
-        continue;
-      }
-
-      optionList.push({
+    for await (const { default: setting } of readdirSync(`./DashboardSettings/${subFolder}`).filter(e => e.endsWith('.js')).map(async e => import(`./DashboardSettings/${subFolder}/${e}`)))
+      optionList.push(setting.type == 'spacer' ? {
+        optionId: `${index.id}.spacer`,
+        title: setting.name,
+        description: setting.description,
+        optionType: setting.type,
+        position: setting.position
+      } : {
         optionId: `${index.id}.${setting.id}`,
         optionName: setting.name,
         optionDescription: setting.description,
@@ -53,7 +44,6 @@ export default async function getSettings() {
           return setting.auth?.(guild, user) ?? { allowed: true };
         }
       });
-    }
 
     categoryOptionList.push({
       categoryId: index.id,
@@ -65,19 +55,18 @@ export default async function getSettings() {
         const items = e.optionId.replace(/([A-Z])/g, r => `.${r.toLowerCase()}`).split('.');
         if (items[items.length - 1] == 'spacer') return { optionId: e.optionId, data: e.description };
 
-        const guildSettings = await this.db.get('guildSettings');
+        const guildSettings = this.db.get('guildSettings');
         const data = items.reduce((acc, e) => acc?.[e], guildSettings[guild.id]) ?? items.reduce((acc, e) => acc?.[e], guildSettings.default);
         return { optionId: e.optionId, data };
       })),
       setNew: async ({ guild, data: dataArray }) => {
-        let guildSettings = await this.db.get('guildSettings');
+        let guildSettings = this.db.get('guildSettings');
 
         for (const { optionId, data } of dataArray) {
           if (data.embed && !data.embed.description) data.embed.description = ' ';
 
           const indexes = [...optionId.replaceAll('.', '":{"').matchAll(/[A-Z]/g)];
-          let json = indexes.reduce((acc, e) => `${acc.substring(0, e.index)}":{"${e[0].toLowerCase()}${acc.substring(e.index + 1)}`, optionId.replaceAll('.', '":{"'));
-          json = `{"${json}":${JSON.stringify(data)}`;
+          const json = `{"${indexes.reduce((acc, e) => acc.substring(0, e.index) + ':{' + e[0].toLowerCase() + acc.substring(e.index + 1), optionId.replaceAll('.', '":{"'))}":${JSON.stringify(data)}`;
 
           guildSettings = guildSettings.fMerge({ [guild.id]: JSON.parse(json.padEnd(json.length + json.split('{').length - 1, '}')) });
         }
