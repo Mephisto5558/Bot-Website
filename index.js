@@ -178,7 +178,7 @@ express()
     max: 100,
     message: '<body style="background-color:#111;color:#ff0000"><p style="text-align:center;top:50%;position:relative;font-size:40;">Sorry, you have been ratelimited!</p></body>'
   }))
-  .use(favicon((await fetch(client.user.displayAvatarURL())).body.read()))
+  // .use(favicon((await fetch(client.user.displayAvatarURL())).body.read()))
   .use(express.json())
   .use(router)
   // .use(Dashboard.getApp())
