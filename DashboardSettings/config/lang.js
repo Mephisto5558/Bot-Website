@@ -4,6 +4,6 @@ export default {
   id: 'lang',
   name: 'Language',
   description: 'The language of the bot',
-  type: DDB.formTypes.select({ 'English': 'en', 'German': 'de' }),
+  type: DDB.formTypes.select({ English: 'en', German: 'de' }),
   position: 1
 }
