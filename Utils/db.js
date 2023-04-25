@@ -17,7 +17,7 @@ export default class DB {
   }));
 
   /**@returns value of collection*/
-  get = key => this.schema.findOne({ key }).then(e => e.value);
+  get = key => this.schema.findOne({ key }).then(e => e?.value);
 
   /**@param {string}key@param {boolean}overwrite overwrite existing collection, default: `false`*/
   async set(key, value, overwrite = false) {

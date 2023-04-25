@@ -10,7 +10,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from 'fs';
 // import fetch from 'node-fetch';
 import path from 'path';
 // import favicon from 'serve-favicon';
-import DB from './db.js';
+import DB from './Utils/db.js';
 import bodyParser from 'body-parser';
 import { xss } from 'express-xss-sanitizer';
 import escapeHTML from 'escape-html';
@@ -18,7 +18,7 @@ import escapeHTML from 'escape-html';
 
 function error(err, req, res) {
   console.error(err);
-  writeFileSync('./errorLog.log', `[${new Date()}]\nErr: ${err}\nRrq: ${req}\nRes: ${res}`);
+  appendFileSync('./errorlog.log', `[${new Date().toLocaleTimeString('en', { timeStyle: 'medium', hour12: false }).replace(/^24:/, '00:')}] Err: ${JSON.stringify(err)}\nREQ: ${JSON.stringify(inspect(req))}}\nRES: ${JSON.stringify(inspect(res))}`);
 }
 
 // async function getCommands() {
@@ -86,7 +86,7 @@ if (!/^https?:\/\//.test(domain)) {
 }
 
 // await DBD.useLicense(Keys.dbdLicense);
-client.login(Keys.token);
+await client.login(Keys.token);
 
 client.db = new DB(Keys.dbConnectionStr);
 // client.dashboardOptionCount = [];
@@ -183,8 +183,8 @@ express()
       message: '<body style="background-color:#111;color:#ff0000"><p style="text-align:center;top:50%;position:relative;font-size:40;">Sorry, you have been ratelimited!</p></body>'
     }),
     // favicon((await fetch(client.user.displayAvatarURL())).body.read()),
-    bodyParser.json({ limit: '1kb' }),
-    bodyParser.urlencoded({ extended: true, limit: '1kb' }),
+    bodyParser.json({ limit: '100kb' }),
+    bodyParser.urlencoded({ extended: true, limit: '100kb' }),//error handling?
     xss(),
     router,
     // Dashboard.getApp(),
@@ -202,6 +202,7 @@ express()
 router.all('*', async (req, res, next) => {
   try {
     if (req.path == '/') return res.redirect('/home');
+    if (req.path.startsWith('/api/') && !/^\/api\/v\d+\//i.test(req.path)) res.redirect(req.path.replace('/api/', '/api/v1/'));
     // if (['/', '/dashboard'].includes(req.path)) return res.redirect(301, '/manage');
 
     const pathStr = path.join(process.cwd(), '/CustomSites', path.normalize(req.path.endsWith('/') ? req.path.slice(0, -1) : req.path).replace(/^(\.\.(\/|\\|$))+/, ''));
@@ -210,10 +211,13 @@ router.all('*', async (req, res, next) => {
 
     if (existsSync(dir)) {
       const subDirs = readdirSync(dir, { withFileTypes: true });
-      const filename = subDirs.find(e => e.name.startsWith(pathStr.slice(pathStr.lastIndexOf(path.sep) + 1) + '.'))?.name;
+      const filename = subDirs.find(e => {
+        const file = pathStr.slice(pathStr.lastIndexOf(path.sep) + 1);
+        return + file.includes('.') ? e.name.startsWith(file) : e.name.startsWith(`${file}.`);
+      })?.name;
 
       if (!filename || !subDirs.find(e => e.isFile() && e.name == filename)) {
-        return !subDirs.find(e => e.isDirectory && e.name == path.basename(req.path)) ? next() : res.send(await readdirSync(pathStr, { withFileTypes: true }).reduce(async (acc, file) => {
+        return !subDirs.find(e => e.isDirectory() && e.name == path.basename(req.path)) ? next() : res.send(await readdirSync(pathStr, { withFileTypes: true }).reduce(async (acc, file) => {
           const name = escapeHTML(file.isFile() ? file.name.split('.').slice(0, -1).join('.') : file.name);
           return `${await acc}<button class="button" onclick="window.location.href=\`\${window.location.pathname}/${name}\`;">${(await importFile(path.join(pathStr, file.name)))?.title || name[0].toUpperCase() + name.slice(1).replace(/[_-]/g, ' ')}</button>`;
         }, '<style>.button-container{align-items:strech;display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:2%}.button{background-color:#242724;border:none;border-radius:5px;color:#fff;cursor:pointer;display:inline-block;font-size:16px;min-width:100px;padding:15px 32px;text-align:center;text-decoration:none;transition:background-color .3s ease-in-out}.button:hover{background-color:#676867}@media (max-width: 480px){.button{flex-basis:calc(100% / 2 - 5px)}}@media (min-width: 481px) and (max-width: 768px){.button{flex-basis:calc(100% / 3 - 5px)}}@media (min-width: 769px) and (max-width: 1024px){.button{flex-basis:calc(100% / 4 - 5px)}}@media (min-width: 1025px){.button{flex-basis:calc(100% / 5 - 5px)}}</style><div class="button-container">') + '</div>');
@@ -226,6 +230,10 @@ router.all('*', async (req, res, next) => {
     if (!data) return next();
     if (data.permissionCheck && !data.permissionCheck.call(req)) return res.redirect(403, '/error/403');
     if (data.title) res.set('title', data.title);
+    if (data.static) {
+      const code = `${data.run}`;
+      return res.send(code.slice(code.indexOf('{') + 1, code.lastIndexOf('}')));
+    }
     if (typeof data.run == 'function') return data.run.call(client, res, req, next);
     return res.send(JSON.stringify(data.run ?? data));
   } catch (err) { next(err); }
