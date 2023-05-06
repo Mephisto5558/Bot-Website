@@ -1,6 +1,23 @@
 import DDB from 'discord-dashboard';
 import { readdirSync, readFileSync } from 'fs';
 
+function fMerge(obj1, obj2, mode, { ...output } = { ...obj1 }) { //do not put on Object as it breaks discord auth /shrug
+  if (`${{}}` != obj1 || `${{}}` != obj2) return output;
+  for (const key of Object.keys({ ...obj1, ...obj2 })) {
+    if (`${{}}` == obj1[key]) output[key] = key in obj2 ? fMerge(obj1[key], obj2[key], mode) : obj1[key];
+    else if (Array.isArray(obj1[key])) {
+      if (key in obj2) {
+        if (mode == 'overwrite') output[key] = obj2[key];
+        else if (mode == 'push') for (const e of obj2[key]) output[key].push(e);
+        else for (let i = 0; i < obj1[key].length || i < obj2[key].length; i++) output[key][i] = i in obj2[key] ? obj2[key][i] : obj1[key][i];
+      }
+      else output[key] = obj1[key];
+    }
+    else output = { ...output, [key]: key in obj2 ? obj2[key] : obj1[key] };
+  }
+  return output;
+};
+
 /** @returns {object[]} List of settings */
 export default async function getSettings() {
   const
@@ -68,7 +85,7 @@ export default async function getSettings() {
           const indexes = [...optionId.replaceAll('.', '":{"').matchAll(/[A-Z]/g)];
           const json = `{"${indexes.reduce((acc, e) => acc.substring(0, e.index) + ':{' + e[0].toLowerCase() + acc.substring(e.index + 1), optionId.replaceAll('.', '":{"'))}":${JSON.stringify(data)}`;
 
-          guildSettings = guildSettings.fMerge({ [guild.id]: JSON.parse(json.padEnd(json.length + json.split('{').length - 1, '}')) });
+          guildSettings = fMerge(guildSettings, { [guild.id]: JSON.parse(json.padEnd(json.length + json.split('{').length - 1, '}')) });
         }
 
         return this.db.set('guildSettings', guildSettings);

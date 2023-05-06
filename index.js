@@ -4,17 +4,23 @@ console.time('Initializing time');
 // import SoftUITheme from 'dbd-soft-ui'; //Currently disabled because it requires quick.db wich doesn't run on Node 19
 // import DBD from 'discord-dashboard';
 import { Client, GatewayIntentBits } from 'discord.js';
+import Strategy from 'passport-discord';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import { appendFileSync, existsSync, readdirSync, readFileSync } from 'fs';
 // import fetch from 'node-fetch';
 import path from 'path';
 // import favicon from 'serve-favicon';
 import DB from './Utils/db.js';
+import VoteSystem from './Utils/VoteSystem.js';
+// import Settings from './settings.js';
 import bodyParser from 'body-parser';
 import { xss } from 'express-xss-sanitizer';
 import escapeHTML from 'escape-html';
-// import Settings from './settings.js';
+import passport from 'passport';
+import { inspect } from 'util';
+import session from 'express-session';
+import cors from 'cors';
 
 function error(err, req, res) {
   console.error(err);
@@ -46,23 +52,6 @@ async function importFile(filepath) {
   }
 }
 
-Object.prototype.fMerge = function fMerge(obj, mode, { ...output } = { ...this }) {
-  if (`${{}}` != this || `${{}}` != obj) return output;
-  for (const key of Object.keys({ ...this, ...obj })) {
-    if (`${{}}` == this[key]) output[key] = key in obj ? this[key].fMerge(obj[key], mode) : this[key];
-    else if (Array.isArray(this[key])) {
-      if (key in obj) {
-        if (mode == 'overwrite') output[key] = obj[key];
-        else if (mode == 'push') for (const e of obj[key]) output[key].push(e);
-        else for (let i = 0; i < this[key].length || i < obj[key].length; i++) output[key][i] = i in obj[key] ? obj[key][i] : this[key][i];
-      }
-      else output[key] = this[key];
-    }
-    else output = { ...output, [key]: key in obj ? obj[key] : this[key] };
-  }
-  return output;
-};
-
 const
   router = express.Router(),
   { Support, Website, Keys } = Object.entries(process.env).filter(([k]) => /^(Support|Website|Keys)\./.test(k)).reduce((acc, [k, v]) => {
@@ -89,6 +78,7 @@ if (!/^https?:\/\//.test(domain)) {
 await client.login(Keys.token);
 
 client.db = new DB(Keys.dbConnectionStr);
+client.voteSystem = await new VoteSystem(client.db).init();
 // client.dashboardOptionCount = [];
 while (client.ws.status) await new Promise(r => setTimeout(r, 10));
 await client.application.fetch();
@@ -172,6 +162,24 @@ await client.application.fetch();
 
 // await Dashboard.init();
 
+passport.use(new Strategy({
+  clientID: client.user.id,
+  clientSecret: Keys.secret,
+  callbackURL: `${domain}/auth/discord/callback`,
+  scope: ['identify']
+}, async (accessToken, refreshToken, user, done) => {
+  await client.db.update('userSettings', `${user.id}.accessToken`, accessToken);
+  await client.db.update('userSettings', `${user.id}.refreshToken`, refreshToken);
+  return done(null, user);
+}));
+
+passport.serializeUser((user, done) => done(null, {
+  id: user.id, username: user.username,
+  discriminator: user.discriminator, locale: user.locale,
+  avatar: user.avatar, banner: user.banner
+}));
+passport.deserializeUser((user, done) => done(null, user));
+
 express()
   .disable('x-powered-by')
   .set('json spaces', 2)
@@ -182,19 +190,33 @@ express()
       max: 100,
       message: '<body style="background-color:#111;color:#ff0000"><p style="text-align:center;top:50%;position:relative;font-size:40;">Sorry, you have been ratelimited!</p></body>'
     }),
-    // favicon((await fetch(client.user.displayAvatarURL())).body.read()),
+    // favicon((await fetch(client.user.displayAvatarURL())).body.read()), //doesn't work
     bodyParser.json({ limit: '100kb' }),
     bodyParser.urlencoded({ extended: true, limit: '100kb' }),//error handling?
     xss(),
+    session({
+      secret: Keys.token,
+      resave: false,
+      saveUninitialized: false,
+      cookie: { secure: domain.startsWith('https') }
+    }),
+    passport.initialize(),
+    passport.session()
+  )
+  .use('/api/:v/internal', cors({ origin: domain }))
+  .use(
     router,
     // Dashboard.getApp(),
     (err, req, res, next) => {
       error(err, req, res);
       if (res.headersSent) try { return next(err); } catch { }
-      res.status(500).sendFile(path.join(process.cwd(), './CustomSites/error/500.html'));
+      //send html only to browser
+      if (req.headers?.['user-agent']?.includes('Mozilla')) return res.status(500).sendFile(path.join(process.cwd(), './CustomSites/error/500.html'));
+      res.sendStatus(500);
     },
-    (_, res) => {
-      try { res.status(404).sendFile(path.join(process.cwd(), './CustomSites/error/404.html')); } catch { }
+    (req, res) => {
+      if (req.headers?.['user-agent']?.includes('Mozilla')) return res.status(404).sendFile(path.join(process.cwd(), './CustomSites/error/404.html'));
+      res.sendStatus(404);
     }
   )
   .listen(port, () => console.log(`Website is online on ${domain}.`));
@@ -228,6 +250,7 @@ router.all('*', async (req, res, next) => {
     }
 
     if (!data) return next();
+    if (data.method && data.method !== req.method) return res.setHeader('Allow', data.method).sendStatus(405);
     if (data.permissionCheck && !data.permissionCheck.call(req)) return res.redirect(403, '/error/403');
     if (data.title) res.set('title', data.title);
     if (data.static) {
