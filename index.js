@@ -198,7 +198,10 @@ express()
       secret: Keys.token,
       resave: false,
       saveUninitialized: false,
-      cookie: { secure: domain.startsWith('https') }
+      cookie: {
+        secure: domain.startsWith('https'),
+        maxAge: 1e100
+      }
     }),
     passport.initialize(),
     passport.session()
