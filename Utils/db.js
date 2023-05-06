@@ -42,7 +42,7 @@ export default class DB {
     data.value ??= {};
     if (typeof data.value != 'object') throw new Error(`data.value in db "${db}" must be typeof object! Found ${typeof data.value}.`);
 
-    DB.mergeWithFlat(data.value, key, value);
+    this.constructor.mergeWithFlat(data.value, key, value);
 
     data.markModified(`value.${key}`);
     await data.save();
