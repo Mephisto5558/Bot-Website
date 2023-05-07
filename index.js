@@ -200,7 +200,7 @@ express()
       saveUninitialized: false,
       cookie: {
         secure: domain.startsWith('https'),
-        maxAge: 1e100
+        maxAge: 2.592e9 //30d
       }
     }),
     passport.initialize(),
