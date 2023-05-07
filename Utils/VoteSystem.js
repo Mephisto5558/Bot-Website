@@ -28,7 +28,7 @@ export default class VoteSystem {
   get = id => this.cache.get(id);
   getMany = (amount, offset = 0, filter = '') => {
     const cards = [...this.cache.values()].filter(e => e.title.includes(filter) || e.body?.includes(filter) || e.id.includes(filter));
-    return { cards: amount ? cards.slice(offset, offset + amount) : cards.slice(offset), moreAvailable: amount && cards.length > offset + amount };
+    return { cards: amount ? cards.slice(offset, offset + amount) : cards.slice(offset), moreAvailable: !!(amount && cards.length > offset + amount) };
   };
 
   async add(title, body, userId = '') {
