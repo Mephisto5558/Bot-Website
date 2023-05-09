@@ -1,26 +1,26 @@
 console.log('Starting...');
 console.time('Initializing time');
 
-// import SoftUITheme from 'dbd-soft-ui'; //Currently disabled because it requires quick.db wich doesn't run on Node 19
-// import DBD from 'discord-dashboard';
-import { Client, GatewayIntentBits } from 'discord.js';
-import Strategy from 'passport-discord';
-import express from 'express';
-import rateLimit from 'express-rate-limit';
 import { appendFileSync, existsSync, readdirSync, readFileSync } from 'fs';
+import { inspect } from 'util';
 // import fetch from 'node-fetch';
-import path from 'path';
-// import favicon from 'serve-favicon';
+import express from 'express';
+import { Client, GatewayIntentBits } from 'discord.js';
+// import DBD from 'discord-dashboard';
 import DB from './Utils/db.js';
 import VoteSystem from './Utils/VoteSystem.js';
-// import Settings from './settings.js';
+// import SoftUITheme from 'dbd-soft-ui'; //Currently disabled because it requires quick.db wich doesn't run on Node 19
+import passport from 'passport';
+import Strategy from 'passport-discord';
+import compression from 'compression';
+import rateLimit from 'express-rate-limit';
 import bodyParser from 'body-parser';
 import { xss } from 'express-xss-sanitizer';
-import escapeHTML from 'escape-html';
-import passport from 'passport';
-import { inspect } from 'util';
 import session from 'express-session';
 import cors from 'cors';
+import path from 'path';
+import escapeHTML from 'escape-html';
+// import Settings from './settings.js';
 
 function error(err, req, res) {
   console.error(err);
@@ -185,12 +185,12 @@ express()
   .set('json spaces', 2)
   .set('title', client.user.username)
   .use(
+    compression(),
     rateLimit({
       windowMs: 60000, //1min
       max: 100,
       message: '<body style="background-color:#111;color:#ff0000"><p style="text-align:center;top:50%;position:relative;font-size:40;">Sorry, you have been ratelimited!</p></body>'
     }),
-    // favicon((await fetch(client.user.displayAvatarURL())).body.read()), //doesn't work
     bodyParser.json({ limit: '100kb' }),
     bodyParser.urlencoded({ extended: true, limit: '100kb' }),//error handling?
     xss(),
@@ -228,7 +228,7 @@ router.all('*', async (req, res, next) => {
   try {
     if (req.path == '/') return res.redirect('/home');
     if (req.path.startsWith('/api/') && !/^\/api\/v\d+\//i.test(req.path)) res.redirect(req.path.replace('/api/', '/api/v1/'));
-    // if (['/', '/dashboard'].includes(req.path)) return res.redirect(301, '/manage');
+    if (req.path == '/dashboard') return res.redirect(301, '/manage');
 
     const pathStr = path.join(process.cwd(), '/CustomSites', path.normalize(req.path.endsWith('/') ? req.path.slice(0, -1) : req.path).replace(/^(\.\.(\/|\\|$))+/, ''));
     const dir = pathStr.substring(0, pathStr.lastIndexOf(path.sep));
