@@ -1,7 +1,7 @@
 console.log('Starting...');
 console.time('Initializing time');
 
-import { appendFileSync, existsSync, readdirSync, readFileSync } from 'fs';
+import { appendFile, access, readdir, readFile } from 'fs/promises';
 import { inspect } from 'util';
 // import fetch from 'node-fetch';
 import express from 'express';
@@ -24,7 +24,7 @@ import escapeHTML from 'escape-html';
 
 function error(err, req, res) {
   console.error(err);
-  appendFileSync('./errorlog.log', `[${new Date().toLocaleTimeString('en', { timeStyle: 'medium', hour12: false }).replace(/^24:/, '00:')}] Err: ${JSON.stringify(err)}\nREQ: ${JSON.stringify(inspect(req))}}\nRES: ${JSON.stringify(inspect(res))}`);
+  appendFile('./errorlog.log', `[${new Date().toLocaleTimeString('en', { timeStyle: 'medium', hour12: false }).replace(/^24:/, '00:')}] Err: ${JSON.stringify(err)}\nREQ: ${JSON.stringify(inspect(req))}}\nRES: ${JSON.stringify(inspect(res))}`);
 }
 
 // async function getCommands() {
@@ -44,11 +44,11 @@ function error(err, req, res) {
 
 /**@param {string}filepath full path*/
 async function importFile(filepath) {
-  if (!filepath.includes('.')) return existsSync(path.join(filepath, 'index.js')) ? importFile(path.join(filepath, 'index.js')) : void 0;
+  if (!filepath.includes('.')) return await access(path.join(filepath, 'index.js')) ? importFile(path.join(filepath, 'index.js')) : void 0;
   switch (filepath.split('.').pop()) {
     case 'js': return (await import(`file://${filepath}`)).default;
-    case 'json': return JSON.parse(readFileSync(filepath, 'utf-8'));
-    default: return readFileSync(`${filepath}`, 'utf-8');
+    case 'json': return JSON.parse(await readFile(filepath, 'utf-8'));
+    default: return readFile(`${filepath}`, 'utf-8');
   }
 }
 
@@ -96,7 +96,7 @@ await client.application.fetch();
 //   noCreateServer: true,
 //   useUnderMaintenance: false,
 //   useCategorySet: true,
-//   html404: readFileSync('./CustomSites/error/404.html', 'utf-8'),
+//   html404: await readFile('./CustomSites/error/404.html', 'utf-8'),
 //   redirectUri: `${domain}/discord/callback`,
 //   bot: client,
 //   seesionStore: 'connect-mongodb-session',
@@ -230,19 +230,20 @@ router.all('*', async (req, res, next) => {
     if (req.path.startsWith('/api/') && !/^\/api\/v\d+\//i.test(req.path)) res.redirect(req.path.replace('/api/', '/api/v1/'));
     if (req.path == '/dashboard') return res.redirect(301, '/manage');
 
-    const pathStr = path.join(process.cwd(), '/CustomSites', path.normalize(req.path.endsWith('/') ? req.path.slice(0, -1) : req.path).replace(/^(\.\.(\/|\\|$))+/, ''));
-    const dir = pathStr.substring(0, pathStr.lastIndexOf(path.sep));
+    const
+      pathStr = path.join(process.cwd(), '/CustomSites', path.normalize(req.path.endsWith('/') ? req.path.slice(0, -1) : req.path).replace(/^(\.\.(\/|\\|$))+/, '')),
+      dir = pathStr.substring(0, pathStr.lastIndexOf(path.sep)),
+      subDirs = await readdir(dir, { withFileTypes: true }).catch(() => { });
     let data;
 
-    if (existsSync(dir)) {
-      const subDirs = readdirSync(dir, { withFileTypes: true });
+    if (subDirs) {
       const filename = subDirs.find(e => {
         const file = pathStr.slice(pathStr.lastIndexOf(path.sep) + 1);
         return + file.includes('.') ? e.name.startsWith(file) : e.name.startsWith(`${file}.`);
       })?.name;
 
       if (!filename || !subDirs.find(e => e.isFile() && e.name == filename)) {
-        return !subDirs.find(e => e.isDirectory() && e.name == path.basename(req.path)) ? next() : res.send(await readdirSync(pathStr, { withFileTypes: true }).reduce(async (acc, file) => {
+        return !subDirs.find(e => e.isDirectory() && e.name == path.basename(req.path)) ? next() : res.send(await (await readdir(pathStr, { withFileTypes: true })).reduce(async (acc, file) => {
           const name = escapeHTML(file.isFile() ? file.name.split('.').slice(0, -1).join('.') : file.name);
           return `${await acc}<button class="button" onclick="window.location.href=\`\${window.location.pathname}/${name}\`;">${(await importFile(path.join(pathStr, file.name)))?.title || name[0].toUpperCase() + name.slice(1).replace(/[_-]/g, ' ')}</button>`;
         }, '<style>.button-container{align-items:strech;display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:2%}.button{background-color:#242724;border:none;border-radius:5px;color:#fff;cursor:pointer;display:inline-block;font-size:16px;min-width:100px;padding:15px 32px;text-align:center;text-decoration:none;transition:background-color .3s ease-in-out}.button:hover{background-color:#676867}@media (max-width: 480px){.button{flex-basis:calc(100% / 2 - 5px)}}@media (min-width: 481px) and (max-width: 768px){.button{flex-basis:calc(100% / 3 - 5px)}}@media (min-width: 769px) and (max-width: 1024px){.button{flex-basis:calc(100% / 4 - 5px)}}@media (min-width: 1025px){.button{flex-basis:calc(100% / 5 - 5px)}}</style><div class="button-container">') + '</div>');
