@@ -33,17 +33,14 @@
 
 <body>
   <div class='header-container'>
-    <h1>Feature Requests</h1>
-    <button id='toggle-cards-display' title='Toggle display mode'>
+    <h1 onclick='window.location.href=window.location.pathname'>Feature Requests</h1>
+    <button class='grey-hover' id='toggle-cards-display' title='Toggle display mode'>
       <i class='fa-solid fa-gears'></i>
     </button>
-    <button id='toggle-color-scheme' title='Toggle color scheme'>
+    <button class='grey-hover' id='toggle-color-scheme' title='Toggle color scheme'>
       <i class='fa-solid fa-lightbulb'></i>
     </button>
     <div class='spacer'></div>
-    <input type='text' id='search-box' placeholder='Suche'>
-    <button id='feature-request-button'>New Feature Request</button>
-    <div class='profile-container'></div>
   </div>
 
   <div id='feature-request-overlay'>
@@ -56,7 +53,7 @@
         <label for='feature-request-description'>Description:</label>
         <textarea id='feature-request-description' name='description' spellcheck required maxlength='4000'></textarea>
         <div id='description-counter' class='counter'></div>
-        <button type='submit'>Submit</button>
+        <button class='blue-button' type='submit'>Submit</button>
       </form>
     </div>
   </div>
