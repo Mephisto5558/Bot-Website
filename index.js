@@ -200,6 +200,7 @@ express()
       saveUninitialized: false,
       cookie: {
         secure: domain.startsWith('https'),
+        sameSite: 'lax',
         maxAge: 2.592e9 //30d
       }
     }),
