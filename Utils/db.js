@@ -24,7 +24,7 @@ export default class DB {
     if (!key) return;
     let data;
 
-    if (!overwrite) data = await this.schema.findOne({ key });
+    if (!overwrite) data = await this.schema.findOne({ key }).exec();
     if (data) data.value = value;
     else data = new this.schema({ key, value });
 
@@ -37,7 +37,7 @@ export default class DB {
     if (!key) return;
     if (typeof key != 'string') throw new Error(`key must be typeof string! Got ${typeof key}.`);
 
-    const data = await this.schema.findOne({ key: db }) || new this.schema({ key: db, value: {} });
+    const data = await this.schema.findOne({ key: db }).exec() || new this.schema({ key: db, value: {} });
 
     data.value ??= {};
     if (typeof data.value != 'object') throw new Error(`data.value in db "${db}" must be typeof object! Found ${typeof data.value}.`);
@@ -53,7 +53,7 @@ export default class DB {
   async push(key, ...pushValue) {
     const values = pushValue.flat();
 
-    const data = await this.schema.findOne({ key }) ?? new this.schema({ key, value: pushValue });
+    const data = await this.schema.findOne({ key }).exec() ?? new this.schema({ key, value: pushValue });
     if (data.value && !Array.isArray(data.value)) throw Error(`You can't push data to a ${typeof data.value} value!`);
     data.value = data.value ? [...data.value, ...values] : pushValue;
 
@@ -65,7 +65,7 @@ export default class DB {
   async delete(key) {
     if (!key) return;
 
-    const data = await this.schema.findOne({ key });
+    const data = await this.schema.findOne({ key }).exec();
     if (data) {
       await data.delete();
       if (process.env.BotUpdateDBURL) get(process.env.BotUpdateDBURL + `&db=${key}`);
