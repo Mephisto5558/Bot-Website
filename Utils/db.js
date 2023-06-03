@@ -18,7 +18,7 @@ export default class DB {
 
   /**@param {string}db@param {string}key*/
   async get(db, key) {
-    let data = await this.schema.findOne({ key: db }).exec();
+    let data = (await this.schema.findOne({ key: db }).exec())?.value;
     if (key) for (const objKey of key.split('.')) {
       data = data?.[objKey];
       if (data === undefined) return data;
