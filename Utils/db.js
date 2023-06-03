@@ -16,65 +16,55 @@ export default class DB {
     value: Mongoose.SchemaTypes.Mixed
   }));
 
-  /**@returns value of collection*/
-  get = key => this.schema.findOne({ key }).then(e => e?.value);
+  /**@param {string}db@param {string}key*/
+  async get(db, key) {
+    let data = await this.schema.findOne({ key: db }).exec();
+    if (key) for (const objKey of key.split('.')) {
+      data = data?.[objKey];
+      if (data === undefined) return data;
+    }
 
-  /**@param {string}key@param {boolean}overwrite overwrite existing collection, default: `false`*/
-  async set(key, value, overwrite = false) {
-    if (!key) return;
-    let data;
+    return data;
+  }
 
-    if (!overwrite) data = await this.schema.findOne({ key }).exec();
-    if (data) data.value = value;
-    else data = new this.schema({ key, value });
+  /**@param {string}key@param {boolean}overwrite overwrite existing collection, default: `false`@returns {value}value*/
+  async set(db, value, overwrite = false) {
+    if (!db) return;
 
-    await data.save();
-    if (process.env.BotUpdateDBURL) get(process.env.BotUpdateDBURL + `&db=${key}`);
+    const update = { $set: { value } };
+    if (!overwrite) update.$setOnInsert = { key: db };
+
+    const data = await this.schema.findOneAndUpdate({ key: db }, update, { new: true, upsert: true }).exec();
+    return data.value;
   }
 
   /**@param {string}db@param {string}key*/
   async update(db, key, value) {
     if (!key) return;
-    if (typeof key != 'string') throw new Error(`key must be typeof string! Got ${typeof key}.`);
 
-    const data = await this.schema.findOne({ key: db }).exec() || new this.schema({ key: db, value: {} });
+    const data = await this.schema.findOneAndUpdate({ key: db }, { $set: { [`value.${key}`]: value } }, { new: true, upsert: true }).exec();
+    return data.value;
+  }
+  /**@param {string}db@param {string}key@param pushValue supports [1, 2, 3] as well as 1, 2, 3@returns {value}value*/
+  async push(db, key, ...pushValue) {
+    const values = pushValue.length == 1 && Array.isArray(pushValue[0]) ? pushValue[0] : pushValue;
 
-    data.value ??= {};
-    if (typeof data.value != 'object') throw new Error(`data.value in db "${db}" must be typeof object! Found ${typeof data.value}.`);
+    if (!db || !values.length) return;
+    if (!Array.isArray(values)) throw Error('You can\'t push an empty or non-array value!');
 
-    this.constructor.mergeWithFlat(data.value, key, value);
-
-    data.markModified(`value.${key}`);
-    await data.save();
-    if (process.env.BotUpdateDBURL) get(process.env.BotUpdateDBURL + `&db=${key}`);
+    const data = await this.schema.findOneAndUpdate({ key: db }, { $push: { [`value.${key}`]: { $each: values } } }, { new: true, upsert: true }).exec();
+    return data.value;
   }
 
-  /**@param {string}key*/
-  async push(key, ...pushValue) {
-    const values = pushValue.flat();
-
-    const data = await this.schema.findOne({ key }).exec() ?? new this.schema({ key, value: pushValue });
-    if (data.value && !Array.isArray(data.value)) throw Error(`You can't push data to a ${typeof data.value} value!`);
-    data.value = data.value ? [...data.value, ...values] : pushValue;
-
-    await data.save();
-    if (process.env.BotUpdateDBURL) get(process.env.BotUpdateDBURL + `&db=${key}`);
-  }
-
-  /**@param {string}key*/
-  async delete(key) {
-    if (!key) return;
-
-    const data = await this.schema.findOne({ key }).exec();
-    if (data) {
-      await data.delete();
-      if (process.env.BotUpdateDBURL) get(process.env.BotUpdateDBURL + `&db=${key}`);
+  /**@param {string}db@param {string}key if no key is provided, the whole db gets deleted@returns true if the element existed or the key param is provied and false if the element did not exist*/
+  async delete(db, key) {
+    if (!db) return false;
+    if (key) {
+      await this.schema.findOneAndUpdate({ key: db }, { $unset: { [`value.${key}`]: '' } }, { new: true, upsert: true }).exec();
+      return true;
     }
-  }
 
-  /**@param {object}obj gets mutated! @param {string}key@returns reduce return value @example DB.mergeWithFlat({a: {b:1}}, 'a.c', 2)*/
-  static mergeWithFlat(obj, key, val) {
-    const keys = key.split('.');
-    return keys.reduce((acc, e, i) => acc[e] = keys.length - 1 == i ? val : acc[e] ?? {}, obj);
+    await this.schema.deleteOne({ key: db }).exec();
+    return true;
   }
-};
+}
