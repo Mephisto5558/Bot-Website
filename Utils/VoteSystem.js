@@ -74,7 +74,7 @@ export default class VoteSystem {
   };
 
   async delete(featureId, userId) {
-    if (!devIds.includes(userId)) return { errorCode: 403, error: 'You don\'t have permission to delete feature requests.' };
+    if (!devIds?.includes(userId)) return { errorCode: 403, error: 'You don\'t have permission to delete feature requests.' };
     if (!this.get(featureId)) return { errorCode: 400, error: 'Unknown feature ID.' };
 
     await this.db.delete('website', `requests.${id}`);
