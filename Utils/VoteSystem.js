@@ -22,7 +22,7 @@ export default class VoteSystem {
 
   /** @returns {Promise<{id:string,title:string,body:string,votes:number}[]>} Overwrites the cache*/
   async fetchAll() {
-    const entries = Object.entries((await this.db.get('website'))?.requests ?? {});
+    const entries = Object.entries((await this.db.get('website', 'requests')) ?? {});
 
     this.cache = new Collection(entries);
     return entries.map(([id, { title, body, votes }]) => ({ id, title, body, votes }));
@@ -43,13 +43,13 @@ export default class VoteSystem {
 
     if (title.length > 140 || body?.length > 4000) return { errorCode: 400, error: 'title can only be 140 chars long, body can only be 4000 chars long.' };
 
-    const { noFeatureRequestApprovement, pendingFeatureRequests } = (await this.db.get('userSettings'))?.[userId] ?? {};
+    const { noFeatureRequestApprovement, pendingFeatureRequests } = (await this.db.get('userSettings', userId)) ?? {};
     if (!noFeatureRequestApprovement && Object.keys(pendingFeatureRequests)?.length >= 5) return { errorCode: 403, error: 'You can only have up to 5 pending feature requests' };
 
     const id = userId + Date.now();
     if (noFeatureRequestApprovement) {
       await this.db.update('website', `requests.${id}`, { title, body });
-      this.db.set(id, { title, body, votes: 0 });
+      this.cache.set(id, { title, body, votes: 0 });
     }
     else await this.db.update('website', `pendingRequests.${userId}.${id}`, { title, body });
 
@@ -57,12 +57,12 @@ export default class VoteSystem {
   }
 
   async approve(userId, id) {
-    const request = (await this.db.get('website'))?.pendingRequests?.[userId]?.[id];
+    const request = await this.db.get('website', `pendingRequests.${userId}.${id}`);
     if (!request) return { errorCode: 400, error: 'The request has not been found for this user.' };
 
     request.votes ??= 0;
     await this.db.update('website', `requests.${id}`, request);
-    this.db.set(id, request);
+    this.cache.set(id, request);
 
     return request;
   }
@@ -87,7 +87,7 @@ export default class VoteSystem {
     if (!userId) return { errorCode: 400, error: 'User ID is missing.' };
     if (type != 'up' && type != 'down') return { errorCode: 400, error: 'Invalid vote type. Use "up" or "down"' };
 
-    const { lastVoted } = (await this.db.get('userSettings'))?.[userId] || {};
+    const { lastVoted } = (await this.db.get('userSettings', userId)) || {};
     if (this.constructor.isInCurrentWeek(new Date(lastVoted))) return { errorCode: 403, error: 'You can only vote once per week.' };
 
     const featureObj = this.get(featureId);
