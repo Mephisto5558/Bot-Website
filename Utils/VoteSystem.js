@@ -77,8 +77,8 @@ export default class VoteSystem {
     if (!devIds?.includes(userId)) return { errorCode: 403, error: 'You don\'t have permission to delete feature requests.' };
     if (!this.get(featureId)) return { errorCode: 400, error: 'Unknown feature ID.' };
 
-    await this.db.delete('website', `requests.${id}`);
-    this.cache.delete(id);
+    await this.db.delete('website', `requests.${featureId}`);
+    this.cache.delete(featureId);
     return { success: true };
   }
 
