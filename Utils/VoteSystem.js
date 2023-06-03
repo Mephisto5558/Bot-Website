@@ -1,5 +1,8 @@
 import { Collection } from 'discord.js';
 import { sanitize } from 'express-xss-sanitizer';
+import { readFile } from 'fs/promises';
+
+const { devIds } = JSON.parse(await readFile('./config.json', 'utf-8').catch(() => '{}')) || {};
 
 export default class VoteSystem {
   /**@param {import('./db.js').default}db Database*/
@@ -70,10 +73,13 @@ export default class VoteSystem {
     return this;
   };
 
-  async delete(id) {
+  async delete(id, userId) {
+    if (!devIds.includes(userId)) return { errorCode: 403, error: 'You don\'t have permission to delete feature requests.' };
+    if (!this.get(featureId)) return { errorCode: 400, error: 'Unknown feature ID.' };
+
     await this.db.update('website', `requests.${id}`, null);
     this.cache.delete(id);
-    return true;
+    return { success: true };
   }
 
   /** @param {string}featureId @param {string}userId @param {'up'|'down'}type @returns {{errorCode:number,error:string}|{feature:string,votes:number}}*/
