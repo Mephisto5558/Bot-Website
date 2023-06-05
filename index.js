@@ -44,7 +44,7 @@ function error(err, req, res) {
 
 /**@param {string}filepath full path*/
 async function importFile(filepath) {
-  if (!filepath.includes('.')) return await access(path.join(filepath, 'index.js')) ? importFile(path.join(filepath, 'index.js')) : void 0;
+  if (!filepath.includes('.')) return access(path.join(filepath, 'index.js')).catch(() => true) ? void 0 : importFile(path.join(filepath, 'index.js'));
   switch (filepath.split('.').pop()) {
     case 'js': return (await import(`file://${filepath}`)).default;
     case 'json': return JSON.parse(await readFile(filepath, 'utf-8'));
@@ -223,7 +223,7 @@ express()
 router.all('*', async (req, res, next) => {
   try {
     if (req.path == '/') return res.redirect('/home');
-    if (req.path.startsWith('/api/') && !/^\/api\/v\d+\//i.test(req.path)) res.redirect(req.path.replace('/api/', '/api/v1/'));
+    if (req.path.startsWith('/api/') && !/^\/api\/v\d+\//i.test(req.path.endsWith('/')? req.path : req.path + '/')) res.redirect(req.path.replace('/api/', '/api/v1/'));
     if (req.path == '/dashboard') return res.redirect(301, '/manage');
 
     const
@@ -239,10 +239,10 @@ router.all('*', async (req, res, next) => {
       })?.name;
 
       if (!filename || !subDirs.find(e => e.isFile() && e.name == filename)) {
-        return !subDirs.find(e => e.isDirectory() && e.name == path.basename(req.path)) ? next() : res.send(await (await readdir(pathStr, { withFileTypes: true })).reduce(async (acc, file) => {
+        return !subDirs.find(e => e.isDirectory() && e.name == path.basename(req.path)) ? next() : res.send(await /**@type {Promise<String>}*/(await readdir(pathStr, { withFileTypes: true })).reduce(async (acc, file) => {
           const name = escapeHTML(file.isFile() ? file.name.split('.').slice(0, -1).join('.') : file.name);
-          return `${await acc}<button class="button" onclick="window.location.href=\`\${window.location.pathname}/${name}\`;">${(await importFile(path.join(pathStr, file.name)))?.title || name[0].toUpperCase() + name.slice(1).replace(/[_-]/g, ' ')}</button>`;
-        }, '<style>.button-container{align-items:strech;display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:2%}.button{background-color:#242724;border:none;border-radius:5px;color:#fff;cursor:pointer;display:inline-block;font-size:16px;min-width:100px;padding:15px 32px;text-align:center;text-decoration:none;transition:background-color .3s ease-in-out}.button:hover{background-color:#676867}@media (max-width: 480px){.button{flex-basis:calc(100% / 2 - 5px)}}@media (min-width: 481px) and (max-width: 768px){.button{flex-basis:calc(100% / 3 - 5px)}}@media (min-width: 769px) and (max-width: 1024px){.button{flex-basis:calc(100% / 4 - 5px)}}@media (min-width: 1025px){.button{flex-basis:calc(100% / 5 - 5px)}}</style><div class="button-container">') + '</div>');
+          return `${await acc}<a href='./${path.basename(req.path)}/${name}'>${(await importFile(path.join(pathStr, file.name)))?.title || name[0].toUpperCase() + name.slice(1).replace(/[_-]/g, ' ')}</a>`;
+        }, '<style>body{background-color:#000}div{align-items:stretch;display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:2%}a{background-color:#242724;border:none;border-radius:5px;color:#fff;cursor:pointer;display:inline-block;font-family:arial;font-size:16px;min-width:100px;padding:15px 32px;text-align:center;text-decoration:none;transition:background-color .3s ease-in-out}a:hover{background-color:#676867}@media (max-width: 480px){a{flex-basis:calc(100% / 2 - 5px)}}@media (min-width: 481px) and (max-width: 768px){a{flex-basis:calc(100% / 3 - 5px)}}@media (min-width: 769px) and (max-width: 1024px){a{flex-basis:calc(100% / 4 - 5px)}}@media (min-width: 1025px){a{flex-basis:calc(100% / 5 - 5px)}}</style><div>') + '</div>');
       }
 
       if (filename.endsWith('.html')) return res.sendFile(path.join(dir, filename));
