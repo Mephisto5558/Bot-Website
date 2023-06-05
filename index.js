@@ -162,6 +162,13 @@ await client.application.fetch();
 
 // await Dashboard.init();
 
+passport.serializeUser((user, done) => done(null, {
+  id: user.id, username: user.username,
+  discriminator: user.discriminator, locale: user.locale,
+  avatar: user.avatar, banner: user.banner
+}));
+passport.deserializeUser((user, done) => done(null, user));
+
 passport.use(new Strategy({
   clientID: client.user.id,
   clientSecret: Keys.secret,
@@ -172,13 +179,6 @@ passport.use(new Strategy({
   await client.db.update('userSettings', `${user.id}.refreshToken`, refreshToken);
   return done(null, user);
 }));
-
-passport.serializeUser((user, done) => done(null, {
-  id: user.id, username: user.username,
-  discriminator: user.discriminator, locale: user.locale,
-  avatar: user.avatar, banner: user.banner
-}));
-passport.deserializeUser((user, done) => done(null, user));
 
 express()
   .disable('x-powered-by')
@@ -197,12 +197,7 @@ express()
     session({
       secret: Keys.token,
       resave: false,
-      saveUninitialized: false,
-      cookie: {
-        secure: domain.startsWith('https'),
-        sameSite: 'lax',
-        maxAge: 2.592e9 //30d
-      }
+      saveUninitialized: false
     }),
     passport.initialize(),
     passport.session()
