@@ -11,6 +11,7 @@
   "author": "Mephisto5558",
   "license": "MIT",
   "dependencies": {
+    "better-sqlite3": "^8.4.0",
     "body-parser": "^1.20.2",
     "compression": "^1.7.4",
     "connect-mongodb-session": "^3.1.1",
