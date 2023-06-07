@@ -43,7 +43,7 @@ export default class VoteSystem {
 
     if (title.length > 140 || body?.length > 4000) return { errorCode: 400, error: 'title can only be 140 chars long, body can only be 4000 chars long.' };
 
-    const { noFeatureRequestApprovement, pendingFeatureRequests } = (await this.db.get('userSettings', userId)) ?? {};
+    const { noFeatureRequestApprovement, pendingFeatureRequests = {} } = (await this.db.get('userSettings', userId)) ?? {};
     if (!noFeatureRequestApprovement && Object.keys(pendingFeatureRequests)?.length >= 5) return { errorCode: 403, error: 'You can only have up to 5 pending feature requests' };
 
     const id = userId + Date.now();
