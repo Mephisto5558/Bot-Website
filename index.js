@@ -174,11 +174,18 @@ passport.use(new Strategy({
   clientSecret: Keys.secret,
   callbackURL: `${domain}/auth/discord/callback`,
   scope: ['identify']
-}, async (accessToken, refreshToken, user, done) => {
-  await client.db.update('userSettings', `${user.id}.accessToken`, accessToken);
-  await client.db.update('userSettings', `${user.id}.refreshToken`, refreshToken);
-  return done(null, user);
-}));
+}, async (_accessToken, _refreshToken, user, done) => done(null, user)));
+
+const store = new session.MemoryStore();
+store.get = async (sid, cb) => { cb(null, await client.db.get('website', `sessions.${sid}`)); };
+store.set = async (sid, session, cb) => {
+  await client.db.update('website', `sessions.${sid}`, session);
+  cb(null);
+};
+store.destroy = async (sid, cb) => {
+  await client.db.delete('website', `sessions.${sid}`);
+  cb(null);
+};
 
 express()
   .disable('x-powered-by')
@@ -195,9 +202,16 @@ express()
     bodyParser.urlencoded({ extended: true, limit: '100kb' }),//error handling?
     xss(),
     session({
+      name: 'sessionId',
       secret: Keys.token,
       resave: false,
-      saveUninitialized: false
+      saveUninitialized: false,
+      store,
+      cookie: {
+        secure: domain.startsWith('https'),
+        httpOnly: true,
+        domain,
+      }
     }),
     passport.initialize(),
     passport.session()
@@ -223,7 +237,7 @@ express()
 router.all('*', async (req, res, next) => {
   try {
     if (req.path == '/') return res.redirect('/home');
-    if (req.path.startsWith('/api/') && !/^\/api\/v\d+\//i.test(req.path.endsWith('/')? req.path : req.path + '/')) res.redirect(req.path.replace('/api/', '/api/v1/'));
+    if (req.path.startsWith('/api/') && !/^\/api\/v\d+\//i.test(req.path.endsWith('/') ? req.path : req.path + '/')) res.redirect(req.path.replace('/api/', '/api/v1/'));
     if (req.path == '/dashboard') return res.redirect(301, '/manage');
 
     const

@@ -11,7 +11,7 @@ export default class VoteSystem {
     this.db = db;
   }
 
-  /**@type {Collection<string,{id:String,title:String,body:String,votes:Number}>} The cache will be updated automatically (WIP)*/
+  /**@type {Collection<string,{id:String,title:String,body:String,votes:Number}>}*/
   cache = new Collection();
 
   /**Initializes the class (fetching data to cache)*/
@@ -22,15 +22,17 @@ export default class VoteSystem {
 
   /** @returns {Promise<{id:string,title:string,body:string,votes:number}[]>} Overwrites the cache*/
   async fetchAll() {
-    const entries = Object.entries((await this.db.get('website', 'requests')) ?? {});
+    const data = Object.entries((await this.db.get('website', 'requests')) ?? {});
 
-    this.cache = new Collection(entries);
-    return entries.map(([id, { title, body, votes }]) => ({ id, title, body, votes }));
+    for (const [k, v] of data) v.id = k;
+    this.cache = new Collection(data);
+
+    return data;
   }
 
   get = id => this.cache.get(id);
-  getMany = (amount, offset = 0, filter = '') => {
-    const cards = [...this.cache.values()].filter(e => e.title.includes(filter) || e.body?.includes(filter) || e.id.includes(filter));
+  getMany = (amount, offset = 0, filter = '', includePending = false, userId = '') => {
+    const cards = [...this.cache.values()].filter(e => ((includePending && devIds.includes(userId)) || !e.pending) && (e.title.includes(filter) || e.body?.includes(filter) || e.id.includes(filter)));
     return { cards: amount ? cards.slice(offset, offset + amount) : cards.slice(offset), moreAvailable: !!(amount && cards.length > offset + amount) };
   };
 
@@ -43,26 +45,28 @@ export default class VoteSystem {
 
     if (title.length > 140 || body?.length > 4000) return { errorCode: 400, error: 'title can only be 140 chars long, body can only be 4000 chars long.' };
 
-    const { noFeatureRequestApprovement, pendingFeatureRequests = {} } = (await this.db.get('userSettings', userId)) ?? {};
-    if (!noFeatureRequestApprovement && Object.keys(pendingFeatureRequests)?.length >= 5) return { errorCode: 403, error: 'You can only have up to 5 pending feature requests' };
+    const featureRequestAutoApprove = (await this.db.get('userSettings', `${userId}.featureRequestAutoApprove`));
+    if (!featureRequestAutoApprove && Object.keys(this.cache.filter((_, k) => k.split('_') == userId))?.length >= 5) return { errorCode: 403, error: 'You can only have up to 5 pending feature requests' };
 
-    const id = userId + Date.now();
-    if (noFeatureRequestApprovement) {
-      await this.db.update('website', `requests.${id}`, { title, body });
-      this.cache.set(id, { title, body, votes: 0 });
-    }
-    else await this.db.update('website', `pendingRequests.${userId}.${id}`, { title, body });
+    const id = `${userId}_${Date.now()}`;
 
-    return { title, body, id, approved: noFeatureRequestApprovement };
+    await this.db.update('website', `requests.${id}`, { title, body, ...(featureRequestAutoApprove ? {} : { pending: true }) });
+    this.cache.set(id, { title, body, id, ...(featureRequestAutoApprove ? {} : { pending: true }) });
+
+    return { title, body, id, approved: featureRequestAutoApprove };
   }
 
-  async approve(userId, id) {
-    const request = await this.db.get('website', `pendingRequests.${userId}.${id}`);
-    if (!request) return { errorCode: 400, error: 'The request has not been found for this user.' };
+  async approve(featureId, userId) {
+    if (!devIds?.includes(userId)) return { errorCode: 403, error: 'You don\'t have permission to delete feature requests.' };
+    const request = this.cache.get(featureId);
+    if (!request) return { errorCode: 400, error: 'Unknown feature ID.' };
+    if (!request.pending) return { errorCode: 409, error: 'This feature is already approved.' };
 
     request.votes ??= 0;
-    await this.db.update('website', `requests.${id}`, request);
-    this.cache.set(id, request);
+    delete request.pending;
+
+    await this.db.update('website', `requests.${featureId}`, request);
+    this.cache.set(featureId, request);
 
     return request;
   }

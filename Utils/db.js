@@ -1,5 +1,4 @@
 import Mongoose from 'mongoose';
-import { get } from 'http';
 Mongoose.set('strictQuery', true);
 
 export default class DB {
