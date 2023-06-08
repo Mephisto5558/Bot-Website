@@ -18,6 +18,9 @@ import session from 'express-session';
 import cors from 'cors';
 import path from 'path';
 import escapeHTML from 'escape-html';
+import debug from 'debug';
+
+debug.log = console.debug.bind(console);
 
 function error(err, req, res) {
   console.error(err);
@@ -80,15 +83,13 @@ passport.use(new Strategy({
 }, async (_accessToken, _refreshToken, user, done) => done(null, user)));
 
 const store = new session.MemoryStore();
-store.get = async (sid, cb) => { cb(null, await client.db.get('website', `sessions.${sid}`)); };
+store.get = async (sid, cb) => client.db.get('website', `sessions.${sid}`).then(e => cb(null, e));
 store.set = async (sid, session, cb) => {
+  if (session.passport?.user?.id) await client.db.update('website', 'sessions', Object.fromEntries(Object.entries(await client.db.get('website', 'sessions')).filter(([, e]) => e.passport?.user?.id != session.passport.user.id)));
   await client.db.update('website', `sessions.${sid}`, session);
   cb(null);
 };
-store.destroy = async (sid, cb) => {
-  await client.db.delete('website', `sessions.${sid}`);
-  cb(null);
-};
+store.destroy = async (sid, cb) => client.db.delete('website', `sessions.${sid}`).then(() => cb());
 
 express()
   .disable('x-powered-by')
@@ -112,7 +113,7 @@ express()
       store,
       cookie: domain.includes('repl.co') ? undefined : {
         secure: domain.startsWith('https'),
-        httpOnly: true,
+        httpOnly: domain.startsWith('https'),
         domain
       }
     }),
