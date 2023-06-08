@@ -113,8 +113,7 @@ express()
       cookie: domain.includes('repl.co') ? undefined : {
         secure: domain.startsWith('https'),
         httpOnly: true,
-        domain,
-        path: '*'
+        domain
       }
     }),
     passport.initialize(),
