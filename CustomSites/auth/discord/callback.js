@@ -2,6 +2,7 @@ import passport from 'passport';
 
 export default {
   run: async (res, req, next) => passport.authenticate('discord', (err, user) => {
+    if (err?.code == 'invalid_grant' || err?.message == 'Failed to obtain access token') return res.redirect('/auth/discord');
     if (err) return next(err);
     if (!user) return res.redirect('/auth/discord');
 
