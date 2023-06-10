@@ -11,7 +11,7 @@ export default class VoteSystem {
     this.db = db;
   }
 
-  /**@type {Collection<string,{id:String,title:String,body:String,votes:Number}>}*/
+  /**@type {Collection<string,{id:String,title:String,body:String,votes:Number,pending?:true}>}*/
   cache = new Collection();
 
   /**Initializes the class (fetching data to cache)*/
@@ -20,7 +20,7 @@ export default class VoteSystem {
     return this;
   }
 
-  /** @returns {Promise<{id:string,title:string,body:string,votes:number}[]>} Overwrites the cache*/
+  /** @returns {Promise<{id:string,title:string,body:string,votes:number,pending?:true}[]>} Overwrites the cache*/
   async fetchAll() {
     const data = Object.entries((await this.db.get('website', 'requests')) ?? {});
 
@@ -71,10 +71,32 @@ export default class VoteSystem {
     return request;
   }
 
-  async update(id, data) {
-    await this.db.update('website', `requests.${id}`, data);
-    this.cache.set(id, data);
-    return this;
+  async update(features, userId) {
+    if (!devIds?.includes(userId)) return { errorCode: 403, error: 'You don\'t have permission to update feature requests.' };
+
+    const promiseList = [], errorList = [];
+    for (let { id, title: oTitle, body } of Array.isArray(features) ? features : [features]) {
+      if (!this.get(id)) {
+        errorList.push({ id, error: 'Unknown feature ID.' });
+        break;
+      }
+
+      const title = sanitize(oTitle?.trim());
+      if (!title) {
+        errorList.push({ id, error: 'title must be non-empty string' });
+        break;
+      }
+
+      const data = { ...this.cache.get(id), title, body: sanitize(body?.trim()) };
+      delete data.id;
+      promiseList.push(this.db.update('website', `requests.${id}`, data));
+
+      data.id = id;
+      this.cache.set(id, data);
+    }
+
+    await Promise.allSettled(promiseList);
+    return errorList.length ? { code: 400, errors: errorList } : { success: true };
   };
 
   async delete(featureId, userId) {
