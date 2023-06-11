@@ -13,7 +13,12 @@
 [![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=Mephisto5558_Teufelsbot-Website&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=Mephisto5558_Teufelsbot-Website)
 [![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=Mephisto5558_Teufelsbot-Website&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=Mephisto5558_Teufelsbot-Website)
 
-A website & dashboard for my discord bot with an easy way for adding new settings & pages.
+A website & ~~dashboard~~ for my discord bot with an easy way for adding new settings & pages.
+
+Dashboard does not work currently.
+
+### Now includes a feature request & voting page!
+<br>
 
 ## Requirements
 ```
