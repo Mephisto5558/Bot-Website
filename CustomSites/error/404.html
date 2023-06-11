@@ -7,7 +7,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" type="text/css" media="all"
     href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
-  <link rel="stylesheet" type="text/css" media="all" href="https://mephisto5558.github.io/Website-Assets/min/css/404.css">
+  <link rel="stylesheet" type="text/css" media="all"
+    href="https://mephisto5558.github.io/Website-Assets/min/css/404.css">
   <link rel="apple-touch-icon" sizes="144x144"
     href="https://mephisto5558.github.io/Website-Assets/img/favicons/favicon144x144.png">
   <link rel="apple-touch-icon" sizes="114x114"
@@ -48,12 +49,7 @@
     </div>
   </div>
 
-  <script src="https://code.jquery.com/jquery-2.2.0.min.js"
-    integrity="sha384-K+ctZQ+LL8q6tP7I94W+qzQsfRV2a+AfHIi9k8z8l9ggpc8X+Ytst4yBo/hH+8Fk"
-    crossorigin="anonymous"></script>
-  <script type="text/javascript">
-    $(".sw_btn").on("click", function () { $("body").toggleClass("light"); });
-  </script>
+  <script>document.querySelector('.sw_btn').addEventListener('click', () => { document.body.classList.toggle('light'); });</script>
 </body>
 
 </html>
