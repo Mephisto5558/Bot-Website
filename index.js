@@ -122,7 +122,7 @@ express()
   .use('/api/:v/internal', cors({ origin: domain }))
   .use(
     router,
-    // Dashboard.getApp(),
+    Dashboard.getApp(),
     (err, req, res, next) => {
       error(err, req, res);
       if (res.headersSent) try { return next(err); } catch { }
