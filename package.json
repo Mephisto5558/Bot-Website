@@ -11,11 +11,11 @@
   "author": "Mephisto5558",
   "license": "MIT",
   "dependencies": {
-    "better-sqlite3": "^8.4.0",
     "body-parser": "^1.20.2",
     "compression": "^1.7.4",
     "connect-mongodb-session": "^3.1.1",
     "cors": "^2.8.5",
+    "dbd-dark-dashboard": "github:Mephisto5558/Dark-Dashboard",
     "discord-dashboard": "^2.3.61",
     "discord.js": "^14.7.1",
     "escape-html": "^1.0.3",
@@ -25,8 +25,7 @@
     "mongoose": "^7.0.5",
     "node": "^20.1.0",
     "passport": "^0.6.0",
-    "passport-discord": "^0.1.4",
-    "serve-favicon": "^2.5.0"
+    "passport-discord": "^0.1.4"
   },
   "repository": {
     "type": "git",

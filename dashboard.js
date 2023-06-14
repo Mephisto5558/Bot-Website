@@ -2,7 +2,7 @@
 import { readFile } from 'fs/promises';
 import fetch from 'node-fetch';
 import DBD from 'discord-dashboard';
-// import SoftUITheme from 'dbd-soft-ui'; //Currently disabled because it requires quick.db wich doesn't run on Node 19
+import DarkDashboard from 'dbd-dark-dashboard';
 import Settings from './settings.js';
 
 const { devIds } = JSON.parse(await readFile('./config.json', 'utf-8').catch(() => '{}')) || {};
@@ -24,7 +24,6 @@ async function getCommands() {
 
 /**@param {import('discord.js').Client}client @returns {Promise<Dashboard>}dashboard*/
 export default async function createDashboard(client, dbdLicense, secret, port, domain, Support) {
-  return console.error('You tried to run createDashboard but it is currently not supported.');
 
   client.dashboardOptionCount = [];
   global.embedBuilder = DBD.formTypes.embedBuilder({
@@ -54,7 +53,37 @@ export default async function createDashboard(client, dbdLicense, secret, port, 
       scopes: ['bot', 'applications.commands'],
       permissions: '412317240384'
     },
-    theme: SoftUITheme({
+
+    // theme: SoftUITheme({
+    //   information: {
+    //     createdBy: client.application.owner.tag,
+    //     iconURL: client.user.displayAvatarURL(),
+    //     websiteTitle: `${client.user.username} | Dashboard`,
+    //     websiteName: `${client.user.username} | Dashboard`,
+    //     websiteUrl: domain,
+    //     dashboardUrl: domain,
+    //     supporteMail: Support.Mail,
+    //     supportServer: Support.Discord,
+    //     imageFavicon: client.user.displayAvatarURL(),
+    //     pageBackGround: 'linear-gradient(#2CA8FF, #155b8d)',
+    //     preloader: 'Loading...',
+    //     loggedIn: 'Successfully signed in.',
+    //     mainColor: '#2CA8FF',
+    //     subColor: '#ebdbdb'
+    //   },
+    //   index: {
+    //     card: {
+    //       category: `${client.user.username} Dashboard - The center of everything`,
+    //       title: 'Welcome to the Teufelsbot dashboard where you can control the features and settings of the bot.',
+    //       description: 'Look up commands and configurate servers on the left side bar!',
+    //       image: 'https://i.imgur.com/axnP93g.png'
+    //     },
+    //     information: {},
+    //     feeds: {},
+    //   },
+    //   commands: await getCommands()
+    // }),
+    theme: DarkDashboard({
       information: {
         createdBy: client.application.owner.tag,
         iconURL: client.user.displayAvatarURL(),
