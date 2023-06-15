@@ -2,7 +2,7 @@
 [![Activity](https://img.shields.io/github/commit-activity/m/Mephisto5558/Teufelsbot-Website)](https://github.com/Mephisto5558/Teufelsbot-Website/pulse)
 [![License](https://img.shields.io/github/license/Mephisto5558/Teufelsbot-Website)](https://github.com/Mephisto5558/Teufelsbot-Website/blob/main/LICENSE)
 [![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=Mephisto5558_Teufelsbot-Website&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=Mephisto5558_Teufelsbot-Website)
-[![wakatime](https://wakatime.com/badge/user/f9d04252-581b-43cf-8bc2-31351c68d2e6.svg)](https://wakatime.com/@f9d04252-581b-43cf-8bc2-31351c68d2e6)<br>
+[![wakatime](https://wakatime.com/badge/user/f9d04252-581b-43cf-8bc2-31351c68d2e6/project/a21351a4-6af9-45fe-b026-940567e304a1.svg)](https://wakatime.com/badge/user/f9d04252-581b-43cf-8bc2-31351c68d2e6/project/a21351a4-6af9-45fe-b026-940567e304a1)<br>
 [![CodeQL](https://github.com/Mephisto5558/Teufelsbot-Website/actions/workflows/codeql-analysis.yml/badge.svg?branch=main)](https://github.com/Mephisto5558/Teufelsbot-Website/actions/workflows/codeql-analysis.yml)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Mephisto5558_Teufelsbot-Website&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Mephisto5558_Teufelsbot-Website)<br>
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=Mephisto5558_Teufelsbot-Website&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=Mephisto5558_Teufelsbot-Website)
