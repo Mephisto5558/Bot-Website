@@ -70,8 +70,7 @@ const Dashboard = await createDashboard(client, Keys.dbdLicense, Keys.secret, po
 
 passport.serializeUser((user, done) => done(null, {
   id: user.id, username: user.username,
-  discriminator: user.discriminator, locale: user.locale,
-  avatar: user.avatar, banner: user.banner
+  locale: user.locale, avatar: user.avatar, banner: user.banner
 }));
 passport.deserializeUser((user, done) => done(null, user));
 
