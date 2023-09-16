@@ -57,7 +57,7 @@ export default class VoteSystem {
   }
 
   async approve(featureId, userId) {
-    if (!devIds?.includes(userId)) return { errorCode: 403, error: 'You don\'t have permission to delete feature requests.' };
+    if (!devIds?.includes(userId)) return { errorCode: 403, error: 'You don\'t have permission to approve feature requests.' };
     const request = this.cache.get(featureId);
     if (!request) return { errorCode: 400, error: 'Unknown feature ID.' };
     if (!request.pending) return { errorCode: 409, error: 'This feature is already approved.' };
