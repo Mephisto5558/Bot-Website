@@ -55,8 +55,8 @@ export default class VoteSystem {
     await this.db.update('website', `requests.${id}`, { title, body, ...(featureRequestAutoApprove ? {} : { pending: true }) });
     this.cache.set(id, { title, body, id, ...(featureRequestAutoApprove ? {} : { pending: true }) });
 
-    if (featureRequestAutoApprove) await this.sendToWebhook('New Pending Feature Request', null, Colors.Blue, `#${id}`);
-    else await this.sendToWebhook('New Approved Feature Request', this.constructor.formatDesc(request), Colors.Blue, `#${id}`);
+    if (featureRequestAutoApprove) await this.sendToWebhook('New Approved Feature Request', this.constructor.formatDesc(request), Colors.Blue, `#${id}`);
+    else await this.sendToWebhook('New Pending Feature Request', null, Colors.Blue, `#${id}`);
 
     return { title, body, id, approved: featureRequestAutoApprove };
   }
