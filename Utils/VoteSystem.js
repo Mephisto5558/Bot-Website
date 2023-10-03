@@ -156,7 +156,7 @@ export default class VoteSystem {
       body: JSON.stringify({
         username: 'Teufelsbot Feature Requests',
         avatar_url: this.domain ? `${this.domain}/favicon.ico` : null,
-        embeds: [{ url: this.domain + (url ?? ''), title, description, color }]
+        embeds: [{ url: `${this.domain}/vote${url ?? ''}`, title, description, color }]
       })
     });
 
