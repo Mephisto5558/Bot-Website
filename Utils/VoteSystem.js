@@ -9,8 +9,8 @@ export default class VoteSystem {
   constructor(db, domain, webhookURL) {
     if (!db?.set) throw new Error('Missing DB#set method');
     this.db = db;
-    this.domain = domain;
-    this.webhookURL = webhookURL
+    this.domain = domain || null;
+    this.webhookURL = webhookURL;
   }
 
   /**@type {Collection<string,{id:String,title:String,body:String,votes:Number,pending?:true}>}*/
@@ -55,8 +55,8 @@ export default class VoteSystem {
     await this.db.update('website', `requests.${id}`, { title, body, ...(featureRequestAutoApprove ? {} : { pending: true }) });
     this.cache.set(id, { title, body, id, ...(featureRequestAutoApprove ? {} : { pending: true }) });
 
-    if (featureRequestAutoApprove) await this.sendToWebhook(`[New Pending Feature Request](${this.domain}}#${id})`, null, Colors.Blue);
-    else await this.sendToWebhook(`[New Approved Feature Request](${this.domain}#${id})`, this.constructor.formatDesc(request), Colors.Blue);
+    if (featureRequestAutoApprove) await this.sendToWebhook('New Pending Feature Request', null, Colors.Blue, `#${id}`);
+    else await this.sendToWebhook('New Approved Feature Request', this.constructor.formatDesc(request), Colors.Blue, `#${id}`);
 
     return { title, body, id, approved: featureRequestAutoApprove };
   }
@@ -73,8 +73,7 @@ export default class VoteSystem {
     await this.db.update('website', `requests.${featureId}`, request);
     this.cache.set(featureId, request);
 
-    await this.sendToWebhook(`[New Approved Feature Request](${this.domain}#${featureId})`, this.constructor.formatDesc(request), Colors.Blue);
-
+    await this.sendToWebhook('New Approved Feature Request', this.constructor.formatDesc(request), Colors.Blue, `#${featureId}`);
     return request;
   }
 
@@ -106,7 +105,7 @@ export default class VoteSystem {
     await Promise.allSettled(promiseList);
 
     await this.sendToWebhook(
-      `[Feature Requests have been edited](${this.domain})`,
+      'Feature Requests have been edited',
       'The following feature request(s) have been edited by a dev:\n\n' + features.reduce((acc, { id }) => errorList.find(e => e.id == id) ? acc : `${acc}\n[${id}](${this.domain}#${id})`, ''),
       Colors.Orange
     );
@@ -123,8 +122,7 @@ export default class VoteSystem {
     await this.db.delete('website', `requests.${featureId}`);
     this.cache.delete(featureId);
 
-    await this.sendToWebhook(`[Feature Request has been ${req.pendig ? 'denied' : 'deleted'}](${this.domain})`, this.constructor.formatDesc(request), Colors.Red);
-
+    await this.sendToWebhook(`Feature Request has been ${req.pendig ? 'denied' : 'deleted'}`, this.constructor.formatDesc(request), Colors.Red);
     return { success: true };
   }
 
@@ -145,12 +143,11 @@ export default class VoteSystem {
     await this.db.update('website', `requests.${featureId}.votes`, feature.votes);
     await this.db.update('userSettings', `${userId}.lastVoted`, new Date().getTime());
 
-    await this.sendToWebhook(`[Feature Request has been ${type}voted](${this.domain}#${featureId})`, feature.title + `\n\nVotes: ${feature.votes}`, Colors.Blurple);
-
+    await this.sendToWebhook(`Feature Request has been ${type} voted`, feature.title + `\n\nVotes: ${feature.votes} `, Colors.Blurple, `#${featureId} `);
     return { feature: featureId, votes: feature.votes };
   }
 
-  async sendToWebhook(title, description, color = Colors.White) {
+  async sendToWebhook(title, description, color = Colors.White, url = '') {
     if (!this.webhookURL) return { errorCode: 500, error: 'The backend has no webhook url configured' };
 
     const res = await fetch(this.webhookURL, {
@@ -159,7 +156,7 @@ export default class VoteSystem {
       body: JSON.stringify({
         username: 'Teufelsbot Feature Requests',
         avatar_url: this.domain ? `${this.domain}/favicon.ico` : null,
-        embeds: [{ title, description, color }]
+        embeds: [{ url: this.domain + (url ?? ''), title, description, color }]
       })
     });
 
@@ -181,4 +178,4 @@ export default class VoteSystem {
 
     return date >= firstDayOfWeek && date < nextWeek;
   }
-}
+};
