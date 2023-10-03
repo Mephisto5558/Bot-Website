@@ -1,5 +1,6 @@
 import { Collection, Colors } from 'discord.js';
 import { sanitize } from 'express-xss-sanitizer';
+import { readFile } from 'fs/promises';
 
 const { devIds } = JSON.parse(await readFile('./config.json', 'utf-8').catch(() => '{}')) || {};
 
