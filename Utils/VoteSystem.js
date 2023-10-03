@@ -1,15 +1,15 @@
 import { Collection, Colors } from 'discord.js';
 import { sanitize } from 'express-xss-sanitizer';
-import { readFile } from 'fs/promises';
 
-const { devIds, webhookURL } = JSON.parse(await readFile('./config.json', 'utf-8').catch(() => '{}')) || {};
+const { devIds } = JSON.parse(await readFile('./config.json', 'utf-8').catch(() => '{}')) || {};
 
 export default class VoteSystem {
-  /**@param {import('./db.js').default}db Database @param {string}domain Website Domain*/
-  constructor(db, domain = '') {
+  /**@param {import('./db.js').default}db Database @param {string}domain Website Domain @param {string}webhookURL Webhook URL*/
+  constructor(db, domain, webhookURL) {
     if (!db?.set) throw new Error('Missing DB#set method');
     this.db = db;
     this.domain = domain;
+    this.webhookURL = webhookURL
   }
 
   /**@type {Collection<string,{id:String,title:String,body:String,votes:Number,pending?:true}>}*/
@@ -149,13 +149,10 @@ export default class VoteSystem {
     return { feature: featureId, votes: feature.votes };
   }
 
-  /**@returns {string} */
-  getWebhookURL = () => webhookURL ?? '';
-
   async sendToWebhook(title, description, color = Colors.White) {
-    if (!webhookURL) return { errorCode: 500, error: 'The backend has no webhook url configured' };
+    if (!this.webhookURL) return { errorCode: 500, error: 'The backend has no webhook url configured' };
 
-    const res = await fetch(webhookURL, {
+    const res = await fetch(this.webhookURL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -177,7 +174,7 @@ export default class VoteSystem {
 
     const today = new Date(), firstDayOfWeek = new Date();
     firstDayOfWeek.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
-    
+
     const nextWeek = new Date(firstDayOfWeek);
     nextWeek.setDate(firstDayOfWeek.getDate() + 7);
 
