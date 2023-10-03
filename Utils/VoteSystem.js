@@ -55,8 +55,8 @@ export default class VoteSystem {
     await this.db.update('website', `requests.${id}`, { title, body, ...(featureRequestAutoApprove ? {} : { pending: true }) });
     this.cache.set(id, { title, body, id, ...(featureRequestAutoApprove ? {} : { pending: true }) });
 
-    if (featureRequestAutoApprove) await this.sendToWebhook('New Approved Feature Request', this.constructor.formatDesc(request), Colors.Blue, `#${id}`);
-    else await this.sendToWebhook('New Pending Feature Request', null, Colors.Blue, `#${id}`);
+    if (featureRequestAutoApprove) await this.sendToWebhook('New Approved Feature Request', this.constructor.formatDesc(request), Colors.Blue, `?q=${id}`);
+    else await this.sendToWebhook('New Pending Feature Request', null, Colors.Blue, `?q=${id}`);
 
     return { title, body, id, approved: featureRequestAutoApprove };
   }
@@ -73,7 +73,7 @@ export default class VoteSystem {
     await this.db.update('website', `requests.${featureId}`, request);
     this.cache.set(featureId, request);
 
-    await this.sendToWebhook('New Approved Feature Request', this.constructor.formatDesc(request), Colors.Blue, `#${featureId}`);
+    await this.sendToWebhook('New Approved Feature Request', this.constructor.formatDesc(request), Colors.Blue, `?q=${featureId}`);
     return request;
   }
 
@@ -106,7 +106,7 @@ export default class VoteSystem {
 
     await this.sendToWebhook(
       'Feature Requests have been edited',
-      'The following feature request(s) have been edited by a dev:\n' + features.reduce((acc, { id }) => errorList.find(e => e.id == id) ? acc : `${acc}\n- [${id}](${this.domain}#${id})`, ''),
+      'The following feature request(s) have been edited by a dev:\n' + features.reduce((acc, { id }) => errorList.find(e => e.id == id) ? acc : `${acc}\n- [${id}](${this.domain}?q=${id})`, ''),
       Colors.Orange
     );
 
@@ -143,7 +143,7 @@ export default class VoteSystem {
     await this.db.update('website', `requests.${featureId}.votes`, feature.votes);
     await this.db.update('userSettings', `${userId}.lastVoted`, new Date().getTime());
 
-    await this.sendToWebhook(`Feature Request has been ${type} voted`, feature.title + `\n\nVotes: ${feature.votes} `, Colors.Blurple, `#${featureId} `);
+    await this.sendToWebhook(`Feature Request has been ${type} voted`, feature.title + `\n\nVotes: ${feature.votes} `, Colors.Blurple, `?q=${featureId} `);
     return { feature: featureId, votes: feature.votes };
   }
 
