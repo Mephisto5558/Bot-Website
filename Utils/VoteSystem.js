@@ -163,7 +163,7 @@ export default class VoteSystem {
     return { success: res.ok };
   }
 
-  static formatDesc({ title = '', body = '' }) { return `${title}\n\n${body.length > 2000 ? body.substring(2000) + '...' : body}`; }
+  static formatDesc({ title = '', body = '' }) { return `**${title}**\n\n${body.length > 2000 ? body.substring(2000) + '...' : body}`; }
 
   /**@param {Date|Number}date The date obj or the ms from `date.getTime()`*/
   static isInCurrentWeek(date) {
