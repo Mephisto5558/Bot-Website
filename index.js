@@ -62,7 +62,7 @@ if (!/^https?:\/\//.test(domain)) {
 await client.login(Keys.token);
 
 client.db = new DB(Keys.dbConnectionStr);
-client.voteSystem = await new VoteSystem(client.db).init();
+client.voteSystem = await new VoteSystem(client.db, domain).init();
 while (client.ws.status) await new Promise(r => setTimeout(r, 10));
 await client.application.fetch();
 
