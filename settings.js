@@ -24,7 +24,7 @@ export default async function getSettings() {
     categoryOptionList = [],
     blacklist = await this.db.get('botSettings', 'blacklist');
 
-  for (const subFolder of readdirSync('./DashboardSettings', { withFileTypes: true })) {
+  for (const subFolder of await readdir('./DashboardSettings', { withFileTypes: true })) {
     if (!subFolder.isDirectory()) continue;
 
     const index = JSON.parse(await readFile(`./DashboardSettings/${subFolder.name}/_index.json`, 'utf-8'));
