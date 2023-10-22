@@ -9,7 +9,10 @@ export default {
     let data;
 
     try { data = await execSync('git pull', { maxBuffer: 1024 * 600 }); }
-    catch (err) { return console.error(`GIT PULL\nExec error: ${err}`); }
+    catch (err) {
+      console.error(`GIT PULL\nExec error: ${err}`);
+      return res?.sendStatus?.(500);
+    }
 
     console.log(
       'GIT PULL\n',

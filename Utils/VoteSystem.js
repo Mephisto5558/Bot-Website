@@ -39,7 +39,8 @@ export default class VoteSystem {
   };
 
   async add(title, body, userId = '') {
-    if (!userId) return { errorCode: 401, error: 'User ID is missing.' };
+    const error = await this.validate(userId);
+    if (error) return error;
     if (!title) return { errorCode: 400, error: 'Missing title.' };
 
     title = sanitize(title.trim());
@@ -55,7 +56,7 @@ export default class VoteSystem {
     await this.db.update('website', `requests.${id}`, { title, body, ...(featureRequestAutoApprove ? {} : { pending: true }) });
     this.cache.set(id, { title, body, id, ...(featureRequestAutoApprove ? {} : { pending: true }) });
 
-    if (featureRequestAutoApprove) await this.sendToWebhook('New Approved Feature Request', this.constructor.formatDesc({title, body}), Colors.Blue, `?q=${id}`);
+    if (featureRequestAutoApprove) await this.sendToWebhook('New Approved Feature Request', this.constructor.formatDesc({ title, body }), Colors.Blue, `?q=${id}`);
     else await this.sendToWebhook('New Pending Feature Request', null, Colors.Blue, `?q=${id}`);
 
     return { title, body, id, approved: featureRequestAutoApprove };
@@ -63,6 +64,7 @@ export default class VoteSystem {
 
   async approve(featureId, userId) {
     if (!devIds?.includes(userId)) return { errorCode: 403, error: 'You don\'t have permission to approve feature requests.' };
+
     const request = this.cache.get(featureId);
     if (!request) return { errorCode: 400, error: 'Unknown feature ID.' };
     if (!request.pending) return { errorCode: 409, error: 'This feature is already approved.' };
@@ -128,7 +130,8 @@ export default class VoteSystem {
 
   /** @param {string}featureId @param {string}userId @param {'up'|'down'}type @returns {{errorCode:number,error:string}|{feature:string,votes:number}}*/
   async addVote(featureId, userId, type = 'up') {
-    if (!userId) return { errorCode: 400, error: 'User ID is missing.' };
+    const error = await this.validate(userId);
+    if (error) return error;
     if (type != 'up' && type != 'down') return { errorCode: 400, error: 'Invalid vote type. Use "up" or "down"' };
 
     const { lastVoted } = (await this.db.get('userSettings', userId)) || {};
@@ -161,6 +164,12 @@ export default class VoteSystem {
     });
 
     return { success: res.ok };
+  }
+
+  /** @param {string}userId @returns an error if one of the validations failed. */
+  async validate(userId) {
+    if (!userId) return { errorCode: 401, error: 'User ID is missing.' };
+    if ((await this.db.get('botSettings', 'blacklist'))?.includes(userId)) return { errorCode: 403, error: 'You have been blacklisted from using the bot.' };
   }
 
   static formatDesc({ title = '', body = '' }) { return `**${title}**\n\n${body.length > 2000 ? body.substring(2000) + '...' : body}`; }
