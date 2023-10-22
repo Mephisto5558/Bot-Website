@@ -4,7 +4,7 @@ console.time('Initializing time');
 import { appendFile, access, readdir, readFile } from 'fs/promises';
 import { inspect } from 'util';
 import express from 'express';
-import { Client, GatewayIntentBits } from 'discord.js';
+import { Client, GatewayIntentBits, Status } from 'discord.js';
 import createDashboard from './dashboard.js';
 import DB from './Utils/db.js';
 import VoteSystem from './Utils/VoteSystem.js';
@@ -27,7 +27,7 @@ function error(err, req, res) {
   appendFile('./errorlog.log', `[${new Date().toLocaleTimeString('en', { timeStyle: 'medium', hour12: false }).replace(/^24:/, '00:')}] Err: ${JSON.stringify(err)}\nREQ: ${JSON.stringify(inspect(req))}}\nRES: ${JSON.stringify(inspect(res))}`);
 }
 
-/**@param {string}filepath full path*/
+/**@param {string}filepath full path @returns {Promise}*/
 async function importFile(filepath) {
   if (!filepath.includes('.')) return access(path.join(filepath, 'index.js')).catch(() => true) ? void 0 : importFile(path.join(filepath, 'index.js'));
   switch (filepath.split('.').pop()) {
@@ -41,7 +41,7 @@ const
   router = express.Router(),
   { Support, Website, Keys } = Object.entries(process.env).filter(([k]) => /^(Support|Website|Keys)\./.test(k)).reduce((acc, [k, v]) => {
     k = k.split('.');
-    acc[k[0]] = Object.assign({}, acc[k[0]], { [k[1]]: v });
+    acc[k[0]] = { ...acc[k[0]], [k[1]]: v };
     return acc;
   }, {}),
   client = new Client({ intents: [GatewayIntentBits.Guilds] })
@@ -63,7 +63,7 @@ await client.login(Keys.token);
 
 client.db = new DB(Keys.dbConnectionStr);
 client.voteSystem = await new VoteSystem(client.db, domain, Keys.webhookURL).init();
-while (client.ws.status) await new Promise(r => setTimeout(r, 10));
+while (client.ws.status != Status.Ready) await new Promise(r => setTimeout(r, 10));
 await client.application.fetch();
 
 const Dashboard = await createDashboard(client, Keys.dbdLicense, Keys.secret, port, domain, Support);
@@ -155,10 +155,14 @@ router.all('*', async (req, res, next) => {
       })?.name;
 
       if (!filename || !subDirs.find(e => e.isFile() && e.name == filename)) {
-        return !subDirs.find(e => e.isDirectory() && e.name == path.basename(req.path)) ? next() : res.send(await /**@type {Promise<String>}*/(await readdir(pathStr, { withFileTypes: true })).reduce(async (acc, file) => {
+        if (!subDirs.find(e => e.isDirectory() && e.name == path.basename(req.path))) return next();
+
+        const html = await (await readdir(pathStr, { withFileTypes: true })).reduce(async (acc, file) => {
           const name = escapeHTML(file.isFile() ? file.name.split('.').slice(0, -1).join('.') : file.name);
           return `${await acc}<a href='./${path.basename(req.path)}/${name}'>${(await importFile(path.join(pathStr, file.name)))?.title || name[0].toUpperCase() + name.slice(1).replace(/[_-]/g, ' ')}</a>`;
-        }, '<style>body{background-color:#000}div{align-items:stretch;display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:2%}a{background-color:#242724;border:none;border-radius:5px;color:#fff;cursor:pointer;display:inline-block;font-family:arial;font-size:16px;min-width:100px;padding:15px 32px;text-align:center;text-decoration:none;transition:background-color .3s ease-in-out}a:hover{background-color:#676867}@media (max-width: 480px){a{flex-basis:calc(100% / 2 - 5px)}}@media (min-width: 481px) and (max-width: 768px){a{flex-basis:calc(100% / 3 - 5px)}}@media (min-width: 769px) and (max-width: 1024px){a{flex-basis:calc(100% / 4 - 5px)}}@media (min-width: 1025px){a{flex-basis:calc(100% / 5 - 5px)}}</style><div>') + '</div>');
+        }, Promise.resolve('<style>body{background-color:#000}div{align-items:stretch;display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:2%}a{background-color:#242724;border:none;border-radius:5px;color:#fff;cursor:pointer;display:inline-block;font-family:arial;font-size:16px;min-width:100px;padding:15px 32px;text-align:center;text-decoration:none;transition:background-color .3s ease-in-out}a:hover{background-color:#676867}@media (max-width: 480px){a{flex-basis:calc(100% / 2 - 5px)}}@media (min-width: 481px) and (max-width: 768px){a{flex-basis:calc(100% / 3 - 5px)}}@media (min-width: 769px) and (max-width: 1024px){a{flex-basis:calc(100% / 4 - 5px)}}@media (min-width: 1025px){a{flex-basis:calc(100% / 5 - 5px)}}</style><div>')) + '</div>';
+
+        return res.send(html);
       }
 
       if (filename.endsWith('.html')) return res.sendFile(path.join(dir, filename));
@@ -166,7 +170,7 @@ router.all('*', async (req, res, next) => {
     }
 
     if (!data) return next();
-    if (data.method && (data.method !== req.method || Array.isArray(data.method) && data.method.includes(req.method))) return res.setHeader('Allow', data.method.join?.(',') ?? data.method).sendStatus(405);
+    if (data.method && (data.method !== req.method || data.method.includes?.(req.method))) return res.setHeader('Allow', data.method.join?.(',') ?? data.method).sendStatus(405);
     if (data.permissionCheck && !data.permissionCheck.call(req)) return res.redirect(403, '/error/403');
     if (data.title) res.set('title', data.title);
     if (data.static) {

@@ -14,8 +14,8 @@ async function getCommands() {
       return Array.isArray(data) ? data : [];
     }
     catch (err) {
-      if (err.constructor.name == 'FetchError') console.error(`FetchError: Couldn't connect to process.env.BotCommandListURL: ${err.code}`);
-      else throw err;
+      if (err.constructor.name != 'FetchError') throw err;
+      console.error(`FetchError: Couldn't connect to process.env.BotCommandListURL: ${err.code}`);
     }
   }
   else console.warn('process.env.BotCommandListURL is not defined. Not setting commands in the dashboard page.');
@@ -24,7 +24,6 @@ async function getCommands() {
 
 /**@param {import('discord.js').Client}client @returns {Promise<Dashboard>}dashboard*/
 export default async function createDashboard(client, dbdLicense, secret, port, domain, Support) {
-
   client.dashboardOptionCount = [];
   global.embedBuilder = DBD.formTypes.embedBuilder({
     username: client.user.username,

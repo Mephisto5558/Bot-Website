@@ -1,5 +1,5 @@
 import DDB from 'discord-dashboard';
-import { readdirSync, readFileSync } from 'fs';
+import { readdir, readFile } from 'fs/promises';
 
 function fMerge(obj1, obj2, mode, { ...output } = { ...obj1 }) { //do not put on Object as it breaks discord auth /shrug
   if (`${{}}` != obj1 || `${{}}` != obj2) return output;
@@ -18,14 +18,16 @@ function fMerge(obj1, obj2, mode, { ...output } = { ...obj1 }) { //do not put on
   return output;
 };
 
-/** @returns {object[]} List of settings */
+/** @this {import('discord.js').Client} @returns {object[]} List of settings */
 export default async function getSettings() {
   const
     categoryOptionList = [],
-    { blacklist } = await this.db.get('botSettings');
+    blacklist = await this.db.get('botSettings', 'blacklist');
 
-  for (const subFolder of readdirSync('./DashboardSettings', { withFileTypes: true }).filter(e => e.isDirectory()).map(e => e.name)) {
-    const index = JSON.parse(readFileSync(`./DashboardSettings/${subFolder}/_index.json`, 'utf-8'));
+  for (const subFolder of readdirSync('./DashboardSettings', { withFileTypes: true })) {
+    if (!subFolder.isDirectory()) continue;
+
+    const index = JSON.parse(await readFile(`./DashboardSettings/${subFolder.name}/_index.json`, 'utf-8'));
     const optionList = [{
       optionId: `${index.id}.spacer`,
       title: 'Important!',
@@ -42,7 +44,10 @@ export default async function getSettings() {
       optionType: DDB.formTypes.switch()
     });
 
-    for await (const { default: setting } of readdirSync(`./DashboardSettings/${subFolder}`).filter(e => e.endsWith('.js')).map(async e => import(`./DashboardSettings/${subFolder}/${e}`)))
+    for (const file of await readdir(`./DashboardSettings/${subFolder.name}`)) {
+      if (!file.endsWith('.js')) continue;
+      const { default: setting } = await import(`./DashboardSettings/${subFolder.name}/${file}`);
+
       optionList.push(setting.type == 'spacer' ? {
         optionId: `${index.id}.spacer`,
         title: setting.name,
@@ -61,6 +66,7 @@ export default async function getSettings() {
           return setting.auth?.(guild, user) ?? { allowed: true };
         }
       });
+    }
 
     categoryOptionList.push({
       categoryId: index.id,
@@ -72,12 +78,12 @@ export default async function getSettings() {
         const items = e.optionId.replace(/([A-Z])/g, r => `.${r.toLowerCase()}`).split('.');
         if (items[items.length - 1] == 'spacer') return { optionId: e.optionId, data: e.description };
 
-        const guildSettings = this.db.get('guildSettings');
+        const guildSettings = await this.db.get('guildSettings');
         const data = items.reduce((acc, e) => acc?.[e], guildSettings[guild.id]) ?? items.reduce((acc, e) => acc?.[e], guildSettings.default);
         return { optionId: e.optionId, data };
       })),
       setNew: async ({ guild, data: dataArray }) => {
-        let guildSettings = this.db.get('guildSettings');
+        let guildSettings = await this.db.get('guildSettings');
 
         for (const { optionId, data } of dataArray) {
           if (data.embed && !data.embed.description) data.embed.description = ' ';
@@ -87,6 +93,14 @@ export default async function getSettings() {
 
           guildSettings = fMerge(guildSettings, { [guild.id]: JSON.parse(json.padEnd(json.length + json.split('{').length - 1, '}')) });
         }
+        // for (const { optionId, data } of dataArray) { //Todo: test this
+        //   if (data.embed && !data.embed.description) data.embed.description = ' ';
+
+        //   const nestedObj = optionId.split('.').reduceRight((obj, key) => ({ [key]: obj }), data);
+        //   const parsedObj = JSON.parse(JSON.stringify(nestedObj));
+
+        //   guildSettings = { ...guildSettings, [guild.id]: parsedObj };
+        // }
 
         return this.db.set('guildSettings', guildSettings);
       },
