@@ -4,7 +4,7 @@ console.time('Initializing time');
 import { appendFile, access, readdir, readFile } from 'fs/promises';
 import { inspect } from 'util';
 import express from 'express';
-import { Client, GatewayIntentBits } from 'discord.js';
+import { Client, GatewayIntentBits, Status } from 'discord.js';
 import createDashboard from './dashboard.js';
 import DB from './Utils/db.js';
 import VoteSystem from './Utils/VoteSystem.js';
