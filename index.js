@@ -4,7 +4,7 @@ console.time('Initializing time');
 import { appendFile, access, readdir, readFile } from 'fs/promises';
 import { inspect } from 'util';
 import express from 'express';
-import { Client, GatewayIntentBits, Status } from 'discord.js';
+import { Client, GatewayIntentBits } from 'discord.js';
 import createDashboard from './dashboard.js';
 import DB from './Utils/db.js';
 import VoteSystem from './Utils/VoteSystem.js';
@@ -44,7 +44,7 @@ const
     acc[k[0]] = { ...acc[k[0]], [k[1]]: v };
     return acc;
   }, {}),
-  client = new Client({ intents: [GatewayIntentBits.Guilds] })
+  client = new Client({ intents: [GatewayIntentBits.Guilds], presence: { status: 'invisible' } })
     .on('debug', debug => debug.toLowerCase().includes('heartbeat') ? void 0 : console.log(debug))
     .on('error', error),
   port = process.env.PORT ?? process.env.SERVER_PORT ?? 80;
