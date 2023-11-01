@@ -108,7 +108,7 @@ export default class VoteSystem {
 
     await this.sendToWebhook(
       'Feature Requests have been edited',
-      'The following feature request(s) have been edited by a dev:\n' + features.reduce((acc, { id }) => errorList.find(e => e.id == id) ? acc : `${acc}\n- [${id}](${this.domain}?q=${id})`, ''),
+      'The following feature request(s) have been edited by a dev:\n' + features.reduce((acc, { id }) => errorList.some(e => e.id == id) ? acc : `${acc}\n- [${id}](${this.domain}?q=${id})`, ''),
       Colors.Orange
     );
 
