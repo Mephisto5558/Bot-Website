@@ -1,6 +1,6 @@
 
 import { readFile } from 'fs/promises';
-import fetch from 'node-fetch';
+import fetch, { FetchError } from 'node-fetch';
 import DBD from 'discord-dashboard';
 import DarkDashboard from 'dbd-dark-dashboard';
 import Settings from './settings.js';
@@ -14,7 +14,7 @@ async function getCommands() {
       return Array.isArray(data) ? data : [];
     }
     catch (err) {
-      if (err.constructor.name != 'FetchError') throw err;
+      if (err instanceof FetchError) throw err;
       console.error(`FetchError: Couldn't connect to process.env.BotCommandListURL: ${err.code}`);
     }
   }
