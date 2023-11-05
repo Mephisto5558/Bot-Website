@@ -1,6 +1,7 @@
 import passport from 'passport';
 
 export default {
+  /**@param {Res}res @param {Req}req @param {import('express').NextFunction}next*/
   run: async (res, req, next) => passport.authenticate('discord', (err, user) => {
     if (err?.code == 'invalid_grant' || err?.message == 'Failed to obtain access token') return res.redirect('/auth/discord');
     if (err) return next(err);

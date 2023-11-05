@@ -1,4 +1,9 @@
 export default {
   method: 'POST',
-  run: function run(res, req) { return this.voteSystem.update(req.body, req.user?.id).then(e => res.status(e.errorCode || 200).json(e)); }
+
+  /**@this Client @param {Res}res @param {Req}req*/
+  run: async function (res, req) {
+    const reply = await this.voteSystem.update(req.body, req.user?.id);
+    return res.status(reply.errorCode || 200).json(reply);
+  }
 };
