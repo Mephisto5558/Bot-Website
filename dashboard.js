@@ -8,18 +8,20 @@ import Settings from './settings.js';
 const { devIds } = JSON.parse(await readFile('./config.json', 'utf-8').catch(() => '{}')) || {};
 
 async function getCommands() {
-  if (process.env.BotCommandListURL) {
-    try {
-      const data = await fetch(process.env.BotCommandListURL).then(e => e.json());
-      return Array.isArray(data) ? data : [];
-    }
-    catch (err) {
-      if (err instanceof FetchError) throw err;
-      console.error(`FetchError: Couldn't connect to process.env.BotCommandListURL: ${err.code}`);
-    }
+  if (!process.env.BotCommandListURL) {
+    console.warn('process.env.BotCommandListURL is not defined. Not setting commands in the dashboard page.');
+    return [];
   }
-  else console.warn('process.env.BotCommandListURL is not defined. Not setting commands in the dashboard page.');
-  return [];
+
+  try {
+    const data = await fetch(process.env.BotCommandListURL).then(e => e.json());
+    return Array.isArray(data) ? data : [];
+  }
+  catch (err) {
+    if (!(err instanceof FetchError)) throw err;
+    console.error(`FetchError: Couldn't connect to process.env.BotCommandListURL: ${err.code}`);
+    return [];
+  }
 }
 
 /**@param {import('discord.js').Client}client @returns {Promise<Dashboard>}dashboard*/
