@@ -5,6 +5,7 @@ const execSync = promisify(exec);
 console.log('Git auto pull is running');
 
 export default {
+  /**@param {Res?}res*/
   run: async res => {
     let data;
 
