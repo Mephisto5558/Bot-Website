@@ -123,7 +123,8 @@ export default class VoteSystem {
 
   /**@param {string}featureId @param {string}userId*/
   async delete(featureId, userId) {
-    if (!devIds?.includes(userId) && featureId.split('_')[0] != userId)
+    const requestAuthor = featureId.split('_')[0];
+    if (!devIds?.includes(userId) && requestAuthor != userId)
       return { errorCode: 403, error: 'You don\'t have permission to delete that feature request.' };
 
     const request = this.get(featureId);
@@ -132,7 +133,7 @@ export default class VoteSystem {
     await this.db.delete('website', `requests.${featureId}`);
     this.cache.delete(featureId);
 
-    await this.sendToWebhook(`Feature Request has been ${req.pendig ? 'denied' : 'deleted'}`, this.constructor.formatDesc(request), Colors.Red);
+    await this.sendToWebhook(`Feature Request has been ${req.pendig ? 'denied' : 'deleted'} by ${requestAuthor == userId ? 'the author' : 'a dev'}`, this.constructor.formatDesc(request), Colors.Red);
     return { success: true };
   }
 
