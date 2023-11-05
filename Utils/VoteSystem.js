@@ -22,7 +22,7 @@ export default class VoteSystem {
     return this;
   }
 
-  /** @returns {Promise<{id:string,title:string,body:string,votes:number,pending?:true}[]>} Overwrites the cache*/
+  /**@returns {Promise<{id:string,title:string,body:string,votes:number,pending?:true}[]>} Overwrites the cache*/
   async fetchAll() {
     const data = Object.entries((await this.db.get('website', 'requests')) ?? {});
 
@@ -32,12 +32,16 @@ export default class VoteSystem {
     return data;
   }
 
+  /**@param {string}id*/
   get = id => this.cache.get(id);
+
+  /**@param {number}amount*/
   getMany = (amount, offset = 0, filter = '', includePending = false, userId = '') => {
     const cards = [...this.cache.values()].filter(e => ((includePending && devIds.includes(userId)) || !e.pending) && (e.title.includes(filter) || e.body?.includes(filter) || e.id.includes(filter)));
     return { cards: amount ? cards.slice(offset, offset + amount) : cards.slice(offset), moreAvailable: !!(amount && cards.length > offset + amount) };
   };
 
+  /**@param {string}title @param {string}body*/
   async add(title, body, userId = '') {
     const error = await this.validate(userId);
     if (error) return error;
@@ -62,6 +66,7 @@ export default class VoteSystem {
     return { title, body, id, approved: featureRequestAutoApprove };
   }
 
+  /**@param {string}featureId @param {string}userId*/
   async approve(featureId, userId) {
     if (!devIds?.includes(userId)) return { errorCode: 403, error: 'You don\'t have permission to approve feature requests.' };
 
@@ -79,6 +84,7 @@ export default class VoteSystem {
     return request;
   }
 
+  /**@param {string}featureId @param {string}userId*/
   async update(features, userId) {
     if (!devIds?.includes(userId)) return { errorCode: 403, error: 'You don\'t have permission to update feature requests.' };
     features = Array.isArray(features) ? features : [features];
@@ -115,8 +121,10 @@ export default class VoteSystem {
     return errorList.length ? { code: 400, errors: errorList } : { success: true };
   };
 
+  /**@param {string}featureId @param {string}userId*/
   async delete(featureId, userId) {
-    if (!devIds?.includes(userId)) return { errorCode: 403, error: 'You don\'t have permission to delete feature requests.' };
+    if (!devIds?.includes(userId) && featureId.split('_')[0] != userId)
+      return { errorCode: 403, error: 'You don\'t have permission to delete that feature request.' };
 
     const request = this.get(featureId);
     if (!request) return { errorCode: 400, error: 'Unknown feature ID.' };
@@ -128,7 +136,7 @@ export default class VoteSystem {
     return { success: true };
   }
 
-  /** @param {string}featureId @param {string}userId @param {'up'|'down'}type @returns {{errorCode:number,error:string}|{feature:string,votes:number}}*/
+  /**@param {string}featureId @param {string}userId @param {'up'|'down'}type @returns {Promise<{errorCode:number,error:string}|{feature:string,votes:number}>}*/
   async addVote(featureId, userId, type = 'up') {
     const error = await this.validate(userId);
     if (error) return error;
@@ -150,6 +158,7 @@ export default class VoteSystem {
     return { feature: featureId, votes: feature.votes };
   }
 
+  /**@param {string}title @param {string}description @param {number}color*/
   async sendToWebhook(title, description, color = Colors.White, url = '') {
     if (!this.webhookURL) return { errorCode: 500, error: 'The backend has no webhook url configured' };
 
@@ -166,7 +175,7 @@ export default class VoteSystem {
     return { success: res.ok };
   }
 
-  /** @param {string}userId @returns an error if one of the validations failed. */
+  /**@param {string}userId @returns an error if one of the validations failed. */
   async validate(userId) {
     if (!userId) return { errorCode: 401, error: 'User ID is missing.' };
     if ((await this.db.get('botSettings', 'blacklist'))?.includes(userId)) return { errorCode: 403, error: 'You have been blacklisted from using the bot.' };
