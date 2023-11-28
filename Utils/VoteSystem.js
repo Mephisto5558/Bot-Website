@@ -133,7 +133,7 @@ export default class VoteSystem {
     await this.db.delete('website', `requests.${featureId}`);
     this.cache.delete(featureId);
 
-    await this.sendToWebhook(`Feature Request has been ${req.pendig ? 'denied' : 'deleted'} by ${requestAuthor == userId ? 'the author' : 'a dev'}`, this.constructor.formatDesc(request), Colors.Red);
+    await this.sendToWebhook(`Feature Request has been ${request.pendig ? 'denied' : 'deleted'} by ${requestAuthor == userId ? 'the author' : 'a dev'}`, this.constructor.formatDesc(request), Colors.Red);
     return { success: true };
   }
 
