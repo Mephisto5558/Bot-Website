@@ -6,7 +6,7 @@ import { inspect } from 'util';
 import express from 'express';
 import { Client, GatewayIntentBits, Status } from 'discord.js';
 import createDashboard from './dashboard.js';
-import DB from './Utils/db.js';
+import { NoCacheDB } from '@mephisto5558/mongoose-db';
 import VoteSystem from './Utils/VoteSystem.js';
 import passport from 'passport';
 import Strategy from 'passport-discord';
@@ -29,7 +29,7 @@ function error(err, req, res) {
 
 /**@param {string}filepath full path @returns {Promise}*/
 async function importFile(filepath) {
-  if (!filepath.includes('.')) return access(path.join(filepath, 'index.js')).catch(() => true) ? void 0 : importFile(path.join(filepath, 'index.js'));
+  if (!filepath.includes('.')) return (await access(path.join(filepath, 'index.js')).catch(() => true)) ? void 0 : importFile(path.join(filepath, 'index.js'));
   switch (filepath.split('.').pop()) {
     case 'js': return (await import(`file://${filepath}`)).default;
     case 'json': return JSON.parse(await readFile(filepath, 'utf-8'));
@@ -61,7 +61,7 @@ if (!/^https?:\/\//.test(domain)) {
 
 await client.login(Keys.token);
 
-client.db = new DB(Keys.dbConnectionStr);
+client.db = new NoCacheDB(Keys.dbConnectionStr);
 client.voteSystem = await new VoteSystem(client.db, domain, Keys.webhookURL).init();
 while (client.ws.status != Status.Ready) await new Promise(r => setTimeout(r, 10));
 await client.application.fetch();
