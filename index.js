@@ -159,7 +159,7 @@ router.all('*', async (req, res, next) => {
 
         const html = await (await readdir(pathStr, { withFileTypes: true })).reduce(async (acc, file) => {
           const name = escapeHTML(file.isFile() ? file.name.split('.').slice(0, -1).join('.') : file.name);
-          return `${await acc}<a href='./${path.basename(req.path)}/${name}'>${(await importFile(path.join(pathStr, file.name)))?.title || name[0].toUpperCase() + name.slice(1).replace(/[_-]/g, ' ')}</a>`;
+          return `${await acc}<a href='./${path.basename(req.path)}/${name}'>${escapeHTML((await importFile(path.join(pathStr, file.name)))?.title || name[0].toUpperCase() + name.slice(1).replace(/[_-]/g, ' '))}</a>`;
         }, Promise.resolve('<style>body{background-color:#000}div{align-items:stretch;display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:2%}a{background-color:#242724;border:none;border-radius:5px;color:#fff;cursor:pointer;display:inline-block;font-family:arial;font-size:16px;min-width:100px;padding:15px 32px;text-align:center;text-decoration:none;transition:background-color .3s ease-in-out}a:hover{background-color:#676867}@media (max-width: 480px){a{flex-basis:calc(100% / 2 - 5px)}}@media (min-width: 481px) and (max-width: 768px){a{flex-basis:calc(100% / 3 - 5px)}}@media (min-width: 769px) and (max-width: 1024px){a{flex-basis:calc(100% / 4 - 5px)}}@media (min-width: 1025px){a{flex-basis:calc(100% / 5 - 5px)}}</style><div>')) + '</div>';
 
         return res.send(html);
