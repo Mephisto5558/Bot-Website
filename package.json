@@ -1,15 +1,18 @@
 {
-  "name": "teufelsbot-website",
+  "name": "@mephisto5558/bot-website",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "type": "module",
-  "engines": {
-    "node": ">=16.9.0"
+  "scripts": {
+    "test": "echo \"Error: no test specified\""
   },
+  "description": "The website for my Discord Bot.",
+  "main": "index.js",
+  "types": "globals.d.ts",
   "keywords": [],
   "author": "Mephisto5558",
   "license": "MIT",
+  "engines": {
+    "node": ">=16.9.0"
+  },
   "dependencies": {
     "@mephisto5558/mongoose-db": "^2.1.1",
     "body-parser": "^1.20.2",
