@@ -319,7 +319,7 @@ class WebServer {
         })?.name;
 
         if (!filename || !subDirs.find(e => e.isFile() && e.name == filename)) {
-          const html = await this.createNavigationButtons();
+          const html = await this.createNavigationButtons(subDirs, pathStr, req.path);
           return html ? res.send(html) : next();
         }
 
