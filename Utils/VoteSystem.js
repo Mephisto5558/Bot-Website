@@ -1,43 +1,29 @@
-import { Collection, Colors } from 'discord.js';
-import { sanitize } from 'express-xss-sanitizer';
-import { readFile } from 'fs/promises';
+const
+  { Colors } = require('discord.js'),
+  { sanitize } = require('express-xss-sanitizer');
 
-const { devIds } = JSON.parse(await readFile('./config.json', 'utf-8').catch(() => '{}')) || {};
+/**@typedef {{id:string, title:string, body:string, votes:number, pending?:true}}featureRequest*/
 
-export default class VoteSystem {
-  /**@param {import('./db.js').default}db Database @param {string}domain Website Domain @param {string}webhookURL Webhook URL*/
-  constructor(db, domain, webhookURL) {
-    if (!db?.set) throw new Error('Missing DB#set method');
-    this.db = db;
-    this.domain = domain || null;
-    this.webhookURL = webhookURL;
+module.exports = class VoteSystem {
+  /**@param {import('../index.js')}webServer*/
+  constructor(webServer) {
+    this.db = webServer.db;
+    this.client = webServer.client;
+    this.domain = webServer.config.domain ?? null;
   }
 
-  /**@type {Collection<string,{id:String,title:String,body:String,votes:Number,pending?:true}>}*/
-  cache = new Collection();
+  /**@returns {featureRequest[]}*/
+  fetchAll = () => Object.entries(this.db.get('website', 'requests') ?? {});
 
-  /**Initializes the class (fetching data to cache)*/
-  async init() {
-    await this.fetchAll();
-    return this;
-  }
+  /**@param {string}id @returns {featureRequest?}*/
+  get = id => this.db.get('website', 'requests' + (id ? `.${id}` : ''));
 
-  /**@returns {Promise<{id:string,title:string,body:string,votes:number,pending?:true}[]>} Overwrites the cache*/
-  async fetchAll() {
-    const data = Object.entries((await this.db.get('website', 'requests')) ?? {});
-
-    for (const [k, v] of data) v.id = k;
-    this.cache = new Collection(data);
-
-    return data;
-  }
-
-  /**@param {string}id*/
-  get = id => this.cache.get(id);
+  /**@param {string}id @param {featureRequest} @returns {Promise<featureRequest?>}*/
+  #update = (id, data) => this.db.update('website', `requests.${id}`, data);
 
   /**@param {number}amount*/
   getMany = (amount, offset = 0, filter = '', includePending = false, userId = '') => {
-    const cards = [...this.cache.values()].filter(e => ((includePending && devIds.includes(userId)) || !e.pending) && (e.title.includes(filter) || e.body?.includes(filter) || e.id.includes(filter)));
+    const cards = Object.values(this.get()).filter(e => ((includePending && this.client.application.owner.id == userId) || !e.pending) && (e.title.includes(filter) || e.body?.includes(filter) || e.id.includes(filter)));
     return { cards: amount ? cards.slice(offset, offset + amount) : cards.slice(offset), moreAvailable: !!(amount && cards.length > offset + amount) };
   };
 
@@ -50,15 +36,16 @@ export default class VoteSystem {
     title = sanitize(title.trim());
     body = sanitize(body?.trim());
 
-    if (title.length > 140 || body?.length > 4000) return { errorCode: 400, error: 'title can only be 140 chars long, body can only be 4000 chars long.' };
+    if (title.length > 140 || body?.length > 4000)
+      return { errorCode: 400, error: 'title can only be 140 chars long, body can only be 4000 chars long.' };
 
-    const featureRequestAutoApprove = await this.db.get('userSettings', `${userId}.featureRequestAutoApprove`);
-    if (!featureRequestAutoApprove && Object.keys(this.cache.filter((_, k) => k.split('_') == userId))?.length >= 5) return { errorCode: 403, error: 'You can only have up to 5 pending feature requests' };
+    const featureRequestAutoApprove = this.db.get('userSettings', `${userId}.featureRequestAutoApprove`);
+    if (!featureRequestAutoApprove && Object.keys(this.db.cache.filter((_, k) => k.split('_') == userId))?.length >= 5)
+      return { errorCode: 403, error: 'You can only have up to 5 pending feature requests' };
 
     const id = `${userId}_${Date.now()}`;
 
-    await this.db.update('website', `requests.${id}`, { title, body, ...(featureRequestAutoApprove ? {} : { pending: true }) });
-    this.cache.set(id, { title, body, id, ...(featureRequestAutoApprove ? {} : { pending: true }) });
+    await this.#update(id, { title, body, ...(featureRequestAutoApprove ? {} : { pending: true }) });
 
     if (featureRequestAutoApprove) await this.sendToWebhook('New Approved Feature Request', this.constructor.formatDesc({ title, body }), Colors.Blue, `?q=${id}`);
     else await this.sendToWebhook('New Pending Feature Request', null, Colors.Blue, `?q=${id}`);
@@ -68,7 +55,8 @@ export default class VoteSystem {
 
   /**@param {string}featureId @param {string}userId*/
   async approve(featureId, userId) {
-    if (!devIds?.includes(userId)) return { errorCode: 403, error: 'You don\'t have permission to approve feature requests.' };
+    if (this.client.application.owner.id != userId)
+      return { errorCode: 403, error: "You don't have permission to approve feature requests." };
 
     const request = this.cache.get(featureId);
     if (!request) return { errorCode: 400, error: 'Unknown feature ID.' };
@@ -77,17 +65,16 @@ export default class VoteSystem {
     request.votes ??= 0;
     delete request.pending;
 
-    await this.db.update('website', `requests.${featureId}`, request);
-    this.cache.set(featureId, request);
+    await this.#update(featureId, request);
 
     await this.sendToWebhook('New Approved Feature Request', this.constructor.formatDesc(request), Colors.Blue, `?q=${featureId}`);
     return request;
   }
 
-  /**@param {string}featureId @param {string}userId*/
+  /**@param {featureRequest[]}features @param {string}userId*/
   async update(features, userId) {
-    if (!devIds?.includes(userId)) return { errorCode: 403, error: 'You don\'t have permission to update feature requests.' };
-    features = Array.isArray(features) ? features : [features];
+    if (this.client.application.owner.id != userId) return { errorCode: 403, error: 'You don\'t have permission to update feature requests.' };
+    if (Array.isArray(features)) features = [features];
 
     const promiseList = [], errorList = [];
     for (let { id, title: oTitle, body } of features) {
@@ -102,12 +89,8 @@ export default class VoteSystem {
         break;
       }
 
-      const data = { ...this.cache.get(id), title, body: sanitize(body?.trim()) };
-      delete data.id;
+      const data = { ...this.get(id), title, body: sanitize(body?.trim()) };
       promiseList.push(this.db.update('website', `requests.${id}`, data));
-
-      data.id = id;
-      this.cache.set(id, data);
     }
 
     await Promise.allSettled(promiseList);
@@ -119,12 +102,12 @@ export default class VoteSystem {
     );
 
     return errorList.length ? { code: 400, errors: errorList } : { success: true };
-  };
+  }
 
   /**@param {string}featureId @param {string}userId*/
   async delete(featureId, userId) {
     const requestAuthor = featureId.split('_')[0];
-    if (!devIds?.includes(userId) && requestAuthor != userId)
+    if (this.client.application.owner.id != userId && requestAuthor != userId)
       return { errorCode: 403, error: 'You don\'t have permission to delete that feature request.' };
 
     const request = this.get(featureId);
@@ -133,17 +116,17 @@ export default class VoteSystem {
     await this.db.delete('website', `requests.${featureId}`);
     this.cache.delete(featureId);
 
-    await this.sendToWebhook(`Feature Request has been ${request.pendig ? 'denied' : 'deleted'} by ${requestAuthor == userId ? 'the author' : 'a dev'}`, this.constructor.formatDesc(request), Colors.Red);
+    await this.sendToWebhook(`Feature Request has been ${request.pending ? 'denied' : 'deleted'} by ${requestAuthor == userId ? 'the author' : 'a dev'}`, this.constructor.formatDesc(request), Colors.Red);
     return { success: true };
   }
 
-  /**@param {string}featureId @param {string}userId @param {'up'|'down'}type @returns {Promise<{errorCode:number,error:string}|{feature:string,votes:number}>}*/
+  /**@param {string}featureId @param {string}userId @param {'up'|'down'}type @returns {Promise<{errorCode:number, error:string}|featureRequest>}*/
   async addVote(featureId, userId, type = 'up') {
     const error = await this.validate(userId);
     if (error) return error;
     if (type != 'up' && type != 'down') return { errorCode: 400, error: 'Invalid vote type. Use "up" or "down"' };
 
-    const { lastVoted } = (await this.db.get('userSettings', userId)) || {};
+    const { lastVoted } = this.db.get('userSettings', userId) || {};
     if (this.constructor.isInCurrentWeek(new Date(lastVoted))) return { errorCode: 403, error: 'You can only vote once per week.' };
 
     const feature = this.get(featureId);
@@ -151,12 +134,12 @@ export default class VoteSystem {
 
     const vote = type == 'up' ? 1 : -1;
     feature.votes = feature.votes + vote || vote;
-    this.cache.set(featureId, feature);
+
     await this.db.update('website', `requests.${featureId}.votes`, feature.votes);
     await this.db.update('userSettings', `${userId}.lastVoted`, new Date().getTime());
 
     await this.sendToWebhook(`Feature Request has been ${type} voted`, feature.title + `\n\nVotes: ${feature.votes} `, Colors.Blurple, `?q=${featureId} `);
-    return { feature: featureId, votes: feature.votes };
+    return feature;
   }
 
   /**@param {string}title @param {string}description @param {number}color*/
@@ -179,7 +162,7 @@ export default class VoteSystem {
   /**@param {string}userId @returns an error if one of the validations failed. */
   async validate(userId) {
     if (!userId) return { errorCode: 401, error: 'User ID is missing.' };
-    if ((await this.db.get('botSettings', 'blacklist'))?.includes(userId)) return { errorCode: 403, error: 'You have been blacklisted from using the bot.' };
+    if (this.db.get('botSettings', 'blacklist')?.includes(userId)) return { errorCode: 403, error: 'You have been blacklisted from using the bot.' };
   }
 
   static formatDesc({ title = '', body = '' }) { return `**${title}**\n\n${body.length > 2000 ? body.substring(2000) + '...' : body}`; }
