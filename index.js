@@ -389,7 +389,7 @@ class WebServer {
       );
   }
 
-  async init(settingsPath, customPagesPath, commands) {
+  async init(commands) {
     while (this.client.ws.status != Status.Ready) await new Promise(r => setTimeout(r, 10));
     await this.client.application.fetch();
 
