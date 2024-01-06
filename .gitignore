@@ -1,14 +1,4 @@
-replit.nix
-logs
-*.log
-env.json
-node_modules
 package-lock.json
-Temp
-.github
-tw
-tw.js
-config.json
 .vscode
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
