@@ -32,7 +32,7 @@ class WebServer {
     this.logError = errorLoggingFunction;
     this.config = config;
     this.config.port ??= process.env.PORT ?? process.env.SERVER_PORT ?? 8000;
-    this.config.domain ??= process.env.SERVER_IP ?? process.env.IP ?? `http://localhost:${this.config.port}`;
+    this.config.domain ??= 'http://' + (process.env.SERVER_IP ?? process.env.IP ?? `localhost:${this.config.port}`);
     this.keys = keys;
 
     this.#checkConstructorParams();
