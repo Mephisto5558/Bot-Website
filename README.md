@@ -3,8 +3,8 @@
 [![License](https://img.shields.io/github/license/Mephisto5558/Bot-Website)](https://github.com/Mephisto5558/Bot-Website/blob/main/LICENSE)
 [![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=Mephisto5558_Bot-Website&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=Mephisto5558_Bot-Website)
 [![wakatime](https://wakatime.com/badge/github/Mephisto5558/Bot-Website.svg)](https://wakatime.com/badge/github/Mephisto5558/Bot-Website)<br>
-[![npm version](https://badge.fury.io/js/@mephisto5558%2Fmongoose-db.svg)](https://www.npmjs.com/package/@mephisto5558/mongoose-db)
-[![npm downloads](https://img.shields.io/npm/dm/%40mephisto5558%2Fmongoose-db)](https://www.npmjs.com/package/@mephisto5558/mongoose-db)<br>
+[![npm version](https://badge.fury.io/js/@mephisto5558%2Fbot-website.svg)](https://www.npmjs.com/package/@mephisto5558/bot-website)
+[![npm downloads](https://img.shields.io/npm/dm/%40mephisto5558%2Fbot-website)](https://www.npmjs.com/package/@mephisto5558/bot-website)<br>
 [![CodeQL](https://github.com/Mephisto5558/Bot-Website/actions/workflows/codeql-analysis.yml/badge.svg?branch=main)](https://github.com/Mephisto5558/Bot-Website/actions/workflows/codeql-analysis.yml)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Mephisto5558_Bot-Website&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Mephisto5558_Bot-Website)<br>
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=Mephisto5558_Bot-Website&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=Mephisto5558_Bot-Website)
