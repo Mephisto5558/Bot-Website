@@ -32,7 +32,7 @@ class WebServer {
     this.logError = errorLoggingFunction;
     this.config = config;
     this.config.port ??= process.env.PORT ?? process.env.SERVER_PORT ?? 8000;
-    this.config.domain ??= 'http://' + (process.env.SERVER_IP ?? process.env.IP ?? `localhost:${this.config.port}`);
+    this.config.domain ??= process.env.SERVER_IP ?? process.env.IP ?? `http://localhost:${this.config.port}`;
     this.keys = keys;
 
     this.#checkConstructorParams();
@@ -63,7 +63,7 @@ class WebServer {
     this.passport = passport.use(new Strategy({
       clientID: this.client.user.id,
       clientSecret: this.keys.secret,
-      callbackURL: `${this.domain}/auth/discord/callback`,
+      callbackURL: `${this.config.domain}/auth/discord/callback`,
       scope: ['identify']
     }, async (_accessToken, _refreshToken, user, done) => done(null, user)));
 
