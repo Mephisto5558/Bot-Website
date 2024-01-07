@@ -55,8 +55,6 @@ class WebServer {
     if (!this.db?.cache) throw new Error('Missing db property');
     if (!this.keys?.secret) throw new Error('Missing discord application secret');
     if (!this.keys?.dbdLicense) throw new Error('Missing dbdLicense. Get one here: https://assistantscenter.com/discord-dashboard/v2');
-    if (!/^https?:\/\//.test(this.config.domain))
-      throw new Error('Invalid domain param. Must start with "http://" or "https://"!');
   }
 
   #setupPassport() {
