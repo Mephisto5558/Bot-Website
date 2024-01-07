@@ -61,7 +61,7 @@ class WebServer {
     this.passport = passport.use(new Strategy({
       clientID: this.client.user.id,
       clientSecret: this.keys.secret,
-      callbackURL: `${this.config.domain}/auth/discord/callback`,
+      callbackURL: '/auth/discord/callback',
       scope: ['identify']
     }, async (_accessToken, _refreshToken, user, done) => done(null, user)));
 
