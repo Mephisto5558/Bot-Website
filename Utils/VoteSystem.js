@@ -45,7 +45,7 @@ module.exports = class VoteSystem {
 
     const id = `${userId}_${Date.now()}`;
 
-    await this.#update(id, { title, body, ...(featureRequestAutoApprove ? {} : { pending: true }) });
+    await this.#update(id, { id, title, body, ...(featureRequestAutoApprove ? {} : { pending: true }) });
 
     if (featureRequestAutoApprove) await this.sendToWebhook('New Approved Feature Request', this.constructor.formatDesc({ title, body }), Colors.Blue, `?q=${id}`);
     else await this.sendToWebhook('New Pending Feature Request', null, Colors.Blue, `?q=${id}`);
