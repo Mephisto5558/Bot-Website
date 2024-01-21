@@ -5,7 +5,7 @@ const
 /**@typedef {{id:string, title:string, body:string, votes:number, pending?:true}}featureRequest*/
 
 module.exports = class VoteSystem {
-  /**@param {import('../index.js')}webServer*/
+  /**@param {import('../index.js').WebServer}webServer*/
   constructor(webServer) {
     this.db = webServer.db;
     this.client = webServer.client;
@@ -58,7 +58,7 @@ module.exports = class VoteSystem {
     if (this.client.application.owner.id != userId)
       return { errorCode: 403, error: "You don't have permission to approve feature requests." };
 
-    const request = this.cache.get(featureId);
+    const request = this.get(featureId);
     if (!request) return { errorCode: 400, error: 'Unknown feature ID.' };
     if (!request.pending) return { errorCode: 409, error: 'This feature is already approved.' };
 
@@ -114,7 +114,7 @@ module.exports = class VoteSystem {
     if (!request) return { errorCode: 400, error: 'Unknown feature ID.' };
 
     await this.db.delete('website', `requests.${featureId}`);
-    this.cache.delete(featureId);
+    this.db.delete(featureId);
 
     await this.sendToWebhook(`Feature Request has been ${request.pending ? 'denied' : 'deleted'} by ${requestAuthor == userId ? 'the author' : 'a dev'}`, this.constructor.formatDesc(request), Colors.Red);
     return { success: true };
