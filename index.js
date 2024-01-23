@@ -412,7 +412,7 @@ class WebServer {
     this.#setupRouter();
     this.#setupApp();
 
-    this.voteSystem = new VoteSystem(this, this.db, this.keys.webhookURL);
+    this.voteSystem = new VoteSystem(this.client, this.db, this.keys.webhookURL);
 
     this.app.listen(this.config.port, () => console.log(`Website is online on ${this.config.domain}.`));
 

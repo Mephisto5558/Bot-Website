@@ -2,14 +2,15 @@ const
   { Colors } = require('discord.js'),
   { sanitize } = require('express-xss-sanitizer');
 
-/**@typedef {{id:string, title:string, body:string, votes:number, pending?:true}}featureRequest*/
-
 module.exports = class VoteSystem {
+  /**@param {import('discord.js').Client}client*/
   constructor(client, db, domain, webhookURL) {
     this.client = client;
     this.db = db;
     this.domain = domain;
     this.webhookURL = webhookURL;
+
+    if (!client.isReady()) throw new Error('Client must be ready!');
   }
 
   fetchAll = () => Object.entries(this.db.get('website', 'requests') ?? {});
