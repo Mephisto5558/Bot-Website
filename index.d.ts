@@ -65,9 +65,9 @@ declare class WebServer {
 }
 
 declare class VoteSystem {
-  constructor(client: Discord.Client, db: DB, domain: string, webhookURL?: string);
+  constructor(client: Discord.Client<true>, db: DB, domain: string, webhookURL?: string);
 
-  client: Discord.Client;
+  client: Discord.Client<true>;
   db: DB;
   domain: string;
   webhookURL: string;
