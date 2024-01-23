@@ -5,29 +5,22 @@ const
 /**@typedef {{id:string, title:string, body:string, votes:number, pending?:true}}featureRequest*/
 
 module.exports = class VoteSystem {
-  /**@param {import('../index.js').WebServer}webServer*/
-  constructor(webServer) {
-    this.db = webServer.db;
-    this.client = webServer.client;
-    this.domain = webServer.config.domain ?? null;
+  constructor(client, db, domain, webhookURL) {
+    this.client = client;
+    this.db = db;
+    this.domain = domain;
+    this.webhookURL = webhookURL;
   }
 
-  /**@returns {featureRequest[]}*/
   fetchAll = () => Object.entries(this.db.get('website', 'requests') ?? {});
-
-  /**@param {string}id @returns {featureRequest?}*/
   get = id => this.db.get('website', 'requests' + (id ? `.${id}` : ''));
-
-  /**@param {string}id @param {featureRequest} @returns {Promise<featureRequest?>}*/
   #update = (id, data) => this.db.update('website', `requests.${id}`, data);
 
-  /**@param {number}amount*/
   getMany = (amount, offset = 0, filter = '', includePending = false, userId = '') => {
     const cards = Object.values(this.get()).filter(e => ((includePending && this.client.application.owner.id == userId) || !e.pending) && (e.title.includes(filter) || e.body?.includes(filter) || e.id.includes(filter)));
     return { cards: amount ? cards.slice(offset, offset + amount) : cards.slice(offset), moreAvailable: !!(amount && cards.length > offset + amount) };
   };
 
-  /**@param {string}title @param {string}body*/
   async add(title, body, userId = '') {
     const error = await this.validate(userId);
     if (error) return error;
@@ -53,7 +46,6 @@ module.exports = class VoteSystem {
     return { title, body, id, approved: featureRequestAutoApprove };
   }
 
-  /**@param {string}featureId @param {string}userId*/
   async approve(featureId, userId) {
     if (this.client.application.owner.id != userId)
       return { errorCode: 403, error: "You don't have permission to approve feature requests." };
@@ -71,7 +63,6 @@ module.exports = class VoteSystem {
     return request;
   }
 
-  /**@param {featureRequest[]}features @param {string}userId*/
   async update(features, userId) {
     if (this.client.application.owner.id != userId) return { errorCode: 403, error: 'You don\'t have permission to update feature requests.' };
     if (Array.isArray(features)) features = [features];
@@ -104,7 +95,6 @@ module.exports = class VoteSystem {
     return errorList.length ? { code: 400, errors: errorList } : { success: true };
   }
 
-  /**@param {string}featureId @param {string}userId*/
   async delete(featureId, userId) {
     const requestAuthor = featureId.split('_')[0];
     if (this.client.application.owner.id != userId && requestAuthor != userId)
@@ -120,7 +110,6 @@ module.exports = class VoteSystem {
     return { success: true };
   }
 
-  /**@param {string}featureId @param {string}userId @param {'up'|'down'}type @returns {Promise<{errorCode:number, error:string}|featureRequest>}*/
   async addVote(featureId, userId, type = 'up') {
     const error = await this.validate(userId);
     if (error) return error;
@@ -142,7 +131,6 @@ module.exports = class VoteSystem {
     return feature;
   }
 
-  /**@param {string}title @param {string}description @param {number}color*/
   async sendToWebhook(title, description, color = Colors.White, url = '') {
     if (!this.webhookURL) return { errorCode: 500, error: 'The backend has no webhook url configured' };
 
@@ -159,7 +147,6 @@ module.exports = class VoteSystem {
     return { success: res.ok };
   }
 
-  /**@param {string}userId @returns an error if one of the validations failed. */
   async validate(userId) {
     if (!userId) return { errorCode: 401, error: 'User ID is missing.' };
     if (this.db.get('botSettings', 'blacklist')?.includes(userId)) return { errorCode: 403, error: 'You have been blacklisted from using the bot.' };
