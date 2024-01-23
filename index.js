@@ -18,7 +18,6 @@ const
   DarkDashboard = require('dbd-dark-dashboard'),
 
   VoteSystem = require('./Utils/VoteSystem.js');
-
 class WebServer {
   constructor(
     client, db, keys, config = {
@@ -360,8 +359,12 @@ class WebServer {
           saveUninitialized: false,
           store: this.sessionStore,
           cookie: {
+            maxAge: 3.154e10, // 356 days
             secure: this.config.domain.startsWith('https'),
-            httpOnly: this.config.domain.startsWith('https')
+            httpOnly: this.config.domain.startsWith('https'),
+            sameSite: 'lax',
+            domain: this.config.domain,
+            path: '/'
           }
         }),
         passport.initialize(),
