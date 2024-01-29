@@ -34,6 +34,8 @@ class WebServer {
     this.config.domain ??= process.env.SERVER_IP ?? process.env.IP ?? `http://localhost:${this.config.port}`;
     this.keys = keys;
 
+    if (!this.config.domain.startsWith('http')) this.config.domain = `http://${this.config.domain}`;
+
     this.#checkConstructorParams();
 
     this.initiated = false; // set to true once this.init() ran
@@ -54,6 +56,7 @@ class WebServer {
     if (!this.db?.cache) throw new Error('Missing db property');
     if (!this.keys?.secret) throw new Error('Missing discord application secret');
     if (!this.keys?.dbdLicense) throw new Error('Missing dbdLicense. Get one here: https://assistantscenter.com/discord-dashboard/v2');
+    if (!this.config.domain.startsWith('http://') && !this.config.domain.startsWith('https://')) throw new Error('config.domain must start with "http://" or "https://"!');
   }
 
   #setupPassport() {
