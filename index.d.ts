@@ -6,7 +6,7 @@ import type { PassportStatic } from 'passport';
 import type { formTypes } from 'discord-dashboard'
 import type { DB } from '@mephisto5558/mongoose-db';
 
-export { WebServer, type VoteSystem, type FeatureRequest, type setting, type customPage }
+export { WebServer, type VoteSystem, type FeatureRequest, type dashboardSetting, type customPage }
 export default WebServer
 
 type Support = { mail?: string, discord?: string }
@@ -22,7 +22,7 @@ type FeatureRequest = {
 };
 type formTypes_ = Omit<formTypes, "embedBuilder"> & { embedBuilder: ReturnType<(typeof formTypes)['embedBuilder']>; _embedBuilder: formTypes['embedBuilder']; };
 
-type setting = {
+type dashboardSetting = {
   id: string,
   name: string,
   description: string,
