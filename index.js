@@ -127,7 +127,7 @@ class WebServer {
           optionId: `${index.id}.${setting.id}`,
           optionName: setting.name,
           optionDescription: setting.description,
-          optionType: typeof (this.formTypes[setting.type] || setting.type) == 'function' ? await setting.type.call(this) : setting.type,
+          optionType: typeof (this.formTypes[setting.type] || setting.type) == 'function' ? await (this.formTypes[setting.type] || setting.type).call(this) : setting.type,
           position: setting.position,
           allowedCheck: async ({ guild, user }) => {
             if (this.db.get('botSettings', 'blacklist')?.includes(user.id)) return { allowed: false, errorMessage: 'You have been blacklisted from using the bot.' };
