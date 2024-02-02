@@ -366,7 +366,6 @@ class WebServer {
             secure: this.config.domain.startsWith('https'),
             httpOnly: this.config.domain.startsWith('https'),
             sameSite: 'lax',
-            domain: this.config.domain,
             path: '/'
           }
         }),
