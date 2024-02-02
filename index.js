@@ -197,7 +197,7 @@ class WebServer {
       html404: this.config.errorPagesDir ? await readFile(path.join(this.config.errorPagesDir, '404.html'), 'utf-8') : undefined,
       redirectUri: `${this.config.domain}/discord/callback`,
       bot: this.client,
-      seesionStore: 'connect-mongodb-session',
+      seesionStore: 'connect-mongo',
       ownerIDs: [this.client.application.owner.id],
       client: {
         id: this.client.user.id,
