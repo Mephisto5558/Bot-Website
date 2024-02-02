@@ -84,7 +84,7 @@ class WebServer {
       await this.db.update('website', `sessions.${sid}`, session);
       cb(null);
     };
-    this.sessionStore.destroy = async (sid, cb) => this.db.delete('website', `sessions.${sid}`).then(() => cb());
+    this.sessionStore.destroy = async (sid, cb) => this.db.delete('website', `sessions.${sid}`).then(() => cb?.());
   }
 
   async #getSettings() {
@@ -112,7 +112,7 @@ class WebServer {
 
       for (const file of await readdir(path.join(this.config.settingsPath, subFolder.name))) {
         if (!file.endsWith('.js')) continue;
-        
+
         /**@type {import('.').dashboardSetting}*/
         const setting = require(path.join(process.cwd(), this.config.settingsPath, subFolder.name, file));
 
@@ -197,7 +197,6 @@ class WebServer {
       html404: this.config.errorPagesDir ? await readFile(path.join(this.config.errorPagesDir, '404.html'), 'utf-8') : undefined,
       redirectUri: `${this.config.domain}/discord/callback`,
       bot: this.client,
-      seesionStore: 'connect-mongo',
       ownerIDs: [this.client.application.owner.id],
       client: {
         id: this.client.user.id,

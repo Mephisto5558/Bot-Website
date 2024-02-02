@@ -21,7 +21,6 @@
   "dependencies": {
     "body-parser": "^1.20.2",
     "compression": "^1.7.4",
-    "connect-mongo": "^5.1.0",
     "cors": "^2.8.5",
     "dbd-dark-dashboard": "github:Mephisto5558/Dark-Dashboard",
     "discord-dashboard": "^2.3.62",
