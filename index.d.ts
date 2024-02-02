@@ -6,7 +6,7 @@ import type { PassportStatic } from 'passport';
 import type { formTypes } from 'discord-dashboard'
 import type { DB } from '@mephisto5558/mongoose-db';
 
-export { WebServer, type VoteSystem, type FeatureRequest }
+export { WebServer, type VoteSystem, type FeatureRequest, type setting, type customPage }
 export default WebServer
 
 type Support = { mail?: string, discord?: string }
@@ -19,6 +19,22 @@ type FeatureRequest = {
   body: string;
   votes: number;
   pending?: true;
+};
+type formTypes_ = Omit<formTypes, "embedBuilder"> & { embedBuilder: ReturnType<(typeof formTypes)['embedBuilder']>; _embedBuilder: formTypes['embedBuilder']; };
+
+type setting = {
+  id: string,
+  name: string,
+  description: string,
+  type: formTypes_ | keyof formTypes_ | ((this: WebServer) => formTypes_ | Promise<formTypes_>),
+  position: number
+};
+type customPage = {
+  method?: 'get' | 'post' | 'put' | 'delete' | 'patch',
+  permissionCheck?(this: express.Request): boolean | Promise<boolean>,
+  title: string,
+  static?: boolean,
+  run?: string | number | boolean | (function(this: WebServer, express.Response, express.Request, express.NextFunction): any),
 };
 
 declare class WebServer {
