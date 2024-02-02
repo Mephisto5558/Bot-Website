@@ -29,8 +29,9 @@ type dashboardSetting = {
   type: formTypes_ | keyof formTypes_ | ((this: WebServer) => formTypes_ | Promise<formTypes_>),
   position: number
 };
+type methods = 'get'| 'post'| 'put'| 'delete'| 'patch'
 type customPage = {
-  method?: 'get' | 'post' | 'put' | 'delete' | 'patch',
+  method?: methods | methods[], 
   permissionCheck?(this: express.Request): boolean | Promise<boolean>,
   title: string,
   static?: boolean,
