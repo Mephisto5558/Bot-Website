@@ -329,7 +329,7 @@ class WebServer {
 
       if (!data) return next();
       if (data.method && (Array.isArray(data.method) && data.method.includes(req.method) || data.method !== req.method)) return res.setHeader('Allow', data.method.join?.(',') ?? data.method).sendStatus(405);
-      if (data.permissionCheck && !data.permissionCheck.call(req)) return res.redirect(403, '/error/403');
+      if (data.permissionCheck && !(await data.permissionCheck.call(req))) return res.redirect(403, '/error/403');
       if (data.title) res.set('title', data.title);
       if (data.static) {
         const code = String(data.run);
