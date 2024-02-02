@@ -39,10 +39,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Mephisto5558/Teufelsbot-Website.git"
+    "url": "git+https://github.com/Mephisto5558/Bot-Website.git"
   },
   "bugs": {
-    "url": "https://github.com/Mephisto5558/Teufelsbot-Website/issues"
+    "url": "https://github.com/Mephisto5558/Bot-Website/issues"
   },
-  "homepage": "https://github.com/Mephisto5558/Teufelsbot-Website#readme"
+  "homepage": "https://github.com/Mephisto5558/Bot-Website#readme"
 }
