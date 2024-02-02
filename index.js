@@ -112,6 +112,8 @@ class WebServer {
 
       for (const file of await readdir(path.join(this.config.settingsPath, subFolder.name))) {
         if (!file.endsWith('.js')) continue;
+        
+        /**@type {import('.').dashboardSetting}*/
         const setting = require(path.join(process.cwd(), this.config.settingsPath, subFolder.name, file));
 
         if (setting.type == 'spacer') optionList.push({
@@ -310,6 +312,7 @@ class WebServer {
         dir = pathStr.substring(0, pathStr.lastIndexOf(path.sep)),
         subDirs = await readdir(dir, { withFileTypes: true }).catch(() => { });
 
+      /**@type {import('.').customPage?}*/
       let data;
 
       if (subDirs) {
@@ -328,7 +331,7 @@ class WebServer {
       }
 
       if (!data) return next();
-      if (data.method && (Array.isArray(data.method) && data.method.includes(req.method) || data.method !== req.method)) return res.setHeader('Allow', data.method.join?.(',') ?? data.method).sendStatus(405);
+      if (data.method && (Array.isArray(data.method) && data.method.some(e => e.toUpperCase() == req.method) || data.method.toUpperCase() !== req.method)) return res.setHeader('Allow', data.method.join?.(',') ?? data.method).sendStatus(405);
       if (data.permissionCheck && !(await data.permissionCheck.call(req))) return res.redirect(403, '/error/403');
       if (data.title) res.set('title', data.title);
       if (data.static) {
