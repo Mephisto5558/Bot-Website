@@ -153,14 +153,6 @@ class WebServer {
         setNew: async ({ guild, data: dataArray }) => {
           let guildSettings = this.db.get('guildSettings');
 
-          // for (const { optionId, data } of dataArray) { //old version for reference
-          //   if (data.embed && !data.embed.description) data.embed.description = ' ';
-
-          //   const indexes = [...optionId.replaceAll('.', '":{"').matchAll(/[A-Z]/g)];
-          //   const json = `{"${indexes.reduce((acc, e) => acc.substring(0, e.index) + ':{' + e[0].toLowerCase() + acc.substring(e.index + 1), optionId.replaceAll('.', '":{"'))}":${JSON.stringify(data)}`;
-
-          //   guildSettings = fMerge(guildSettings, { [guild.id]: JSON.parse(json.padEnd(json.length + json.split('{').length - 1, '}')) });
-          // }
           for (const { optionId, data } of dataArray) {
             if (data.embed && !data.embed.description) data.embed.description = ' ';
 
@@ -416,7 +408,7 @@ class WebServer {
     this.#setupRouter();
     this.#setupApp();
 
-    this.voteSystem = new VoteSystem(this.client, this.db, this.keys.webhookURL);
+    this.voteSystem = new VoteSystem(this.client, this.db, this.config.domain, this.keys.webhookURL);
 
     this.app.listen(this.config.port, () => console.log(`Website is online on ${this.config.domain}.`));
 
