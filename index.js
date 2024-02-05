@@ -31,7 +31,8 @@ class WebServer {
     this.logError = errorLoggingFunction;
     this.config = config;
     this.config.port ??= process.env.PORT ?? process.env.SERVER_PORT ?? 8000;
-    this.config.domain ??= process.env.SERVER_IP ?? process.env.IP ?? `http://localhost:${this.config.port}`;
+    this.config.domain ??= process.env.SERVER_IP ?? process.env.IP ?? 'http://localhost';
+    this.config.baseUrl = port ? this.config.domain + ':' + this.config.port : this.config.domain;
     this.keys = keys;
 
     if (!this.config.domain.startsWith('http')) this.config.domain = `http://${this.config.domain}`;
@@ -187,7 +188,7 @@ class WebServer {
       useUnderMaintenance: false,
       useCategorySet: true,
       html404: this.config.errorPagesDir ? await readFile(path.join(this.config.errorPagesDir, '404.html'), 'utf-8') : undefined,
-      redirectUri: `${this.config.domain}/discord/callback`,
+      redirectUri: `${this.config.baseUrl}/discord/callback`,
       bot: this.client,
       ownerIDs: [this.client.application.owner.id],
       client: {
@@ -205,8 +206,8 @@ class WebServer {
       //     iconURL: this.user.displayAvatarURL(),
       //     websiteTitle: `${this.user.username} | Dashboard`,
       //     websiteName: `${this.user.username} | Dashboard`,
-      //     websiteUrl: domain,
-      //     dashboardUrl: domain,
+      //     websiteUrl: baseUrl,
+      //     dashboardUrl: baseUrl,
       //     supporteMail: Support.Mail,
       //     supportServer: Support.Discord,
       //     imageFavicon: this.user.displayAvatarURL(),
@@ -234,8 +235,8 @@ class WebServer {
           iconURL: this.client.user.displayAvatarURL(),
           websiteTitle: `${this.client.user.username} | Dashboard`,
           websiteName: `${this.client.user.username} | Dashboard`,
-          websiteUrl: this.config.domain,
-          dashboardUrl: this.config.domain,
+          websiteUrl: this.config.baseUrl,
+          dashboardUrl: this.config.baseUrl,
           supporteMail: this.config.support.mail,
           supportServer: this.config.support.discord,
           imageFavicon: this.client.user.displayAvatarURL(),
@@ -366,7 +367,7 @@ class WebServer {
         passport.initialize(),
         passport.session()
       )
-      .use('/api/:v/internal', cors({ origin: this.config.domain }))
+      .use('/api/:v/internal', cors({ origin: this.config.baseUrl }))
       .use(
         this.router,
         this.dashboard.getApp(),
@@ -408,9 +409,9 @@ class WebServer {
     this.#setupRouter();
     this.#setupApp();
 
-    this.voteSystem = new VoteSystem(this.client, this.db, this.config.domain, this.keys.webhookURL);
+    this.voteSystem = new VoteSystem(this.client, this.db, this.config.baseUrl, this.keys.webhookURL);
 
-    this.app.listen(this.config.port, () => console.log(`Website is online on ${this.config.domain}.`));
+    this.app.listen(this.config.port, () => console.log(`Website is online on ${this.config.baseUrl}.`));
 
     this.initiated = true;
     return this;
