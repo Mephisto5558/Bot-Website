@@ -51,8 +51,13 @@ declare class WebServer {
   client: Discord.Client<true>;
   db: DB;
   config: {
-    support: Support; port: number; domain: string; errorPagesDir?: string;
-    settingsPath: string, customPagesPath: string
+    support: Support, port: number, domain: string, 
+    /**```js
+     * if (port) `${WebServer['config']['domain']}:${WebServer['config']['port']}`
+     * else WebServer['config']['domain']
+     * ```*/
+    baseUrl: string,
+    errorPagesDir?: string, settingsPath: string, customPagesPath: string
   };
   keys: Keys;
   initiated: boolean;
