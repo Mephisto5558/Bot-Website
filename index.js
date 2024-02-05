@@ -32,10 +32,10 @@ class WebServer {
     this.config = config;
     this.config.port ??= process.env.PORT ?? process.env.SERVER_PORT ?? 8000;
     this.config.domain ??= process.env.SERVER_IP ?? process.env.IP ?? 'http://localhost';
+    if (!this.config.domain.startsWith('http')) this.config.domain = `http://${this.config.domain}`;
+
     this.config.baseUrl = config.port ? this.config.domain + ':' + this.config.port : this.config.domain;
     this.keys = keys;
-
-    if (!this.config.domain.startsWith('http')) this.config.domain = `http://${this.config.domain}`;
 
     this.#checkConstructorParams();
 
