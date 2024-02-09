@@ -128,7 +128,7 @@ class WebServer {
           optionId: `${index.id}.${setting.id}`,
           optionName: setting.name,
           optionDescription: setting.description,
-          optionType: typeof (this.formTypes[setting.type] || setting.type) == 'function' ? await (this.formTypes[setting.type] || setting.type).call(this) : setting.type,
+          optionType: typeof (this.formTypes[setting.type] ?? setting.type) == 'function' ? await (this.formTypes[setting.type] ?? setting.type).call(this) : setting.type,
           position: setting.position,
           allowedCheck: async ({ guild, user }) => {
             if (this.db.get('botSettings', 'blacklist')?.includes(user.id)) return { allowed: false, errorMessage: 'You have been blacklisted from using the bot.' };
@@ -288,7 +288,7 @@ class WebServer {
 
     return (await readdir(pathStr, { withFileTypes: true })).reduce((acc, file) => {
       const name = escapeHTML(file.isFile() ? file.name.split('.').slice(0, -1).join('.') : file.name);
-      return acc + `<a href='./${escapeHTML(path.basename(reqPath)) + '/' + name}'>` + escapeHTML(require(path.join(pathStr, file.name))?.title || name[0].toUpperCase() + name.slice(1).replace(/[_-]/g, ' ')) + '</a>';
+      return acc + `<a href='./${escapeHTML(path.basename(reqPath)) + '/' + name}'>` + escapeHTML(require(path.join(pathStr, file.name))?.title ?? name[0].toUpperCase() + name.slice(1).replace(/[_-]/g, ' ')) + '</a>';
     }, '<style>body{background-color:#000}div{align-items:stretch;display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:2%}a{background-color:#242724;border:none;border-radius:5px;color:#fff;cursor:pointer;display:inline-block;font-family:arial;font-size:16px;min-width:100px;padding:15px 32px;text-align:center;text-decoration:none;transition:background-color .3s ease-in-out}a:hover{background-color:#676867}@media (max-width: 480px){a{flex-basis:calc(100% / 2 - 5px)}}@media (min-width: 481px) and (max-width: 768px){a{flex-basis:calc(100% / 3 - 5px)}}@media (min-width: 769px) and (max-width: 1024px){a{flex-basis:calc(100% / 4 - 5px)}}@media (min-width: 1025px){a{flex-basis:calc(100% / 5 - 5px)}}</style><div>') + '</div>';
   }
 
@@ -323,7 +323,8 @@ class WebServer {
       }
 
       if (!data) return next();
-      if (data.method && (Array.isArray(data.method) && data.method.some(e => e.toUpperCase() == req.method) || data.method.toUpperCase() !== req.method)) return res.setHeader('Allow', data.method.join?.(',') ?? data.method).sendStatus(405);
+      if (data.method && (Array.isArray(data.method) && data.method.some(e => e.toUpperCase() == req.method) || data.method.toUpperCase() !== req.method))
+        return res.setHeader('Allow', data.method.join?.(',') ?? data.method).sendStatus(405);
       if (data.permissionCheck && !(await data.permissionCheck.call(req))) return res.redirect(403, '/error/403');
       if (data.title) res.set('title', data.title);
       if (data.static) {

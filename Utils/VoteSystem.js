@@ -116,14 +116,13 @@ module.exports = class VoteSystem {
     if (error) return error;
     if (type != 'up' && type != 'down') return { errorCode: 400, error: 'Invalid vote type. Use "up" or "down"' };
 
-    const { lastVoted } = this.db.get('userSettings', userId) || {};
+    const { lastVoted } = this.db.get('userSettings', userId) ?? {};
     if (this.constructor.isInCurrentWeek(new Date(lastVoted))) return { errorCode: 403, error: 'You can only vote once per week.' };
 
     const feature = this.get(featureId);
     if (!feature) return { errorCode: 400, error: 'Unknown feature ID.' };
 
-    const vote = type == 'up' ? 1 : -1;
-    feature.votes = feature.votes + vote || vote;
+    feature.votes = (feature.votes ?? 0) + (type == 'up' ? 1 : -1);
 
     await this.db.update('website', `requests.${featureId}.votes`, feature.votes);
     await this.db.update('userSettings', `${userId}.lastVoted`, new Date().getTime());
