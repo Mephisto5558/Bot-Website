@@ -3,7 +3,12 @@ const
   { sanitize } = require('express-xss-sanitizer');
 
 module.exports = class VoteSystem {
-  /**@param {import('discord.js').Client}client*/
+  /**
+   * @param {import('discord.js').Client<true>}client
+   * @param {import('@mephisto5558/mongoose-db').DB}db
+   * @param {string} domain
+   * @param {string?} webhookURL
+   */
   constructor(client, db, domain, webhookURL) {
     this.client = client;
     this.db = db;
@@ -13,15 +18,28 @@ module.exports = class VoteSystem {
     if (!client.isReady()) throw new Error('Client must be ready!');
   }
 
+  /** @type {import('..').VoteSystem['fetchAll']} */
   fetchAll = () => Object.entries(this.db.get('website', 'requests') ?? {});
+
+  /** @type {import('..').VoteSystem['get']} */
   get = id => this.db.get('website', 'requests' + (id ? `.${id}` : ''));
+
+  /**
+   * @typedef {import('..').FeatureRequest}FeatureRequest
+   * @param {FeatureRequest['id']}id
+   * @param {FeatureRequest}data
+   * @returns {Promise<FeatureRequest | void>}*/
   #update = (id, data) => this.db.update('website', `requests.${id}`, data);
 
+  /** @type {import('..').VoteSystem['getMany']} */
   getMany = (amount, offset = 0, filter = '', includePending = false, userId = '') => {
-    const cards = Object.values(this.get()).filter(e => ((includePending && this.client.application.owner.id == userId) || !e.pending) && (e.title.includes(filter) || e.body?.includes(filter) || e.id.includes(filter)));
+    const cards = Object.values(this.get()).filter(e => ((includePending && this.client.application.owner.id == userId) || !e.pending)
+      && (e.title.includes(filter) || e.body?.includes(filter) || e.id.includes(filter)));
+
     return { cards: amount ? cards.slice(offset, offset + amount) : cards.slice(offset), moreAvailable: !!(amount && cards.length > offset + amount) };
   };
 
+  /** @type {import('..').VoteSystem['add']} */
   async add(title, body, userId = '') {
     const error = await this.validate(userId);
     if (error) return error;
@@ -39,7 +57,7 @@ module.exports = class VoteSystem {
 
     const id = `${userId}_${Date.now()}`;
 
-    await this.#update(id, { id, title, body, ...(featureRequestAutoApprove ? {} : { pending: true }) });
+    await this.#update(id, { id, title, body, ...featureRequestAutoApprove ? {} : { pending: true } });
 
     if (featureRequestAutoApprove) await this.sendToWebhook('New Approved Feature Request', this.constructor.formatDesc({ title, body }), Colors.Blue, `?q=${id}`);
     else await this.sendToWebhook('New Pending Feature Request', null, Colors.Blue, `?q=${id}`);
@@ -47,6 +65,7 @@ module.exports = class VoteSystem {
     return { title, body, id, approved: featureRequestAutoApprove };
   }
 
+  /** @type {import('..').VoteSystem['approve']} */
   async approve(featureId, userId) {
     if (this.client.application.owner.id != userId)
       return { errorCode: 403, error: "You don't have permission to approve feature requests." };
@@ -64,12 +83,16 @@ module.exports = class VoteSystem {
     return request;
   }
 
+  /** @type {import('..').VoteSystem['update']} */
   async update(features, userId) {
     if (this.client.application.owner.id != userId) return { errorCode: 403, error: 'You don\'t have permission to update feature requests.' };
     if (Array.isArray(features)) features = [features];
 
-    const promiseList = [], errorList = [];
-    for (let { id, title: oTitle, body } of features) {
+    const
+      promiseList = [],
+      errorList = [];
+
+    for (const { id, title: oTitle, body } of features) {
       if (!this.get(id)) {
         errorList.push({ id, error: 'Unknown feature ID.' });
         break;
@@ -96,6 +119,7 @@ module.exports = class VoteSystem {
     return errorList.length ? { code: 400, errors: errorList } : { success: true };
   }
 
+  /** @type {import('..').VoteSystem['delete']} */
   async delete(featureId, userId) {
     const requestAuthor = featureId.split('_')[0];
     if (this.client.application.owner.id != userId && requestAuthor != userId)
@@ -107,10 +131,14 @@ module.exports = class VoteSystem {
     await this.db.delete('website', `requests.${featureId}`);
     this.db.delete(featureId);
 
-    await this.sendToWebhook(`Feature Request has been ${request.pending ? 'denied' : 'deleted'} by ${requestAuthor == userId ? 'the author' : 'a dev'}`, this.constructor.formatDesc(request), Colors.Red);
+    await this.sendToWebhook(
+      `Feature Request has been ${request.pending ? 'denied' : 'deleted'} by ${requestAuthor == userId ? 'the author' : 'a dev'}`,
+      this.constructor.formatDesc(request), Colors.Red
+    );
     return { success: true };
   }
 
+  /** @type {import('..').VoteSystem['addVote']} */
   async addVote(featureId, userId, type = 'up') {
     const error = await this.validate(userId);
     if (error) return error;
@@ -131,6 +159,7 @@ module.exports = class VoteSystem {
     return feature;
   }
 
+  /** @type {import('..').VoteSystem['sendToWebhook']} */
   async sendToWebhook(title, description, color = Colors.White, url = '') {
     if (!this.webhookURL) return { errorCode: 500, error: 'The backend has no webhook url configured' };
 
@@ -139,6 +168,7 @@ module.exports = class VoteSystem {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         username: 'Teufelsbot Feature Requests',
+        /* eslint-disable-next-line camelcase */
         avatar_url: this.domain ? `${this.domain}/favicon.ico` : null,
         embeds: [{ url: `${this.domain}/vote${url ?? ''}`, title, description, color }]
       })
@@ -147,19 +177,22 @@ module.exports = class VoteSystem {
     return { success: res.ok };
   }
 
-  async validate(userId) {
+  /** @type {import('..').VoteSystem['validate']} */
+  validate(userId) {
     if (!userId) return { errorCode: 401, error: 'User ID is missing.' };
     if (this.db.get('botSettings', 'blacklist')?.includes(userId)) return { errorCode: 403, error: 'You have been blacklisted from using the bot.' };
   }
 
+  /** @type {typeof import('..').VoteSystem['formatDesc']} */
   static formatDesc({ title = '', body = '' }) { return `**${title}**\n\n${body.length > 2000 ? body.substring(2000) + '...' : body}`; }
 
-  /**@param {Date|Number}date The date obj or the ms from `date.getTime()`*/
+  /** @type {typeof import('..').VoteSystem['isInCurrentWeek']} */
   static isInCurrentWeek(date) {
     if (!date) return false;
     if (date instanceof Number) date = new Date(date);
 
-    const today = new Date(), firstDayOfWeek = new Date();
+    const today = new Date(),
+      firstDayOfWeek = new Date();
     firstDayOfWeek.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
 
     const nextWeek = new Date(firstDayOfWeek);
