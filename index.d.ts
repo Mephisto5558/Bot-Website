@@ -6,7 +6,7 @@ import type { PassportStatic } from 'passport';
 import type { formTypes } from 'discord-dashboard';
 import type { DB } from '@mephisto5558/mongoose-db';
 
-export { WebServer, type VoteSystem, type FeatureRequest, type dashboardSetting, type customPage };
+export { WebServer, type VoteSystem, type FeatureRequest, type dashboardSetting, type customPage, type commands };
 export default WebServer;
 
 type Support = { mail?: string; discord?: string };
@@ -29,7 +29,7 @@ type dashboardSetting = {
   type: formTypes_ | keyof formTypes_ | ((this: WebServer) => formTypes_ | Promise<formTypes_>);
   position: number;
 };
-type methods = 'get'| 'post'| 'put'| 'delete'| 'patch';
+type methods = 'get' | 'post' | 'put' | 'delete' | 'patch';
 type customPage = {
   method?: methods | methods[];
   permissionCheck?(this: express.Request): boolean | Promise<boolean>;
@@ -37,6 +37,7 @@ type customPage = {
   static?: boolean;
   run?: string | number | boolean | ((this: WebServer, arg1: express.Response, arg2: express.Request, arg3: express.NextFunction) => unknown);
 };
+type commands = { category: string; subTitle: string; aliasesDisabled: boolean; list: Record<string, unknown>[] }[];
 
 declare class WebServer {
   constructor(
@@ -52,13 +53,16 @@ declare class WebServer {
   db: DB;
   config: {
     support: Support; port: number; domain: string;
-    /**```js
+
+    /**
+     * ```js
      * if (port) `${WebServer['config']['domain']}:${WebServer['config']['port']}`
      * else WebServer['config']['domain']
      * ```*/
     baseUrl: string;
     errorPagesDir?: string; settingsPath: string; customPagesPath: string;
   };
+
   keys: Keys;
   initiated: boolean;
 
@@ -66,23 +70,16 @@ declare class WebServer {
   sessionStore: MemoryStore | null;
   dashboardOptionCount: unknown[] | null;
 
-  /**modified default settings of embedBuilder*/
+  /** modified default settings of embedBuilder*/
   formTypes: (Omit<formTypes, 'embedBuilder'> & { embedBuilder: ReturnType<(typeof formTypes)['embedBuilder']>; _embedBuilder: formTypes['embedBuilder'] }) | null;
   dashboard: Dashboard | null;
   router: express.Router | null;
   app: express.Express | null;
   voteSystem: VoteSystem | null;
 
-  init(commands: object[]): Promise<this>;
+  init(commands: commands): Promise<this>;
 
-  #checkConstructorParams(): undefined;
-  #setupPassport(): undefined;
-  #setupSessionStore(): undefined;
-  #setupDashboard(settingsPath: string, commands: object[]): Promise<undefined>;
-  #setupRouter(): undefined;
-  #setupApp(): undefined;
-
-  sendNavigationButtons(dir: Dirent[], path: string, reqPath: string): Promise<string | void>;
+  static createNavigationButtons(dir: Dirent[], path: string, reqPath: string): Promise<string | void>;
 
   logError(err: Error, req: express.Request, res: express.Response): unknown;
 }
@@ -97,8 +94,7 @@ declare class VoteSystem {
 
   fetchAll(): Promise<FeatureRequest[]>;
   get(id: FeatureRequest['id']): Promise<FeatureRequest | void>;
-  #update(id: FeatureRequest['id'], data: FeatureRequest): Promise<FeatureRequest | void>;
-  getMunknown(amount: number, offset?: number, filter?: string, includePendig?: boolean, userId?: Discord.Snowflake): { cards: FeatureRequest[]; moreAvailable: boolean };
+  getMany(amount: number, offset?: number, filter?: string, includePendig?: boolean, userId?: Discord.Snowflake): { cards: FeatureRequest[]; moreAvailable: boolean };
   add(title: string, body: string, userId?: Discord.Snowflake): Promise<FeatureRequest | RequestError>;
   approve(featureId: FeatureRequest['id'], userId: Discord.Snowflake): Promise<FeatureRequest | RequestError>;
   update(features: FeatureRequest[], userId: Discord.Snowflake): Promise<{ success: true } | { code: 400; errors: { id: FeatureRequest['id']; error: string }[] }>;
@@ -109,6 +105,6 @@ declare class VoteSystem {
 
   static formatDesc(params: { title?: string; body?: string }): string;
 
-  /**@param date A date obj or millseconds*/
+  /** @param date A date obj or millseconds*/
   static isInCurrentWeek(date: Date | number): boolean;
 }
