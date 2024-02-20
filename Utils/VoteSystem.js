@@ -59,8 +59,9 @@ module.exports = class VoteSystem {
 
     await this.#update(id, { id, title, body, ...featureRequestAutoApprove ? {} : { pending: true } });
 
+    /* eslint-disable-next-line unicorn/prefer-ternary */
     if (featureRequestAutoApprove) await this.sendToWebhook('New Approved Feature Request', this.constructor.formatDesc({ title, body }), Colors.Blue, `?q=${id}`);
-    else await this.sendToWebhook('New Pending Feature Request', null, Colors.Blue, `?q=${id}`);
+    else await this.sendToWebhook('New Pending Feature Request', undefined, Colors.Blue, `?q=${id}`);
 
     return { title, body, id, approved: featureRequestAutoApprove };
   }
@@ -153,7 +154,7 @@ module.exports = class VoteSystem {
     feature.votes = (feature.votes ?? 0) + (type == 'up' ? 1 : -1);
 
     await this.db.update('website', `requests.${featureId}.votes`, feature.votes);
-    await this.db.update('userSettings', `${userId}.lastVoted`, new Date().getTime());
+    await this.db.update('userSettings', `${userId}.lastVoted`, Date.now());
 
     await this.sendToWebhook(`Feature Request has been ${type} voted`, feature.title + `\n\nVotes: ${feature.votes} `, Colors.Blurple, `?q=${featureId} `);
     return feature;
@@ -169,7 +170,7 @@ module.exports = class VoteSystem {
       body: JSON.stringify({
         username: 'Teufelsbot Feature Requests',
         /* eslint-disable-next-line camelcase */
-        avatar_url: this.domain ? `${this.domain}/favicon.ico` : null,
+        avatar_url: this.domain ? `${this.domain}/favicon.ico` : undefined,
         embeds: [{ url: `${this.domain}/vote${url ?? ''}`, title, description, color }]
       })
     });
@@ -184,7 +185,7 @@ module.exports = class VoteSystem {
   }
 
   /** @type {typeof import('..').VoteSystem['formatDesc']} */
-  static formatDesc({ title = '', body = '' }) { return `**${title}**\n\n${body.length > 2000 ? body.substring(2000) + '...' : body}`; }
+  static formatDesc({ title = '', body = '' }) { return `**${title}**\n\n${body.length > 2000 ? body.slice(2000) + '...' : body}`; }
 
   /** @type {typeof import('..').VoteSystem['isInCurrentWeek']} */
   static isInCurrentWeek(date) {

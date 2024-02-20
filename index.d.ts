@@ -1,6 +1,6 @@
 import type Discord from 'discord.js';
 import type express from 'express';
-import type { Dirent } from 'fs';
+import type { Dirent } from 'node:fs';
 import type { MemoryStore } from 'express-session';
 import type { PassportStatic } from 'passport';
 import type { formTypes } from 'discord-dashboard';
