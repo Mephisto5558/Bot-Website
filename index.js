@@ -1,6 +1,6 @@
 /* eslint-disable max-lines */
 const
-  { readdir, readFile } = require('fs/promises'),
+  { readdir, readFile } = require('node:fs/promises'),
   DDB = require('discord-dashboard'),
   { GatewayIntentBits, Status } = require('discord.js'),
   { xss } = require('express-xss-sanitizer'),
@@ -11,7 +11,7 @@ const
   escapeHTML = require('escape-html'),
   express = require('express'),
   passport = require('passport'),
-  path = require('path'),
+  path = require('node:path'),
   rateLimit = require('express-rate-limit'),
   session = require('express-session'),
   Strategy = require('passport-discord'),
@@ -20,13 +20,9 @@ const
 
   VoteSystem = require('./Utils/VoteSystem.js');
 class WebServer {
-  constructor(
-    client, db, keys, config = {
-      support: {}, port: null, domain: null, html500Page: null, html404Page: null,
-      settingsPath: null, customPagesPath: null
-    },
-    errorLoggingFunction = console.error
-  ) {
+  constructor(client, db, keys, config, errorLoggingFunction = console.error) {
+    config ??= { support: {} };
+
     this.client = client;
     this.db = db;
     this.logError = errorLoggingFunction;
@@ -42,6 +38,7 @@ class WebServer {
 
     this.initiated = false; // set to true once this.init() ran
 
+    /* eslint-disable unicorn/no-null */
     // properties set after this.init() ran
     this.passport = null;
     this.sessionStore = null;
@@ -51,6 +48,7 @@ class WebServer {
     this.router = null;
     this.app = null;
     this.voteSystem = null;
+    /* eslint-enable unicorn/no-null */
   }
 
   #checkConstructorParams() {
@@ -67,24 +65,26 @@ class WebServer {
       clientSecret: this.keys.secret,
       callbackURL: '/auth/discord/callback',
       scope: ['identify']
-    }, (_accessToken, _refreshToken, user, done) => done(null, user)));
+    }, (_accessToken, _refreshToken, user, done) => done(undefined, user)));
 
-    this.passport.serializeUser((user, done) => done(null, {
+    this.passport.serializeUser((user, done) => done(undefined, {
       id: user.id, username: user.username,
       locale: user.locale, avatar: user.avatar, banner: user.banner
     }));
 
-    this.passport.deserializeUser((user, done) => done(null, user));
+    this.passport.deserializeUser((user, done) => done(undefined, user));
   }
 
   #setupSessionStore() {
     this.sessionStore = new session.MemoryStore();
+    /* eslint-disable-next-line unicorn/no-null */
     this.sessionStore.get = (sid, cb) => cb(null, this.client.db.get('website', `sessions.${sid}`));
     this.sessionStore.set = async (sid, sessionData, cb) => {
       if (sessionData.passport?.user?.id)
         await this.db.update('website', 'sessions', Object.fromEntries(Object.entries(this.db.get('website', 'sessions')).filter(([, e]) => e.passport?.user?.id != sessionData.passport.user.id)));
       await this.db.update('website', `sessions.${sid}`, sessionData);
 
+      /* eslint-disable-next-line unicorn/no-null */
       cb(null);
     };
     this.sessionStore.destroy = (sid, cb) => this.db.delete('website', `sessions.${sid}`).then(() => cb?.());
@@ -96,7 +96,7 @@ class WebServer {
     for (const subFolder of await readdir(this.config.settingsPath, { withFileTypes: true })) {
       if (!subFolder.isDirectory()) continue;
 
-      const index = JSON.parse(await readFile(path.join(this.config.settingsPath, subFolder.name, '_index.json'), 'utf-8'));
+      const index = JSON.parse(await readFile(path.join(this.config.settingsPath, subFolder.name, '_index.json'), 'utf8'));
       const optionList = [{
         optionId: `${index.id}.spacer`,
         title: 'Important!',
@@ -154,8 +154,8 @@ class WebServer {
         getActualSet: ({ guild }) => optionList.map(e => {
           /* eslint-disable-next-line prefer-rest-params */
           if (e.get) return { optionId: e.optionId, data: e.get(arguments) };
-          const items = e.optionId.replace(/([A-Z])/g, e => `.${e.toLowerCase()}`).split('.');
-          if (items[items.length - 1] == 'spacer') return { optionId: e.optionId, data: e.description };
+          const items = e.optionId.replaceAll(/([A-Z])/g, e => `.${e.toLowerCase()}`).split('.');
+          if (items.at(-1) == 'spacer') return { optionId: e.optionId, data: e.description };
 
           const data = items.reduce((acc, e) => acc?.[e], this.db.get('guildSettings', guild.id)) ?? items.reduce((acc, e) => acc?.[e], this.db.get('guildSettings', 'default'));
           return { optionId: e.optionId, data };
@@ -197,7 +197,7 @@ class WebServer {
       noCreateServer: true,
       useUnderMaintenance: false,
       useCategorySet: true,
-      html404: this.config.errorPagesDir ? await readFile(path.join(this.config.errorPagesDir, '404.html'), 'utf-8') : undefined,
+      html404: this.config.errorPagesDir ? await readFile(path.join(this.config.errorPagesDir, '404.html'), 'utf8') : undefined,
       redirectUri: `${this.config.baseUrl}/discord/callback`,
       bot: this.client,
       ownerIDs: [this.client.application.owner.id],
@@ -305,7 +305,7 @@ class WebServer {
 
       const
         pathStr = path.join(process.cwd(), this.config.customPagesPath, path.normalize(req.path.endsWith('/') ? req.path.slice(0, -1) : req.path).replace(/^(\.\.(\/|\\|$))+/, '')),
-        dir = pathStr.substring(0, pathStr.lastIndexOf(path.sep)),
+        dir = pathStr.slice(0, Math.max(0, pathStr.lastIndexOf(path.sep))),
         /* eslint-disable-next-line no-empty-function */
         subDirs = await readdir(dir, { withFileTypes: true }).catch(() => { });
 
@@ -318,7 +318,7 @@ class WebServer {
           return +file.includes('.') ? e.name.startsWith(file) : e.name.startsWith(`${file}.`);
         })?.name;
 
-        if (!filename || !subDirs.find(e => e.isFile() && e.name == filename)) {
+        if (!filename || !subDirs.some(e => e.isFile() && e.name == filename)) {
           const html = await this.constructor.createNavigationButtons(subDirs, pathStr, req.path);
           return html ? res.send(html) : next();
         }
@@ -349,7 +349,7 @@ class WebServer {
       .use(
         compression(),
         rateLimit({
-          windowMs: 60000, // 1min
+          windowMs: 6e4, // 1min
           max: 100,
           message: '<body style="background-color:#111;color:#ff0000"><p style="text-align:center;top:50%;position:relative;font-size:40;">Sorry, you have been ratelimited!</p></body>'
         }),
@@ -430,11 +430,11 @@ class WebServer {
 
   /** @type {typeof import('.').WebServer['createNavigationButtons']} */
   static async createNavigationButtons(dir, pathStr, reqPath) {
-    if (!dir.find(e => e.isDirectory() && e.name == path.basename(reqPath))) return;
+    if (!dir.some(e => e.isDirectory() && e.name == path.basename(reqPath))) return;
 
     return (await readdir(pathStr, { withFileTypes: true })).reduce((acc, file) => {
       const name = escapeHTML(file.isFile() ? file.name.split('.').slice(0, -1).join('.') : file.name);
-      const title = require(path.join(pathStr, file.name))?.title ?? name[0].toUpperCase() + name.slice(1).replace(/[_-]/g, ' ');
+      const title = require(path.join(pathStr, file.name))?.title ?? name[0].toUpperCase() + name.slice(1).replaceAll(/[_-]/g, ' ');
 
       return acc + `<a href='./${escapeHTML(path.basename(reqPath)) + '/' + name}'>` + escapeHTML(title) + '</a>';
     }, '<link rel="stylesheet" href="https://mephisto5558.github.io/Website-Assets/min/css/navButtons.css" crossorigin="anonymous" /><div class="navButton">') + '</div>';
