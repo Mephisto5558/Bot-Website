@@ -33,7 +33,7 @@
     "passport-discord": "^0.1.4"
   },
   "devDependencies": {
-    "@mephisto5558/eslint-config": "^1.1.0",
+    "@mephisto5558/eslint-config": "^1.1.1",
     "@mephisto5558/mongoose-db": "^3.0.0",
     "@stylistic/eslint-plugin": "^1.6.2",
     "@typescript-eslint/eslint-plugin": "^7.0.1",
