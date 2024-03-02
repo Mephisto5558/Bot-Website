@@ -1,3 +1,4 @@
 {
+  "root": true,
   "extends": "@mephisto5558/eslint-config"
 }
