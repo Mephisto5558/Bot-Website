@@ -146,7 +146,7 @@ module.exports = class VoteSystem {
     if (type != 'up' && type != 'down') return { errorCode: 400, error: 'Invalid vote type. Use "up" or "down"' };
 
     const { lastVoted } = this.db.get('userSettings', userId) ?? {};
-    if (this.constructor.isInCurrentWeek(new Date(lastVoted))) return { errorCode: 403, error: 'You can only vote once per week.' };
+    if (this.constructor.isInCurrentWeek(lastVoted)) return { errorCode: 403, error: 'You can only vote once per week.' };
 
     const feature = this.get(featureId);
     if (!feature) return { errorCode: 400, error: 'Unknown feature ID.' };
@@ -154,7 +154,7 @@ module.exports = class VoteSystem {
     feature.votes = (feature.votes ?? 0) + (type == 'up' ? 1 : -1);
 
     await this.db.update('website', `requests.${featureId}.votes`, feature.votes);
-    await this.db.update('userSettings', `${userId}.lastVoted`, Date.now());
+    await this.db.update('userSettings', `${userId}.lastVoted`, new Date());
 
     await this.sendToWebhook(`Feature Request has been ${type} voted`, feature.title + `\n\nVotes: ${feature.votes} `, Colors.Blurple, `?q=${featureId} `);
     return feature;
