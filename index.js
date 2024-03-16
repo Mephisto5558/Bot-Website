@@ -188,8 +188,8 @@ class WebServer {
 
     await DBD.useLicense(this.keys.dbdLicense);
 
-    /** @type {import('./index').WebServer['dashboard']} */
-    this.dashboard = new DBD.UpdatedClass()({
+    const DBDUpdated = DBD.UpdatedClass()
+    this.dashboard = new DBDUpdated({
       port: this.config.port,
       domain: this.config.domain,
       acceptPrivacyPolicy: true,
