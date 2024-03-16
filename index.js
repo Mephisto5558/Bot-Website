@@ -188,7 +188,7 @@ class WebServer {
 
     await DBD.useLicense(this.keys.dbdLicense);
 
-    const DBDUpdated = DBD.UpdatedClass()
+    const DBDUpdated = DBD.UpdatedClass();
     this.dashboard = new DBDUpdated({
       port: this.config.port,
       domain: this.config.domain,
