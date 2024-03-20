@@ -35,7 +35,7 @@ type customPage = {
   permissionCheck?(this: express.Request): boolean | Promise<boolean>;
   title: string;
   static?: boolean;
-  run?: string | number | boolean | ((this: WebServer, arg1: express.Response, arg2: express.Request, arg3: express.NextFunction) => unknown);
+  run?: URL | string | number | boolean | ((this: WebServer, arg1: express.Response, arg2: express.Request, arg3: express.NextFunction) => unknown);
 };
 type commands = { category: string; subTitle: string; aliasesDisabled: boolean; list: Record<string, unknown>[] }[];
 
