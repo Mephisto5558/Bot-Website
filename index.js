@@ -188,6 +188,7 @@ class WebServer {
 
     await DBD.useLicense(this.keys.dbdLicense);
 
+    /* eslint-disable-next-line new-cap */
     const DBDUpdated = DBD.UpdatedClass();
     this.dashboard = new DBDUpdated({
       port: this.config.port,
@@ -337,6 +338,8 @@ class WebServer {
         return res.send(code.slice(code.indexOf('{') + 1, code.lastIndexOf('}')));
       }
       if (typeof data.run == 'function') return data.run.call(this, res, req, next);
+      if (data.run instanceof URL) return res.redirect(data.run.toString());
+
       return res.send(JSON.stringify(data.run ?? data));
     }));
   };
