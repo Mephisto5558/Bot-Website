@@ -19,7 +19,14 @@ const
   DarkDashboard = require('dbd-dark-dashboard'),
 
   VoteSystem = require('./Utils/VoteSystem.js');
+
 class WebServer {
+  /**
+   * @param {import('.').WebServer['client']}client
+   * @param {import('.').WebServer['db']}db
+   * @param {import('.').WebServer['keys']} keys
+   * @param {import('.').WebServer['config']?}config
+   * @param {import('.').WebServer['logError']}errorLoggingFunction*/
   constructor(client, db, keys, config, errorLoggingFunction = console.error) {
     config ??= { support: {} };
 
@@ -36,7 +43,7 @@ class WebServer {
 
     this.#checkConstructorParams();
 
-    this.initiated = false; // set to true once this.init() ran
+    this.initiated = false;
 
     /* eslint-disable unicorn/no-null */
     // properties set after this.init() ran
@@ -154,25 +161,18 @@ class WebServer {
         getActualSet: ({ guild }) => optionList.map(e => {
           /* eslint-disable-next-line prefer-rest-params */
           if (e.get) return { optionId: e.optionId, data: e.get(arguments) };
-          const items = e.optionId.replaceAll(/([A-Z])/g, e => `.${e.toLowerCase()}`).split('.');
-          if (items.at(-1) == 'spacer') return { optionId: e.optionId, data: e.description };
+          const dataPath = e.optionId.replaceAll(/([A-Z])/g, e => `.${e.toLowerCase()}`);
+          if (dataPath.split('.').at(-1) == 'spacer') return { optionId: e.optionId, data: e.description };
 
-          const data = items.reduce((acc, e) => acc?.[e], this.db.get('guildSettings', guild.id)) ?? items.reduce((acc, e) => acc?.[e], this.db.get('guildSettings', 'default'));
+          const data = this.db.get('guildSettings', `${guild.id}.${dataPath}`) ?? this.db.get('guildSettings', `default.${dataPath}`);
           return { optionId: e.optionId, data };
         }),
         setNew: ({ guild, data: dataArray }) => {
-          let guildSettings = this.db.get('guildSettings');
-
           for (const { optionId, data } of dataArray) {
             if (data.embed && !data.embed.description) data.embed.description = ' ';
 
-            const nestedObj = optionId.split('.').reduceRight((obj, key) => ({ [key]: obj }), data);
-            const parsedObj = JSON.parse(JSON.stringify(nestedObj));
-
-            guildSettings = { ...guildSettings, [guild.id]: parsedObj };
+            this.db.update('guildSettings', `${guild.id}.${optionId}`, data);
           }
-
-          return this.db.set('guildSettings', guildSettings);
         },
         // optionList is never used again so idc about it being mutated and Array#toSorted doesn't exist in Node 18
         categoryOptionsList: optionList.sort((a, b) => a.position - b.position) // NOSONAR
