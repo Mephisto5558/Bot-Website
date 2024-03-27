@@ -85,15 +85,9 @@ class WebServer {
   #setupSessionStore() {
     this.sessionStore = new session.MemoryStore();
     /* eslint-disable-next-line unicorn/no-null */
-    this.sessionStore.get = (sid, cb) => cb(null, this.client.db.get('website', `sessions.${sid}`));
-    this.sessionStore.set = async (sid, sessionData, cb) => {
-      if (sessionData.passport?.user?.id)
-        await this.db.update('website', 'sessions', Object.fromEntries(Object.entries(this.db.get('website', 'sessions')).filter(([, e]) => e.passport?.user?.id != sessionData.passport.user.id)));
-      await this.db.update('website', `sessions.${sid}`, sessionData);
-
-      /* eslint-disable-next-line unicorn/no-null */
-      cb(null);
-    };
+    this.sessionStore.get = (sid, cb) => cb(null, this.db.get('website', `sessions.${sid}`));
+    /* eslint-disable-next-line unicorn/no-null */
+    this.sessionStore.set = (sid, sessionData, cb) => this.db.update('website', `sessions.${sid}`, sessionData).then(() => cb?.(null));
     this.sessionStore.destroy = (sid, cb) => this.db.delete('website', `sessions.${sid}`).then(() => cb?.());
   }
 
