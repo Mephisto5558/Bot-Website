@@ -42,7 +42,7 @@ type commands = { category: string; subTitle: string; aliasesDisabled: boolean; 
 
 declare class WebServer {
   constructor(
-    client: Discord.Client, db: DB, keys: Keys,
+    client: Discord.Client, db: TypedDB, keys: Keys,
     config?: {
       support?: Support; port?: number; domain?: string; errorPagesDir?: string;
       settingsPath?: string; customPagesPath?: string;
@@ -51,7 +51,7 @@ declare class WebServer {
   );
 
   client: Discord.Client<true>;
-  db: DB;
+  db: TypedDB;
   config: {
     support: Support; port: number; domain: string;
 
@@ -88,10 +88,10 @@ declare class WebServer {
 }
 
 declare class VoteSystem {
-  constructor(client: Discord.Client<true>, db: DB, domain: string, webhookURL?: string);
+  constructor(client: Discord.Client<true>, db: TypedDB, domain: string, webhookURL?: string);
 
   client: Discord.Client<true>;
-  db: DB;
+  db: TypedDB;
   domain: string;
   webhookURL: string;
 
@@ -163,15 +163,13 @@ type CreateObjectEntries<TValue, TValueInitial> = TValue extends object ? {
   : EmptyEntry<TValue>;
 
 // Source: https://github.com/Mephisto5558/Teufelsbot/blob/532f1fc7a83e2d7f5f41b9618214ec7d809c2032/globals.d.ts#L494
-declare module '@mephisto5558/mongoose-db' {
-  class DB {
-    get<DB extends keyof Database>(db: DB): Database[DB];
-    get<DB extends keyof Database, K extends keyof FlattenedDatabase[DB]>(db: DB, key: K): FlattenedDatabase[DB][K];
+declare class TypedDB extends DB {
+  get<DB extends keyof Database>(db: DB): Database[DB];
+  get<DB extends keyof Database, K extends keyof FlattenedDatabase[DB]>(db: DB, key: K): FlattenedDatabase[DB][K];
 
-    update<DB extends keyof Database, K extends keyof FlattenedDatabase[DB]>(db: DB, key: K, value: FlattenedDatabase[DB][K]): Promise<Database[DB]>;
-    set<DB extends keyof Database, K extends keyof FlattenedDatabase[DB]>(db: DB, value: FlattenedDatabase[DB][K], overwrite?: boolean): Promise<Database[DB]>;
-    delete<DB extends keyof Database, K extends keyof FlattenedDatabase[DB] | undefined>(db: DB, key?: K): Promise<boolean>;
-    push<DB extends keyof Database, K extends keyof FlattenedDatabase[DB]>(db: DB, key: K, ...value: FlattenedDatabase[DB][K]): Promise<Database[DB]>;
-    pushToSet<DB extends keyof Database, K extends keyof FlattenedDatabase[DB]>(db: DB, key: K, ...value: FlattenedDatabase[DB][K]): Promise<Database[DB]>;
-  }
+  update<DB extends keyof Database, K extends keyof FlattenedDatabase[DB]>(db: DB, key: K, value: FlattenedDatabase[DB][K]): Promise<Database[DB]>;
+  set<DB extends keyof Database, K extends keyof FlattenedDatabase[DB]>(db: DB, value: FlattenedDatabase[DB][K], overwrite?: boolean): Promise<Database[DB]>;
+  delete<DB extends keyof Database, K extends keyof FlattenedDatabase[DB] | undefined>(db: DB, key?: K): Promise<boolean>;
+  push<DB extends keyof Database, K extends keyof FlattenedDatabase[DB]>(db: DB, key: K, ...value: FlattenedDatabase[DB][K]): Promise<Database[DB]>;
+  pushToSet<DB extends keyof Database, K extends keyof FlattenedDatabase[DB]>(db: DB, key: K, ...value: FlattenedDatabase[DB][K]): Promise<Database[DB]>;
 }
