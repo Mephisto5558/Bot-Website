@@ -5,6 +5,7 @@ import type { MemoryStore } from 'express-session';
 import type { PassportStatic } from 'passport';
 import type { formTypes } from 'discord-dashboard';
 import type { DB } from '@mephisto5558/mongoose-db';
+import { Database } from './database';
 
 export { WebServer, type VoteSystem, type FeatureRequest, type dashboardSetting, type customPage, type commands };
 export default WebServer;
@@ -14,7 +15,7 @@ type Keys = { secret: string; dbdLicense: string; webhookURL: string };
 
 type RequestError = { errorCode: number; error: string };
 type FeatureRequest = {
-  id: string;
+  id: `PVTI_${string}` | `${Discord.Snowflake}_${number}`;
   title: string;
   body: string;
   votes: number;
@@ -64,6 +65,8 @@ declare class WebServer {
   };
 
   keys: Keys;
+
+  /** set to true once this.init() ran */
   initiated: boolean;
 
   passport: PassportStatic | null;
@@ -107,4 +110,68 @@ declare class VoteSystem {
 
   /** @param date A date obj or millseconds*/
   static isInCurrentWeek(date: Date | number): boolean;
+}
+
+
+type FlattenedDatabase = { [DB in keyof Database]: FlattenObject<Database[DB]>; };
+
+/* https://github.com/blazejkustra/dynamode/blob/fd3abf1e420612811c3eba96ec431e00c28b2783/lib/utils/types.ts#L10
+   Flatten entity  */
+type FlattenObject<TValue> = CollapseEntries<CreateObjectEntries<TValue, TValue>>;
+
+type Entry = { key: string; value: unknown };
+type EmptyEntry<TValue> = { key: ''; value: TValue };
+type ExcludedTypes = Date | Set<unknown> | Map<unknown, unknown> | Array<unknown>;
+type ArrayEncoder = `[${bigint}]`;
+
+type EscapeArrayKey<TKey extends string> = TKey extends `${infer TKeyBefore}.${ArrayEncoder}${infer TKeyAfter}`
+  ? EscapeArrayKey<`${TKeyBefore}${ArrayEncoder}${TKeyAfter}`>
+  : TKey;
+
+// Transforms entries to one flattened type
+type CollapseEntries<TEntry extends Entry> = { [E in TEntry as EscapeArrayKey<E['key']>]: E['value']; };
+
+// Transforms array type to object
+type CreateArrayEntry<TValue, TValueInitial> = OmitItself<
+  TValue extends unknown[] ? { [k: ArrayEncoder]: TValue[number] } : TValue,
+  TValueInitial
+>;
+
+// Omit the type that references itself
+type OmitItself<TValue, TValueInitial> = TValue extends TValueInitial
+  ? EmptyEntry<TValue>
+  : OmitExcludedTypes<TValue, TValueInitial>;
+
+// Omit the type that is listed in ExcludedTypes union
+type OmitExcludedTypes<TValue, TValueInitial> = TValue extends ExcludedTypes
+  ? EmptyEntry<TValue>
+  : CreateObjectEntries<TValue, TValueInitial>;
+
+type CreateObjectEntries<TValue, TValueInitial> = TValue extends object ? {
+  // Checks that Key is of type string
+  [TKey in keyof TValue]-?: TKey extends string
+    ? // Nested key can be an object, run recursively to the bottom
+    CreateArrayEntry<TValue[TKey], TValueInitial> extends infer TNestedValue
+      ? TNestedValue extends Entry
+        ? TNestedValue['key'] extends ''
+          ? { key: TKey; value: TNestedValue['value'] }
+          : { key: `${TKey}.${TNestedValue['key']}`; value: TNestedValue['value'] } | { key: TKey; value: TValue[TKey] }
+        : never
+      : never
+    : never;
+}[keyof TValue] // Builds entry for each key
+  : EmptyEntry<TValue>;
+
+// Source: https://github.com/Mephisto5558/Teufelsbot/blob/532f1fc7a83e2d7f5f41b9618214ec7d809c2032/globals.d.ts#L494
+declare module '@mephisto5558/mongoose-db' {
+  class DB {
+    get<DB extends keyof Database>(db: DB): Database[DB];
+    get<DB extends keyof Database, K extends keyof FlattenedDatabase[DB]>(db: DB, key: K): FlattenedDatabase[DB][K];
+
+    update<DB extends keyof Database, K extends keyof FlattenedDatabase[DB]>(db: DB, key: K, value: FlattenedDatabase[DB][K]): Promise<Database[DB]>;
+    set<DB extends keyof Database, K extends keyof FlattenedDatabase[DB]>(db: DB, value: FlattenedDatabase[DB][K], overwrite?: boolean): Promise<Database[DB]>;
+    delete<DB extends keyof Database, K extends keyof FlattenedDatabase[DB] | undefined>(db: DB, key?: K): Promise<boolean>;
+    push<DB extends keyof Database, K extends keyof FlattenedDatabase[DB]>(db: DB, key: K, ...value: FlattenedDatabase[DB][K]): Promise<Database[DB]>;
+    pushToSet<DB extends keyof Database, K extends keyof FlattenedDatabase[DB]>(db: DB, key: K, ...value: FlattenedDatabase[DB][K]): Promise<Database[DB]>;
+  }
 }
