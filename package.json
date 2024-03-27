@@ -10,6 +10,7 @@
   "files": [
     "index.js",
     "index.d.ts",
+    "database.d.ts",
     "Utils/VoteSystem.js"
   ],
   "keywords": [],
