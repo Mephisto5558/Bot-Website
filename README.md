@@ -10,11 +10,12 @@
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Mephisto5558_Bot-Website&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Mephisto5558_Bot-Website)<br>
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=Mephisto5558_Bot-Website&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=Mephisto5558_Bot-Website)
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=Mephisto5558_Bot-Website&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=Mephisto5558_Bot-Website)
-[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=Mephisto5558_Bot-Website&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=Mephisto5558_Bot-Website)<br>
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=Mephisto5558_Bot-Website&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=Mephisto5558_Bot-Website)
+[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=Mephisto5558_Bot-Website&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=Mephisto5558_Bot-Website)<br>
 [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=Mephisto5558_Bot-Website&metric=bugs)](https://sonarcloud.io/summary/new_code?id=Mephisto5558_Bot-Website)
 [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=Mephisto5558_Bot-Website&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=Mephisto5558_Bot-Website)
 [![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=Mephisto5558_Bot-Website&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=Mephisto5558_Bot-Website)
-[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=Mephisto5558_Bot-Website&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=Mephisto5558_Bot-Website)
+[![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=Mephisto5558_Bot-Website&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=Mephisto5558_Bot-Website)
 
 A website & dashboard for my discord bot with an easy way of adding new dashboard settings & pages.
 
