@@ -168,6 +168,7 @@ class WebServer {
             this.db.update('guildSettings', `${guild.id}.${optionId}`, data);
           }
         },
+
         // optionList is never used again so idc about it being mutated and Array#toSorted doesn't exist in Node 18
         categoryOptionsList: optionList.sort((a, b) => a.position - b.position) // NOSONAR
       });
@@ -381,6 +382,7 @@ class WebServer {
             /* eslint-disable-next-line no-empty */
             catch { }
           }
+
           // send html only to browser
           if (this.config.errorPagesDir && req.headers?.['user-agent']?.includes('Mozilla'))
             return res.status(500).sendFile(path.join(this.config.errorPagesDir, '500.html'), { root: process.cwd() });
