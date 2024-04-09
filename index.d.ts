@@ -148,6 +148,7 @@ type OmitExcludedTypes<TValue, TValueInitial> = TValue extends ExcludedTypes
   : CreateObjectEntries<TValue, TValueInitial>;
 
 type CreateObjectEntries<TValue, TValueInitial> = TValue extends object ? {
+
   // Checks that Key is of type string
   [TKey in keyof TValue]-?: TKey extends string
     ? // Nested key can be an object, run recursively to the bottom
