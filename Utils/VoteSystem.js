@@ -87,7 +87,7 @@ module.exports = class VoteSystem {
   /** @type {import('..').VoteSystem['update']} */
   async update(features, userId) {
     if (this.client.application.owner.id != userId) return { errorCode: 403, error: 'You don\'t have permission to update feature requests.' };
-    if (Array.isArray(features)) features = [features];
+    if (!Array.isArray(features)) features = [features];
 
     const
       promiseList = [],
