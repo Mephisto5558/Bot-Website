@@ -71,23 +71,44 @@ class WebServer {
       clientID: this.client.user.id,
       clientSecret: this.keys.secret,
       callbackURL: '/auth/discord/callback',
-      scope: ['identify']
-    }, (_accessToken, _refreshToken, user, done) => done(undefined, user)));
+      scope: ['identify', 'guilds']
+    }, (_accessToken, _refreshToken, user, done) => {
+      // Compatibility with Discord-Dashboard
+      user.tag = `${user.username}#${user.discriminator}`;
+      /* eslint-disable-next-line unicorn/no-null */
+      user.avatarURL = user.avatar ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=1024` : null;
 
-    this.passport.serializeUser((user, done) => done(undefined, {
-      id: user.id, username: user.username,
-      locale: user.locale, avatar: user.avatar, banner: user.banner
+      done(undefined, user);
     }));
 
+    this.passport.serializeUser((user, done) => done(undefined, user));
     this.passport.deserializeUser((user, done) => done(undefined, user));
   }
 
   #setupSessionStore() {
     this.sessionStore = new session.MemoryStore();
-    /* eslint-disable-next-line unicorn/no-null */
-    this.sessionStore.get = (sid, cb) => cb(null, this.db.get('website', `sessions.${sid}`));
-    /* eslint-disable-next-line unicorn/no-null */
-    this.sessionStore.set = (sid, sessionData, cb) => this.db.update('website', `sessions.${sid}`, sessionData).then(() => cb?.(null));
+    this.sessionStore.get = (sid, cb) => {
+      const data = this.db.get('website', `sessions.${sid}`);
+
+      if (data?.user) {
+        if (data.passport) data.passport.user = data.user;
+        else data.passport = { user: data.user };
+      }
+      /* eslint-disable-next-line unicorn/no-null */
+      return cb(null, data);
+    };
+    this.sessionStore.set = async (sid, sessionData, cb) => {
+      if (sessionData.passport?.user) {
+        sessionData.user = sessionData.passport.user;
+
+        delete sessionData.passport.user;
+        if (!Object.keys(sessionData.passport).length) delete sessionData.passport;
+      }
+
+      await this.db.update('website', `sessions.${sid}`, sessionData);
+      /* eslint-disable-next-line unicorn/no-null */
+      return cb?.(null);
+    };
     this.sessionStore.destroy = (sid, cb) => this.db.delete('website', `sessions.${sid}`).then(() => cb?.());
   }
 
@@ -163,14 +184,14 @@ class WebServer {
           const data = this.db.get('guildSettings', `${guild.id}.${dataPath}`) ?? this.db.get('guildSettings', `default.${dataPath}`);
           return { optionId: e.optionId, data };
         }),
-        setNew: ({ guild, data: dataArray }) => {
+        setNew: async ({ guild, data: dataArray }) => {
           for (const { optionId, data } of dataArray) {
             const dataPath = optionId.replaceAll(/([A-Z])/g, e => `.${e.toLowerCase()}`);
 
             if (this.db.get('guildSettings', `${guild.id}.${dataPath}`) === data) continue;
             if (data.embed) data.embed.description ??= ' ';
 
-            this.db.update('guildSettings', `${guild.id}.${dataPath}`, data);
+            await this.db.update('guildSettings', `${guild.id}.${dataPath}`, data);
           }
         },
 
@@ -200,6 +221,7 @@ class WebServer {
       useCategorySet: true,
       html404: this.config.errorPagesDir ? await readFile(path.join(this.config.errorPagesDir, '404.html'), 'utf8') : undefined,
       redirectUri: `${this.config.baseUrl}/discord/callback`,
+      sessionStore: this.sessionStore,
       bot: this.client,
       ownerIDs: [this.client.application.owner.id],
       client: {
@@ -300,9 +322,28 @@ class WebServer {
     /* eslint-disable-next-line new-cap */
     this.router = express.Router();
     this.router.all('*', asyncHandler(async (req, res, next) => {
+      Object.defineProperty(req.session, 'guilds', { // Dashboard
+        get() { return this.user?.guilds; },
+        set(val) {
+          this.user ??= {};
+          this.user.guilds = val;
+        }
+      });
+
       if (req.path === '/') return res.redirect('/home');
       if (req.path.startsWith('/api/') && !/^\/api\/v\d+\//i.test(req.path.endsWith('/') ? req.path : req.path + '/')) res.redirect(req.path.replace('/api/', '/api/v1/'));
       if (req.path == '/dashboard') return res.redirect(301, '/manage');
+      if (req.path == '/callback') { // Dashboard
+        if (req.query.code) req.session.user.accessToken = req.query.code;
+        return next();
+      }
+      if (req.path == '/guilds/reload') { // Dashboard
+        /* eslint-disable new-cap */
+        if (req.session.user?.accessToken && !req.AssistantsSecureStorage.GetUser(req.session.user.id))
+          req.AssistantsSecureStorage.SaveUser(req.session.user.id, req.session.user.accessToken);
+        /* eslint-enable new-cap */
+        return next();
+      }
 
       const
         pathStr = path.join(process.cwd(), this.config.customPagesPath, path.normalize(req.path.endsWith('/') ? req.path.slice(0, -1) : req.path).replace(/^(\.\.(\/|\\|$))+/, '')),
