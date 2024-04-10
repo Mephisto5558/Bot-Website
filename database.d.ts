@@ -1,6 +1,5 @@
 import type { Snowflake, APIUser, GuildFeature } from 'discord.js';
-import type { SessionData } from 'express-session';
-import type { Profile } from 'passport-discord';
+import type { Cookie } from 'express-session';
 import { FeatureRequest } from '.';
 
 export { Database };
@@ -8,50 +7,36 @@ export { Database };
 type Database = {
   website: {
     sessions: {
-      [sessionId: string]: SessionData & {
-        passport?: {
-          user: {
-            id: Profile['id'];
-            username: Profile['username'];
-            locale: Profile['locale'];
-            avatar: Profile['avatar'];
-            banner: Profile['banner'];
-          };
-        };
-
-        /** from `discord-dashboard` */
+      [sessionId: string]: {
+        cookie: Cookie;
+        r?: string;
+        redirectURL?: string;
         discordAuthStatus?: {
           loading: boolean;
           success: boolean;
           state: {
-            error: unknown?;
-            data: unknown?;
+            error: string?;
+            data: string?;
           };
         };
-        redirectURL?: string;
-        r?: string;
         user?: APIUser & {
-          public_flags: number;
-          flags: number;
           avatar_decoration_data: {
             asset: string;
             sku_id: string;
           }?;
           banner_color: `#${number}`?;
           tag: `${string}#${number}`;
-          avatarURL: string;
+          avatarURL: string?;
+          guilds: {
+            id: Snowflake;
+            name: string;
+            icon: string?;
+            owner: boolean;
+            permissions: `${bigint}`;
+            features: GuildFeature[];
+          }[];
         };
         loggedInLastTime?: boolean;
-        guilds?: {
-          id: Snowflake;
-          name: string;
-          icon: string?;
-          owner: boolean;
-          permissions: `${bigint}`;
-          features: GuildFeature[];
-        }[];
-        errors?: unknown?;
-        success?: boolean?;
       } | undefined;
     };
     requests: {
