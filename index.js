@@ -132,11 +132,13 @@ class WebServer {
           });
         }
         else {
+          if (this.formTypes[setting.type]) setting.type = this.formTypes[setting.type];
+
           optionList.push({
             optionId: `${index.id}.${setting.id}`,
             optionName: setting.name,
             optionDescription: setting.description,
-            optionType: typeof (this.formTypes[setting.type] ?? setting.type) == 'function' ? await (this.formTypes[setting.type] ?? setting.type).call(this) : setting.type,
+            optionType: typeof setting.type == 'function' ? await setting.type.call(this) : setting.type,
             position: setting.position,
             allowedCheck: ({ guild, user }) => {
               if (this.db.get('botSettings', 'blacklist')?.includes(user.id)) return { allowed: false, errorMessage: 'You have been blacklisted from using the bot.' };
