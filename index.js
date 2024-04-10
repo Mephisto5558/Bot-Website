@@ -163,6 +163,7 @@ class WebServer {
         }),
         setNew: ({ guild, data: dataArray }) => {
           for (const { optionId, data } of dataArray) {
+            if (this.db.get('guildSettings', `${guild.id}.${optionId}`) === data) continue;
             if (data.embed && !data.embed.description) data.embed.description = ' ';
 
             this.db.update('guildSettings', `${guild.id}.${optionId}`, data);
