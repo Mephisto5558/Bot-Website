@@ -385,6 +385,30 @@ class WebServer {
     }));
   };
 
+  /* eslint-disable jsdoc/imports-as-dependencies -- see https://github.com/gajus/eslint-plugin-jsdoc/issues/1114*/
+  /**
+   * @param {Error|import('http-errors').HttpError}err
+   * @param {import('express').Request}req
+   * @param {import('express').Response}res*/
+  /* eslint-enable jsdoc/imports-as-dependencies */
+  #reqErrorHandler = (err, req, res, next) => {
+    if (!res.statusCode) this.logError(err);
+
+    // send html only to browser
+    if (this.config.errorPagesDir && req.headers?.['user-agent']?.includes('Mozilla')) {
+      const filePath = path.join(this.config.errorPagesDir, `${err.statusCode ?? 500}.html`);
+
+      try {
+        return res.status(err.statusCode ?? 500).sendFile(filePath, { root: process.cwd() });
+      }
+      catch (err) {
+        if (err.code != 'ENOENT') return this.#reqErrorHandler(err, req, res, next);
+      }
+    }
+
+    return res.sendStatus(err.statusCode ?? 500);
+  };
+
   #setupApp() {
     this.app = express()
       .disable('x-powered-by')
@@ -421,19 +445,7 @@ class WebServer {
       .use(
         this.router,
         this.dashboard.getApp(),
-        (err, req, res, next) => {
-          this.logError(err);
-          if (res.headersSent) {
-            try { return next(err); }
-            /* eslint-disable-next-line no-empty */
-            catch { }
-          }
-
-          // send html only to browser
-          if (this.config.errorPagesDir && req.headers?.['user-agent']?.includes('Mozilla'))
-            return res.status(500).sendFile(path.join(this.config.errorPagesDir, '500.html'), { root: process.cwd() });
-          res.sendStatus(500);
-        },
+        this.#reqErrorHandler,
         (req, res) => {
           if (this.config.errorPagesDir && req.headers?.['user-agent']?.includes('Mozilla'))
             return res.status(404).sendFile(path.join(this.config.errorPagesDir, '404.html'), { root: process.cwd() });

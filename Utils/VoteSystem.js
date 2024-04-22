@@ -49,7 +49,7 @@ module.exports = class VoteSystem {
     body = sanitize(body?.trim());
 
     if (title.length > 140 || body?.length > 4000)
-      return { errorCode: 400, error: 'title can only be 140 chars long, body can only be 4000 chars long.' };
+      return { errorCode: 413, error: 'title can only be 140 chars long, body can only be 4000 chars long.' };
 
     const featureRequestAutoApprove = this.db.get('userSettings', `${userId}.featureRequestAutoApprove`);
     if (!featureRequestAutoApprove && Object.keys(this.db.cache.filter((_, k) => k.split('_') == userId))?.length >= 5)
@@ -101,7 +101,12 @@ module.exports = class VoteSystem {
 
       const title = sanitize(oTitle?.trim());
       if (!title) {
-        errorList.push({ id, error: 'title must be non-empty string' });
+        errorList.push({ id, error: 'missing title' });
+        break;
+      }
+
+      if (title.length > 140 || body?.length > 4000) {
+        errorList.push({ id, error: 'title can only be 140 chars long, body can only be 4000 chars long.' });
         break;
       }
 
