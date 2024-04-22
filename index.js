@@ -45,7 +45,7 @@ class WebServer {
 
     this.initiated = false;
 
-    /* eslint-disable unicorn/no-null */
+    /* eslint-disable unicorn/no-null -- `null` is appropriate here */
     // properties set after this.init() ran
     this.passport = null;
     this.sessionStore = null;
@@ -75,7 +75,7 @@ class WebServer {
     }, (_accessToken, _refreshToken, user, done) => {
       // Compatibility with Discord-Dashboard
       user.tag = `${user.username}#${user.discriminator}`;
-      /* eslint-disable-next-line unicorn/no-null */
+      /* eslint-disable-next-line unicorn/no-null -- `null` is appropriate here */
       user.avatarURL = user.avatar ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=1024` : null;
 
       done(undefined, user);
@@ -94,7 +94,7 @@ class WebServer {
         if (data.passport) data.passport.user = data.user;
         else data.passport = { user: data.user };
       }
-      /* eslint-disable-next-line unicorn/no-null */
+      /* eslint-disable-next-line unicorn/no-null -- `null` must be used here */
       return cb(null, data);
     };
     this.sessionStore.set = async (sid, sessionData, cb) => {
@@ -106,7 +106,7 @@ class WebServer {
       }
 
       await this.db.update('website', `sessions.${sid}`, sessionData);
-      /* eslint-disable-next-line unicorn/no-null */
+      /* eslint-disable-next-line unicorn/no-null -- `null` must be used here */
       return cb?.(null);
     };
     this.sessionStore.destroy = (sid, cb) => this.db.delete('website', `sessions.${sid}`).then(() => cb?.());
@@ -209,7 +209,7 @@ class WebServer {
 
     await DBD.useLicense(this.keys.dbdLicense);
 
-    /* eslint-disable-next-line new-cap */
+    /* eslint-disable-next-line new-cap -- UpdatedClass is none of mine (and, returns a class) */
     const DBDUpdated = DBD.UpdatedClass();
     this.dashboard = new DBDUpdated({
       port: this.config.port,
@@ -263,7 +263,7 @@ class WebServer {
            commands
          }), */
 
-      /* eslint-disable-next-line new-cap */
+      /* eslint-disable-next-line new-cap -- this is a function that does stuff a class usually does. */
       theme: DarkDashboard({
         information: {
           createdBy: this.client.application.owner.username,
@@ -319,7 +319,7 @@ class WebServer {
   }
 
   #setupRouter = () => {
-    /* eslint-disable-next-line new-cap */
+    /* eslint-disable-next-line new-cap -- Router is a function that returns a class */
     this.router = express.Router();
     this.router.all('*', asyncHandler(async (req, res, next) => {
       Object.defineProperty(req.session, 'guilds', { // Dashboard
@@ -385,7 +385,7 @@ class WebServer {
     }));
   };
 
-  /* eslint-disable jsdoc/imports-as-dependencies -- see https://github.com/gajus/eslint-plugin-jsdoc/issues/1114*/
+  /* eslint-disable jsdoc/imports-as-dependencies -- see https://github.com/gajus/eslint-plugin-jsdoc/issues/1114 */
   /**
    * @param {Error|import('http-errors').HttpError}err
    * @param {import('express').Request}req
