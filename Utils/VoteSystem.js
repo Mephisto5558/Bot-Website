@@ -59,7 +59,7 @@ module.exports = class VoteSystem {
 
     await this.#update(id, { id, title, body, ...featureRequestAutoApprove ? {} : { pending: true } });
 
-    /* eslint-disable-next-line unicorn/prefer-ternary */
+    /* eslint-disable-next-line unicorn/prefer-ternary -- would make the line too long. */
     if (featureRequestAutoApprove) await this.sendToWebhook('New Approved Feature Request', this.constructor.formatDesc({ title, body }), Colors.Blue, `?q=${id}`);
     else await this.sendToWebhook('New Pending Feature Request', undefined, Colors.Blue, `?q=${id}`);
 
