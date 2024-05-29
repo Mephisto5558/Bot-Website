@@ -34,6 +34,7 @@ class WebServer {
     this.db = db;
     this.logError = errorLoggingFunction;
     this.config = config;
+    this.config.devIds ??= [];
     this.config.port ??= process.env.PORT ?? process.env.SERVER_PORT ?? 8000;
     this.config.domain ??= process.env.SERVER_IP ?? process.env.IP ?? 'http://localhost';
     if (!this.config.domain.startsWith('http')) this.config.domain = `http://${this.config.domain}`;
@@ -223,7 +224,7 @@ class WebServer {
       redirectUri: `${this.config.baseUrl}/discord/callback`,
       sessionStore: this.sessionStore,
       bot: this.client,
-      ownerIDs: [this.client.application.owner.id],
+      ownerIDs: this.config.devIds,
       client: {
         id: this.client.user.id,
         secret: this.keys.secret

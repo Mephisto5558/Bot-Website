@@ -33,7 +33,7 @@ module.exports = class VoteSystem {
 
   /** @type {import('..').VoteSystem['getMany']} */
   getMany = (amount, offset = 0, filter = '', includePending = false, userId = '') => {
-    const cards = Object.values(this.get()).filter(e => ((includePending && this.client.application.owner.id == userId) || !e.pending)
+    const cards = Object.values(this.get()).filter(e => ((includePending && this.client.config.devIds.includes(userId)) || !e.pending)
       && (e.title.includes(filter) || e.body?.includes(filter) || e.id.includes(filter)));
 
     return { cards: amount ? cards.slice(offset, offset + amount) : cards.slice(offset), moreAvailable: !!(amount && cards.length > offset + amount) };
@@ -68,7 +68,7 @@ module.exports = class VoteSystem {
 
   /** @type {import('..').VoteSystem['approve']} */
   async approve(featureId, userId) {
-    if (this.client.application.owner.id != userId)
+    if (!this.client.config.devIds.includes(userId))
       return { errorCode: 403, error: "You don't have permission to approve feature requests." };
 
     const request = this.get(featureId);
@@ -86,7 +86,7 @@ module.exports = class VoteSystem {
 
   /** @type {import('..').VoteSystem['update']} */
   async update(features, userId) {
-    if (this.client.application.owner.id != userId) return { errorCode: 403, error: 'You don\'t have permission to update feature requests.' };
+    if (!this.client.config.devIds.includes(userId)) return { errorCode: 403, error: 'You don\'t have permission to update feature requests.' };
     if (!Array.isArray(features)) features = [features];
 
     const
@@ -128,7 +128,7 @@ module.exports = class VoteSystem {
   /** @type {import('..').VoteSystem['delete']} */
   async delete(featureId, userId) {
     const requestAuthor = featureId.split('_')[0];
-    if (this.client.application.owner.id != userId && requestAuthor != userId)
+    if (!this.client.config.devIds.includes(userId) && requestAuthor != userId)
       return { errorCode: 403, error: 'You don\'t have permission to delete that feature request.' };
 
     const request = this.get(featureId);
