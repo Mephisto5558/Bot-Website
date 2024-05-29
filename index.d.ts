@@ -45,7 +45,7 @@ declare class WebServer {
     client: Discord.Client, db: TypedDB, keys: Keys,
     config?: {
       support?: Support; port?: number; domain?: string; errorPagesDir?: string;
-      settingsPath?: string; customPagesPath?: string;
+      settingsPath?: string; customPagesPath?: string; ownerIds?: string[];
     },
     errorLoggingFunction?: (err: Error, req: express.Request, res: express.Response) => unknown
   );
@@ -53,7 +53,7 @@ declare class WebServer {
   client: Discord.Client<true>;
   db: TypedDB;
   config: {
-    support: Support; port: number; domain: string;
+    support: Support; port: number; domain: string; ownerIds: string[];
 
     /**
      * ```js
