@@ -88,11 +88,10 @@ declare class WebServer {
 }
 
 declare class VoteSystem {
-  constructor(client: Discord.Client<true>, db: TypedDB, domain: string, webhookURL?: string);
+  constructor(client: Discord.Client<true>, db: TypedDB, config: { domain: string; webhookURL?: string; ownerIds: string[] });
 
   client: Discord.Client<true>;
-  db: TypedDB;
-  domain: string;
+  config: { domain: string; webhookURL?: string; ownerIds: string[] };
   webhookURL: string;
 
   fetchAll(): Promise<FeatureRequest[]>;

@@ -34,7 +34,7 @@ class WebServer {
     this.db = db;
     this.logError = errorLoggingFunction;
     this.config = config;
-    this.config.devIds ??= [];
+    this.config.ownerIds ??= [];
     this.config.port ??= process.env.PORT ?? process.env.SERVER_PORT ?? 8000;
     this.config.domain ??= process.env.SERVER_IP ?? process.env.IP ?? 'http://localhost';
     if (!this.config.domain.startsWith('http')) this.config.domain = `http://${this.config.domain}`;
@@ -224,7 +224,7 @@ class WebServer {
       redirectUri: `${this.config.baseUrl}/discord/callback`,
       sessionStore: this.sessionStore,
       bot: this.client,
-      ownerIDs: this.config.devIds,
+      ownerIDs: this.config.ownerIds,
       client: {
         id: this.client.user.id,
         secret: this.keys.secret
@@ -478,7 +478,7 @@ class WebServer {
     this.#setupRouter();
     this.#setupApp();
 
-    this.voteSystem = new VoteSystem(this.client, this.db, this.config.baseUrl, this.keys.webhookURL);
+    this.voteSystem = new VoteSystem(this.client, this.db, this.config);
 
     this.app.listen(this.config.port, () => console.log(`Website is online on ${this.config.baseUrl}.`));
 

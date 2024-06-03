@@ -6,14 +6,12 @@ module.exports = class VoteSystem {
   /**
    * @param {import('discord.js').Client<true>}client
    * @param {import('@mephisto5558/mongoose-db').DB}db
-   * @param {string} domain
-   * @param {string?} webhookURL
+   * @param {{domain: string, webhookURL?:string, ownerIds: string[]}}config
    */
-  constructor(client, db, domain, webhookURL) {
+  constructor(client, db, config) {
     this.client = client;
     this.db = db;
-    this.domain = domain;
-    this.webhookURL = webhookURL;
+    this.config = config;
 
     if (!client.isReady()) throw new Error('Client must be ready!');
   }
@@ -33,7 +31,7 @@ module.exports = class VoteSystem {
 
   /** @type {import('..').VoteSystem['getMany']} */
   getMany = (amount, offset = 0, filter = '', includePending = false, userId = '') => {
-    const cards = Object.values(this.get()).filter(e => ((includePending && this.client.config.devIds.includes(userId)) || !e.pending)
+    const cards = Object.values(this.get()).filter(e => ((includePending && this.config.ownerIds.includes(userId)) || !e.pending)
       && (e.title.includes(filter) || e.body?.includes(filter) || e.id.includes(filter)));
 
     return { cards: amount ? cards.slice(offset, offset + amount) : cards.slice(offset), moreAvailable: !!(amount && cards.length > offset + amount) };
@@ -68,7 +66,7 @@ module.exports = class VoteSystem {
 
   /** @type {import('..').VoteSystem['approve']} */
   async approve(featureId, userId) {
-    if (!this.client.config.devIds.includes(userId))
+    if (!this.client.config.ownerIds.includes(userId))
       return { errorCode: 403, error: "You don't have permission to approve feature requests." };
 
     const request = this.get(featureId);
@@ -86,7 +84,7 @@ module.exports = class VoteSystem {
 
   /** @type {import('..').VoteSystem['update']} */
   async update(features, userId) {
-    if (!this.client.config.devIds.includes(userId)) return { errorCode: 403, error: 'You don\'t have permission to update feature requests.' };
+    if (!this.client.config.ownerIds.includes(userId)) return { errorCode: 403, error: 'You don\'t have permission to update feature requests.' };
     if (!Array.isArray(features)) features = [features];
 
     const
@@ -118,7 +116,8 @@ module.exports = class VoteSystem {
 
     await this.sendToWebhook(
       'Feature Requests have been edited',
-      'The following feature request(s) have been edited by a dev:\n' + features.reduce((acc, { id }) => errorList.some(e => e.id == id) ? acc : `${acc}\n- [${id}](${this.domain}/vote?q=${id})`, ''),
+      'The following feature request(s) have been edited by a dev:\n'
+      + features.reduce((acc, { id }) => errorList.some(e => e.id == id) ? acc : `${acc}\n- [${id}](${this.config.domain}/vote?q=${id})`, ''),
       Colors.Orange
     );
 
@@ -128,7 +127,7 @@ module.exports = class VoteSystem {
   /** @type {import('..').VoteSystem['delete']} */
   async delete(featureId, userId) {
     const requestAuthor = featureId.split('_')[0];
-    if (!this.client.config.devIds.includes(userId) && requestAuthor != userId)
+    if (!this.client.config.ownerIds.includes(userId) && requestAuthor != userId)
       return { errorCode: 403, error: 'You don\'t have permission to delete that feature request.' };
 
     const request = this.get(featureId);
@@ -167,16 +166,16 @@ module.exports = class VoteSystem {
 
   /** @type {import('..').VoteSystem['sendToWebhook']} */
   async sendToWebhook(title, description, color = Colors.White, url = '') {
-    if (!this.webhookURL) return { errorCode: 500, error: 'The backend has no webhook url configured' };
+    if (!this.config.webhookURL) return { errorCode: 500, error: 'The backend has no webhook url configured' };
 
-    const res = await fetch(this.webhookURL, {
+    const res = await fetch(this.config.webhookURL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         username: 'Teufelsbot Feature Requests',
         /* eslint-disable-next-line camelcase */
-        avatar_url: this.domain ? `${this.domain}/favicon.ico` : undefined,
-        embeds: [{ url: `${this.domain}/vote${url ?? ''}`, title, description, color }]
+        avatar_url: this.config.domain ? `${this.config.domain}/favicon.ico` : undefined,
+        embeds: [{ url: `${this.config.domain}/vote${url ?? ''}`, title, description, color }]
       })
     });
 
