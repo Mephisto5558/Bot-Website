@@ -91,7 +91,7 @@ module.exports = class VoteSystem {
       promiseList = [],
       errorList = [];
 
-    for (const { id, title: oTitle, body } of features) {
+    for (const { id, title: oTitle, body, pending } of features) {
       if (!this.get(id)) {
         errorList.push({ id, error: 'Unknown feature ID.' });
         break;
@@ -109,6 +109,8 @@ module.exports = class VoteSystem {
       }
 
       const data = { ...this.get(id), title, body: sanitize(body?.trim()) };
+      if (pending !== undefined) data.pending = pending;
+
       promiseList.push(this.db.update('website', `requests.${id}`, data));
     }
 
