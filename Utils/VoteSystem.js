@@ -66,7 +66,7 @@ module.exports = class VoteSystem {
 
   /** @type {import('..').VoteSystem['approve']} */
   async approve(featureId, userId) {
-    if (!this.client.config.ownerIds.includes(userId))
+    if (!this.config.ownerIds.includes(userId))
       return { errorCode: 403, error: "You don't have permission to approve feature requests." };
 
     const request = this.get(featureId);
@@ -84,7 +84,7 @@ module.exports = class VoteSystem {
 
   /** @type {import('..').VoteSystem['update']} */
   async update(features, userId) {
-    if (!this.client.config.ownerIds.includes(userId)) return { errorCode: 403, error: 'You don\'t have permission to update feature requests.' };
+    if (!this.config.ownerIds.includes(userId)) return { errorCode: 403, error: 'You don\'t have permission to update feature requests.' };
     if (!Array.isArray(features)) features = [features];
 
     const
@@ -127,7 +127,7 @@ module.exports = class VoteSystem {
   /** @type {import('..').VoteSystem['delete']} */
   async delete(featureId, userId) {
     const requestAuthor = featureId.split('_')[0];
-    if (!this.client.config.ownerIds.includes(userId) && requestAuthor != userId)
+    if (!this.config.ownerIds.includes(userId) && requestAuthor != userId)
       return { errorCode: 403, error: 'You don\'t have permission to delete that feature request.' };
 
     const request = this.get(featureId);
