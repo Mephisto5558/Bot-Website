@@ -46,6 +46,7 @@ declare class WebServer {
     config?: {
       support?: Support; port?: number; domain?: string; errorPagesDir?: string;
       settingsPath?: string; customPagesPath?: string; ownerIds?: string[];
+      webhookUrl?: string;
     },
     errorLoggingFunction?: (err: Error, req: express.Request, res: express.Response) => unknown
   );
