@@ -17,6 +17,8 @@
 [![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=Mephisto5558_Bot-Website&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=Mephisto5558_Bot-Website)
 [![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=Mephisto5558_Bot-Website&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=Mephisto5558_Bot-Website)
 
+[![Discord Server](https://discord.com/api/guilds/1011956895529041950/widget.png?style=shield)](https://discord.com/invite/yWwGTeppjR)
+
 A website & dashboard for my discord bot with an easy way of adding new dashboard settings & pages.
 
 ### Note that this library currently uses a deprecated (but working) library for its dashboard.
