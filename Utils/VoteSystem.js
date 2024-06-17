@@ -6,7 +6,7 @@ module.exports = class VoteSystem {
   /**
    * @param {import('discord.js').Client<true>}client
    * @param {import('@mephisto5558/mongoose-db').DB}db
-   * @param {{domain: string, webhookURL?:string, ownerIds: string[]}}config
+   * @param {{domain: string, webhookUrl?:string, ownerIds: string[]}}config
    */
   constructor(client, db, config) {
     this.client = client;
@@ -168,9 +168,9 @@ module.exports = class VoteSystem {
 
   /** @type {import('..').VoteSystem['sendToWebhook']} */
   async sendToWebhook(title, description, color = Colors.White, url = '') {
-    if (!this.config.webhookURL) return { errorCode: 500, error: 'The backend has no webhook url configured' };
+    if (!this.config.webhookUrl) return { errorCode: 500, error: 'The backend has no webhook url configured' };
 
-    const res = await fetch(this.config.webhookURL, {
+    const res = await fetch(this.config.webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

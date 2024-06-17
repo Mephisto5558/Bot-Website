@@ -11,7 +11,7 @@ export { WebServer, type VoteSystem, type FeatureRequest, type dashboardSetting,
 export default WebServer;
 
 type Support = { mail?: string; discord?: string };
-type Keys = { secret: string; dbdLicense: string; webhookURL: string };
+type Keys = { secret: string; dbdLicense: string };
 
 type RequestError = { errorCode: number; error: string };
 type FeatureRequest = {
@@ -61,6 +61,7 @@ declare class WebServer {
      * else WebServer['config']['domain']
      * ```*/
     baseUrl: string;
+    webhookUrl?: string;
     errorPagesDir?: string; settingsPath: string; customPagesPath: string;
   };
 
@@ -88,11 +89,10 @@ declare class WebServer {
 }
 
 declare class VoteSystem {
-  constructor(client: Discord.Client<true>, db: TypedDB, config: { domain: string; webhookURL?: string; ownerIds: string[] });
+  constructor(client: Discord.Client<true>, db: TypedDB, config: { domain: string; webhookUrl?: string; ownerIds: string[] });
 
   client: Discord.Client<true>;
-  config: { domain: string; webhookURL?: string; ownerIds: string[] };
-  webhookURL: string;
+  config: { domain: string; webhookUrl?: string; ownerIds: string[] };
 
   fetchAll(): Promise<FeatureRequest[]>;
   get(id: FeatureRequest['id']): Promise<FeatureRequest | void>;
