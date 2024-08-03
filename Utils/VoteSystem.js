@@ -20,6 +20,7 @@ module.exports = class VoteSystem {
   fetchAll = () => Object.entries(this.db.get('website', 'requests') ?? {});
 
   /** @type {import('..').VoteSystem['get']} */
+  /* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- can't get the typing correct rn (todo)*/
   get = id => this.db.get('website', 'requests' + (id ? `.${id}` : ''));
 
   /**
@@ -27,30 +28,30 @@ module.exports = class VoteSystem {
    * @param {FeatureRequest['id']}id
    * @param {FeatureRequest}data
    * @returns {Promise<FeatureRequest | void>}*/
-  #update = (id, data) => this.db.update('website', `requests.${id}`, data);
+  #update = async (id, data) => this.db.update('website', `requests.${id}`, data);
 
   /** @type {import('..').VoteSystem['getMany']} */
   getMany = (amount, offset = 0, filter = '', includePending = false, userId = '') => {
     const cards = Object.values(this.get()).filter(e => ((includePending && this.config.ownerIds.includes(userId)) || !e.pending)
-      && (e.title.includes(filter) || e.body?.includes(filter) || e.id.includes(filter)));
+      && (e.title.includes(filter) || e.body.includes(filter) || e.id.includes(filter)));
 
     return { cards: amount ? cards.slice(offset, offset + amount) : cards.slice(offset), moreAvailable: !!(amount && cards.length > offset + amount) };
   };
 
   /** @type {import('..').VoteSystem['add']} */
   async add(title, body, userId = '') {
-    const error = await this.validate(userId);
+    const error = this.validate(userId);
     if (error) return error;
     if (!title) return { errorCode: 400, error: 'Missing title.' };
 
     title = sanitize(title.trim());
-    body = sanitize(body?.trim());
+    body = sanitize(body.trim());
 
-    if (title.length > 140 || body?.length > 4000)
+    if (title.length > 140 || body.length > 4000)
       return { errorCode: 413, error: 'title can only be 140 chars long, body can only be 4000 chars long.' };
 
     const featureRequestAutoApprove = this.db.get('userSettings', `${userId}.featureRequestAutoApprove`);
-    if (!featureRequestAutoApprove && Object.keys(this.db.cache.filter((_, k) => k.split('_') == userId))?.length >= 5)
+    if (!featureRequestAutoApprove && Object.keys(this.db.cache.filter((_, k) => k.split('_') == userId)).length >= 5)
       return { errorCode: 403, error: 'You can only have up to 5 pending feature requests' };
 
     const id = `${userId}_${Date.now()}`;
@@ -97,18 +98,18 @@ module.exports = class VoteSystem {
         break;
       }
 
-      const title = sanitize(oTitle?.trim());
+      const title = sanitize(oTitle.trim());
       if (!title) {
         errorList.push({ id, error: 'missing title' });
         break;
       }
 
-      if (title.length > 140 || body?.length > 4000) {
+      if (title.length > 140 || body.length > 4000) {
         errorList.push({ id, error: 'title can only be 140 chars long, body can only be 4000 chars long.' });
         break;
       }
 
-      const data = { ...this.get(id), title, body: sanitize(body?.trim()) };
+      const data = { ...this.get(id), title, body: sanitize(body.trim()) };
       if (pending !== undefined) data.pending = pending;
 
       promiseList.push(this.db.update('website', `requests.${id}`, data));
@@ -136,7 +137,6 @@ module.exports = class VoteSystem {
     if (!request) return { errorCode: 400, error: 'Unknown feature ID.' };
 
     await this.db.delete('website', `requests.${featureId}`);
-    this.db.delete(featureId);
 
     await this.sendToWebhook(
       `Feature Request has been ${request.pending ? 'denied' : 'deleted'} by ${requestAuthor == userId ? 'the author' : 'a dev'}`,
@@ -147,9 +147,9 @@ module.exports = class VoteSystem {
 
   /** @type {import('..').VoteSystem['addVote']} */
   async addVote(featureId, userId, type = 'up') {
-    const error = await this.validate(userId);
+    const error = this.validate(userId);
     if (error) return error;
-    if (type != 'up' && type != 'down') return { errorCode: 400, error: 'Invalid vote type. Use "up" or "down"' };
+    if (!['up', 'down'].includes(type)) return { errorCode: 400, error: 'Invalid vote type. Use "up" or "down"' };
 
     const { lastVoted } = this.db.get('userSettings', userId) ?? {};
     if (this.constructor.isInCurrentWeek(lastVoted)) return { errorCode: 403, error: 'You can only vote once per week.' };
@@ -177,7 +177,7 @@ module.exports = class VoteSystem {
         username: 'Teufelsbot Feature Requests',
         /* eslint-disable-next-line camelcase */
         avatar_url: this.config.domain ? `${this.config.domain}/favicon.ico` : undefined,
-        embeds: [{ url: `${this.config.domain}/vote${url ?? ''}`, title, description, color }]
+        embeds: [{ url: `${this.config.domain}/vote${url}`, title, description, color }]
       })
     });
 

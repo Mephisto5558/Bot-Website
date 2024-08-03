@@ -3,11 +3,12 @@ import type express from 'express';
 import type { Dirent } from 'node:fs';
 import type { MemoryStore } from 'express-session';
 import type { PassportStatic } from 'passport';
-import type { formTypes } from 'discord-dashboard';
-import type { DB } from '@mephisto5558/mongoose-db';
-import { Database } from './database';
+import type { formTypes, Dashboard } from 'discord-dashboard';
+import type { DB as DBClass } from '@mephisto5558/mongoose-db';
+import type { Database } from './database';
 
-export { WebServer, type VoteSystem, type FeatureRequest, type dashboardSetting, type customPage, type commands };
+export { WebServer };
+export type { VoteSystem, FeatureRequest, dashboardSetting, customPage, commands, WebServerConfig };
 export default WebServer;
 
 type Support = { mail?: string; discord?: string };
@@ -18,9 +19,10 @@ type FeatureRequest = {
   id: `PVTI_${string}` | `${Discord.Snowflake}_${number}`;
   title: string;
   body: string;
-  votes: number;
-  pending?: true;
-};
+} & (
+  { votes: number; pending: undefined }
+  | { votes?: number; pending: true }
+);
 type formTypes_ = Omit<formTypes, 'embedBuilder'> & { embedBuilder: ReturnType<(typeof formTypes)['embedBuilder']>; _embedBuilder: formTypes['embedBuilder'] };
 
 type dashboardSetting = {
@@ -40,31 +42,28 @@ type customPage = {
 };
 type commands = { category: string; subTitle: string; aliasesDisabled: boolean; list: Record<string, unknown>[] }[];
 
+type WebServerConfig = {
+  support?: Support; port?: number; domain?: string; ownerIds?: string[];
+
+  /**
+   * ```js
+   * if (port) `${WebServer['config']['domain']}:${WebServer['config']['port']}`
+   * else WebServer['config']['domain']
+   * ```*/
+  webhookUrl?: string;
+  errorPagesDir?: string; settingsPath?: string; customPagesPath?: string;
+};
+
 declare class WebServer {
   constructor(
     client: Discord.Client, db: TypedDB, keys: Keys,
-    config?: {
-      support?: Support; port?: number; domain?: string; errorPagesDir?: string;
-      settingsPath?: string; customPagesPath?: string; ownerIds?: string[];
-      webhookUrl?: string;
-    },
+    config?: WebServerConfig,
     errorLoggingFunction?: (err: Error, req: express.Request, res: express.Response) => unknown
   );
 
   client: Discord.Client<true>;
   db: TypedDB;
-  config: {
-    support: Support; port: number; domain: string; ownerIds: string[];
-
-    /**
-     * ```js
-     * if (port) `${WebServer['config']['domain']}:${WebServer['config']['port']}`
-     * else WebServer['config']['domain']
-     * ```*/
-    baseUrl: string;
-    webhookUrl?: string;
-    errorPagesDir?: string; settingsPath: string; customPagesPath: string;
-  };
+  config: Required<WebServerConfig> & { baseUrl: string };
 
   keys: Keys;
 
@@ -84,7 +83,7 @@ declare class WebServer {
 
   init(commands: commands): Promise<this>;
 
-  static createNavigationButtons(dir: Dirent[], path: string, reqPath: string): Promise<string | void>;
+  static createNavigationButtons(dir: Dirent[], path: string, reqPath: string): Promise<string | undefined>;
 
   logError(err: Error, req: express.Request, res: express.Response): unknown;
 }
@@ -95,8 +94,11 @@ declare class VoteSystem {
   client: Discord.Client<true>;
   config: { domain: string; webhookUrl?: string; ownerIds: string[] };
 
-  fetchAll(): Promise<FeatureRequest[]>;
-  get(id: FeatureRequest['id']): Promise<FeatureRequest | void>;
+  fetchAll(): FeatureRequest[];
+
+  get(id: FeatureRequest['id']): FeatureRequest | undefined;
+  get(): Record<FeatureRequest['id'], FeatureRequest>;
+
   getMany(amount: number, offset?: number, filter?: string, includePendig?: boolean, userId?: Discord.Snowflake): { cards: FeatureRequest[]; moreAvailable: boolean };
   add(title: string, body: string, userId?: Discord.Snowflake): Promise<FeatureRequest | RequestError>;
   approve(featureId: FeatureRequest['id'], userId: Discord.Snowflake): Promise<FeatureRequest | RequestError>;
@@ -104,7 +106,7 @@ declare class VoteSystem {
   delete(featureId: FeatureRequest['id'], userId: Discord.Snowflake): Promise<{ success: true } | RequestError>;
   addVote(featureId: FeatureRequest['id'], userId: Discord.Snowflake, type: 'up' | 'down'): Promise<FeatureRequest | RequestError>;
   sendToWebhook(title: string, description: string, color?: number, url?: string): Promise<{ success: boolean } | RequestError>;
-  validate(userId: Discord.Snowflake): Promise<RequestError | void>;
+  validate(userId: Discord.Snowflake): RequestError | undefined;
 
   static formatDesc(params: { title?: string; body?: string }): string;
 
@@ -121,7 +123,7 @@ type FlattenObject<TValue> = CollapseEntries<CreateObjectEntries<TValue, TValue>
 
 type Entry = { key: string; value: unknown };
 type EmptyEntry<TValue> = { key: ''; value: TValue };
-type ExcludedTypes = Date | Set<unknown> | Map<unknown, unknown> | Array<unknown>;
+type ExcludedTypes = Date | Set<unknown> | Map<unknown, unknown> | unknown[];
 type ArrayEncoder = `[${bigint}]`;
 
 type EscapeArrayKey<TKey extends string> = TKey extends `${infer TKeyBefore}.${ArrayEncoder}${infer TKeyAfter}`
@@ -133,7 +135,7 @@ type CollapseEntries<TEntry extends Entry> = { [E in TEntry as EscapeArrayKey<E[
 
 // Transforms array type to object
 type CreateArrayEntry<TValue, TValueInitial> = OmitItself<
-  TValue extends unknown[] ? { [k: ArrayEncoder]: TValue[number] } : TValue,
+  TValue extends unknown[] ? Record<ArrayEncoder, TValue[number]> : TValue,
   TValueInitial
 >;
 
@@ -163,14 +165,21 @@ type CreateObjectEntries<TValue, TValueInitial> = TValue extends object ? {
 }[keyof TValue] // Builds entry for each key
   : EmptyEntry<TValue>;
 
-// Source: https://github.com/Mephisto5558/Teufelsbot/blob/532f1fc7a83e2d7f5f41b9618214ec7d809c2032/globals.d.ts#L494
-declare class TypedDB extends DB {
+// Source: https://github.com/Mephisto5558/Teufelsbot/blob/main/globals.d.ts#L494
+declare class TypedDB extends DBClass {
+  /**
+   * generates required database entries from {@link ./Templates/db_collections.json}.
+   * @param overwrite overwrite existing collection, default: `false`*/
+  generate(overwrite?: boolean): Promise<void>;
+
+  get(): undefined;
   get<DB extends keyof Database>(db: DB): Database[DB];
   get<DB extends keyof Database, K extends keyof FlattenedDatabase[DB]>(db: DB, key: K): FlattenedDatabase[DB][K];
 
-  update<DB extends keyof Database, K extends keyof FlattenedDatabase[DB]>(db: DB, key: K, value: FlattenedDatabase[DB][K]): Promise<Database[DB]>;
-  set<DB extends keyof Database, K extends keyof FlattenedDatabase[DB]>(db: DB, value: FlattenedDatabase[DB][K], overwrite?: boolean): Promise<Database[DB]>;
-  delete<DB extends keyof Database, K extends keyof FlattenedDatabase[DB] | undefined>(db: DB, key?: K): Promise<boolean>;
-  push<DB extends keyof Database, K extends keyof FlattenedDatabase[DB]>(db: DB, key: K, ...value: FlattenedDatabase[DB][K]): Promise<Database[DB]>;
-  pushToSet<DB extends keyof Database, K extends keyof FlattenedDatabase[DB]>(db: DB, key: K, ...value: FlattenedDatabase[DB][K]): Promise<Database[DB]>;
+  update<DB extends keyof Database, FDB extends FlattenedDatabase[DB], K extends keyof FDB>(db: DB, key: K, value: FDB[K]): Promise<Database[DB]>;
+  set<DB extends keyof Database, FDB extends FlattenedDatabase[DB]>(db: DB, value: FDB[keyof FDB], overwrite?: boolean): Promise<Database[DB]>;
+  delete<DB extends keyof Database>(db: DB, key?: keyof FlattenedDatabase[DB]): Promise<boolean>;
+
+  push<DB extends keyof Database, FDB extends FlattenedDatabase[DB], K extends keyof FDB>(db: DB, key: K, ...value: FDB[K][]): Promise<Database[DB]>;
+  pushToSet<DB extends keyof Database, FDB extends FlattenedDatabase[DB], K extends keyof FDB>(db: DB, key: K, ...value: FDB[K][]): Promise<Database[DB]>;
 }

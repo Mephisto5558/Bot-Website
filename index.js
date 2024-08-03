@@ -25,10 +25,12 @@ class WebServer {
    * @param {import('.').WebServer['client']}client
    * @param {import('.').WebServer['db']}db
    * @param {import('.').WebServer['keys']} keys
-   * @param {import('.').WebServer['config']?}config
+   * @param {import('.').WebServerConfig?}config
    * @param {import('.').WebServer['logError']}errorLoggingFunction*/
   constructor(client, db, keys, config, errorLoggingFunction = console.error) {
     config ??= { support: {} };
+
+    this.#checkConstructorParams(client, db, keys, config, errorLoggingFunction);
 
     this.client = client;
     this.db = db;
@@ -41,8 +43,6 @@ class WebServer {
 
     this.config.baseUrl = config.port ? this.config.domain + ':' + this.config.port : this.config.domain;
     this.keys = keys;
-
-    this.#checkConstructorParams();
 
     this.initiated = false;
 
@@ -59,12 +59,20 @@ class WebServer {
     /* eslint-enable unicorn/no-null */
   }
 
-  #checkConstructorParams() {
-    if (!this.client?.options?.intents?.has(GatewayIntentBits.Guilds)) throw new Error('Client must have the "Guilds" gateway intent.');
-    if (!this.db?.cache) throw new Error('Missing db property');
-    if (!this.keys?.secret) throw new Error('Missing discord application secret');
-    if (!this.keys?.dbdLicense) throw new Error('Missing dbdLicense. Get one here: https://assistantscenter.com/discord-dashboard/v2');
-    if (!this.config.domain.startsWith('http://') && !this.config.domain.startsWith('https://')) throw new Error('config.domain must start with "http://" or "https://"!');
+  /**
+   * @param {import('.').WebServer['client']?}client
+   * @param {import('.').WebServer['db']?}db
+   * @param {import('.').WebServer['keys']?} keys
+   * @param {import('.').WebServerConfig?}config
+   * @param {import('.').WebServer['logError']?}errorLoggingFunction
+   * @throws {Error} on invalid data*/
+  #checkConstructorParams(client, db, keys, config, errorLoggingFunction) {
+    if (!client?.options.intents.has(GatewayIntentBits.Guilds)) throw new Error('Client must have the "Guilds" gateway intent.');
+    if (!db?.cache) throw new Error('Missing db property');
+    if (!keys?.secret) throw new Error('Missing discord application secret');
+    if (!keys.dbdLicense) throw new Error('Missing dbdLicense. Get one here: https://assistantscenter.com/discord-dashboard/v2');
+    if (!config.domain.startsWith('http://') && !this.config.domain.startsWith('https://')) throw new Error('config.domain must start with "http://" or "https://"!');
+    if (typeof errorLoggingFunction != 'function') throw new Error('Invalid errorLoggingFunction');
   }
 
   #setupPassport() {
@@ -108,7 +116,7 @@ class WebServer {
 
       await this.db.update('website', `sessions.${sid}`, sessionData);
       /* eslint-disable-next-line unicorn/no-null -- `null` must be used here */
-      return cb?.(null);
+      return cb(null);
     };
     this.sessionStore.destroy = (sid, cb) => this.db.delete('website', `sessions.${sid}`).then(() => cb?.());
   }
@@ -163,7 +171,7 @@ class WebServer {
             optionType: typeof setting.type == 'function' ? await setting.type.call(this) : setting.type,
             position: setting.position,
             allowedCheck: ({ guild, user }) => {
-              if (this.db.get('botSettings', 'blacklist')?.includes(user.id)) return { allowed: false, errorMessage: 'You have been blacklisted from using the bot.' };
+              if (this.db.get('botSettings', 'blacklist').includes(user.id)) return { allowed: false, errorMessage: 'You have been blacklisted from using the bot.' };
               if (setting.auth === false) return { allowed: false, errorMessage: 'This feature has been disabled.' };
               return setting.auth?.(guild, user) ?? { allowed: true };
             }
@@ -348,12 +356,12 @@ class WebServer {
 
       const
         pathStr = path.join(process.cwd(), this.config.customPagesPath, path.normalize(req.path.endsWith('/') ? req.path.slice(0, -1) : req.path).replace(/^(\.\.(\/|\\|$))+/, '')),
-        dir = pathStr.slice(0, Math.max(0, pathStr.lastIndexOf(path.sep))),
-        /* eslint-disable-next-line no-empty-function */
-        subDirs = await readdir(dir, { withFileTypes: true }).catch(() => { });
+        dir = pathStr.slice(0, Math.max(0, pathStr.lastIndexOf(path.sep)));
 
       /** @type {import('.').customPage?}*/
-      let data;
+      let data, subDirs;
+      try { subDirs = await readdir(dir, { withFileTypes: true }); }
+      catch { /* empty */ }
 
       if (subDirs) {
         const filename = subDirs.find(e => {
@@ -363,7 +371,7 @@ class WebServer {
 
         if (!filename || !subDirs.some(e => e.isFile() && e.name == filename)) {
           const html = await this.constructor.createNavigationButtons(subDirs, pathStr, req.path);
-          return html ? res.send(html) : next();
+          return void (html ? res.send(html) : next());
         }
 
         if (filename.endsWith('.html')) return res.sendFile(path.join(dir, filename));
@@ -396,11 +404,11 @@ class WebServer {
     if (!res.statusCode) this.logError(err);
 
     // send html only to browser
-    if (this.config.errorPagesDir && req.headers?.['user-agent']?.includes('Mozilla')) {
+    if (this.config.errorPagesDir && req.headers['user-agent']?.includes('Mozilla')) {
       const filePath = path.join(this.config.errorPagesDir, `${err.statusCode ?? 500}.html`);
 
       try {
-        return res.status(err.statusCode ?? 500).sendFile(filePath, { root: process.cwd() });
+        res.status(err.statusCode ?? 500).sendFile(filePath, { root: process.cwd() }); return;
       }
       catch (err) {
         if (err.code != 'ENOENT') return this.#reqErrorHandler(err, req, res, next);
@@ -448,7 +456,7 @@ class WebServer {
         this.dashboard.getApp(),
         this.#reqErrorHandler,
         (req, res) => {
-          if (this.config.errorPagesDir && req.headers?.['user-agent']?.includes('Mozilla'))
+          if (this.config.errorPagesDir && req.headers['user-agent']?.includes('Mozilla'))
             return res.status(404).sendFile(path.join(this.config.errorPagesDir, '404.html'), { root: process.cwd() });
           res.sendStatus(404);
         }
@@ -480,7 +488,7 @@ class WebServer {
 
     this.voteSystem = new VoteSystem(this.client, this.db, this.config);
 
-    this.app.listen(this.config.port, () => console.log(`Website is online on ${this.config.baseUrl}.`));
+    this.app.listen(this.config.port, () => { console.log(`Website is online on ${this.config.baseUrl}.`); });
 
     this.initiated = true;
     return this;
