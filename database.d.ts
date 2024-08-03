@@ -1,47 +1,50 @@
-import type { Snowflake, APIUser, GuildFeature } from 'discord.js';
+import type { APIUser, GuildFeature } from 'discord.js';
 import type { Cookie } from 'express-session';
-import { FeatureRequest } from '.';
+import type { FeatureRequest } from '.';
 
-export { Database };
+export type { Database };
+
+type Snowflake = `${number}`;
+
+type sessionId = string;
+type requestId = FeatureRequest['id'];
+type guildId = Snowflake;
+type userId = Snowflake;
 
 type Database = {
   website: {
-    sessions: {
-      [sessionId: string]: {
-        cookie: Cookie;
-        r?: string;
-        redirectURL?: string;
-        discordAuthStatus?: {
-          loading: boolean;
-          success: boolean;
-          state: {
-            error: string?;
-            data: string?;
-          };
+    sessions: Record<sessionId, {
+      cookie: Cookie;
+      r?: string;
+      redirectURL?: string;
+      discordAuthStatus?: {
+        loading: boolean;
+        success: boolean;
+        state: {
+          error: string | null;
+          data: string | null;
         };
-        user?: APIUser & {
-          avatar_decoration_data: {
-            asset: string;
-            sku_id: string;
-          }?;
-          banner_color: `#${number}`?;
-          tag: `${string}#${number}`;
-          avatarURL: string?;
-          guilds: {
-            id: Snowflake;
-            name: string;
-            icon: string?;
-            owner: boolean;
-            permissions: `${bigint}`;
-            features: GuildFeature[];
-          }[];
-        };
-        loggedInLastTime?: boolean;
-      } | undefined;
-    };
-    requests: {
-      [requestId: FeatureRequest['id']]: FeatureRequest | undefined;
-    };
+      };
+      user?: APIUser & {
+        avatar_decoration_data: {
+          asset: string;
+          sku_id: string;
+        } | null;
+        banner_color: `#${number}` | null;
+        tag: `${string}#${number}`;
+        avatarURL: string | null;
+        guilds: {
+          id: Snowflake;
+          name: string;
+          icon: string | null;
+          owner: boolean;
+          permissions: `${bigint}`;
+          features: GuildFeature[];
+        }[];
+      };
+      loggedInLastTime?: boolean;
+    } | undefined>;
+    requests: Record<requestId, FeatureRequest | undefined>;
   };
 
   botSettings?: {
@@ -50,13 +53,11 @@ type Database = {
 
   guildSettings: {
     default: Record<string, unknown>;
-    [guildId: Snowflake]: Record<string, unknown> | undefined;
+    [guildId: guildId]: Record<string, unknown> | undefined;
   };
 
-  userSettings: {
-    [userId: Snowflake]: {
-      lastVoted?: Date;
-      featureRequestAutoApprove?: boolean;
-    } | undefined;
-  };
+  userSettings: Record<userId, {
+    lastVoted?: Date;
+    featureRequestAutoApprove?: boolean;
+  } | undefined>;
 };
