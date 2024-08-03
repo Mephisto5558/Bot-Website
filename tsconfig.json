@@ -1,6 +1,9 @@
 {
   "compilerOptions": {
     "moduleResolution": "Node10",
+    "lib": [
+      "ESNext"
+    ],
     "noEmit": true,
     "allowJs": true,
     "esModuleInterop": true,
