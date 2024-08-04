@@ -203,9 +203,7 @@ class WebServer {
             await this.db.update('guildSettings', `${guild.id}.${dataPath}`, data);
           }
         },
-
-        // optionList is never used again so idc about it being mutated and Array#toSorted doesn't exist in Node 18
-        categoryOptionsList: optionList.sort((a, b) => a.position - b.position) // NOSONAR
+        categoryOptionsList: optionList.toSorted((a, b) => a.position - b.position)
       });
     }
 
