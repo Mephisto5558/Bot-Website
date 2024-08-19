@@ -1,7 +1,6 @@
 const
   { Colors } = require('discord.js'),
   { sanitize } = require('express-xss-sanitizer');
-
 module.exports = class VoteSystem {
   /**
    * @param {import('discord.js').Client<true>}client
@@ -20,7 +19,6 @@ module.exports = class VoteSystem {
   fetchAll = () => Object.entries(this.db.get('website', 'requests') ?? {});
 
   /** @type {import('..').VoteSystem['get']} */
-  /* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- can't get the typing correct rn (todo)*/
   get = id => this.db.get('website', 'requests' + (id ? `.${id}` : ''));
 
   /**
