@@ -27,16 +27,20 @@ jobs:
       security-events: write
       actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '20'
 
       - name: Install ESLint
         run: npm install eslint @microsoft/eslint-formatter-sarif
 
       - name: Run ESLint
-        run: npx eslint --config eslint.config.mjs
+        run: npx eslint
           --format @microsoft/eslint-formatter-sarif
-          --output-file eslint-results.sarif .
+          --output-file eslint-results.sarif
         continue-on-error: true
 
       - name: Upload analysis results to GitHub
