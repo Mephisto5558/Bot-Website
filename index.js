@@ -41,7 +41,7 @@ class WebServer {
     this.config.domain ??= process.env.SERVER_IP ?? process.env.IP ?? 'http://localhost';
     if (!this.config.domain.startsWith('http')) this.config.domain = `http://${this.config.domain}`;
 
-    this.config.baseUrl = config.port ? this.config.domain + ':' + this.config.port : this.config.domain;
+    this.config.baseUrl = config.port == undefined ? this.config.domain : this.config.domain + ':' + this.config.port;
     this.keys = keys;
 
     this.initiated = false;
@@ -341,7 +341,7 @@ class WebServer {
       if (req.path.startsWith('/api/') && !/^\/api\/v\d+\//i.test(req.path.endsWith('/') ? req.path : req.path + '/')) res.redirect(req.path.replace('/api/', '/api/v1/'));
       if (req.path == '/dashboard') return res.redirect(301, '/manage');
       if (req.path == '/callback') { // Dashboard
-        if (req.query.code) req.session.user.accessToken = req.query.code;
+        if (req.query.code != undefined) req.session.user.accessToken = req.query.code;
         return next();
       }
       if (req.path == '/guilds/reload') { // Dashboard
@@ -377,7 +377,7 @@ class WebServer {
       }
 
       if (!data) return next();
-      if (data.method && (Array.isArray(data.method) && data.method.some(e => e.toUpperCase() == req.method) || data.method.toUpperCase() !== req.method))
+      if (data.method != undefined && (Array.isArray(data.method) && data.method.some(e => e.toUpperCase() == req.method) || data.method.toUpperCase() !== req.method))
         return res.setHeader('Allow', data.method.join?.(',') ?? data.method).sendStatus(405);
       if (data.permissionCheck && !await data.permissionCheck.call(req)) return res.redirect(403, '/error/403');
       if (data.title) res.set('title', data.title);

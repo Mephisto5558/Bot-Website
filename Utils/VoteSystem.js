@@ -193,7 +193,7 @@ module.exports = class VoteSystem {
 
   /** @type {typeof import('..').VoteSystem['isInCurrentWeek']} */
   static isInCurrentWeek(date) {
-    if (!date) return false;
+    if (date == 0) return false;
     if (date instanceof Number) date = new Date(date);
 
     const today = new Date(),
