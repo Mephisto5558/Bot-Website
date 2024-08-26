@@ -5,7 +5,7 @@ module.exports = class VoteSystem {
   /**
    * @param {import('discord.js').Client<true>}client
    * @param {import('@mephisto5558/mongoose-db').DB}db
-   * @param {{domain: string, webhookUrl?:string, ownerIds: string[]}}config
+   * @param {{domain: string, port?: number; webhookUrl?: string, ownerIds: string[]}}config
    */
   constructor(client, db, config) {
     this.client = client;
@@ -168,14 +168,17 @@ module.exports = class VoteSystem {
   async sendToWebhook(title, description, color = Colors.White, url = '') {
     if (!this.config.webhookUrl) return { errorCode: 500, error: 'The backend has no webhook url configured' };
 
+    let websiteUrl = this.config.domain;
+    if (this.config.port != undefined) websiteUrl += `:${this.config.port}`;
+
     const res = await fetch(this.config.webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         username: 'Teufelsbot Feature Requests',
         /* eslint-disable-next-line camelcase */
-        avatar_url: this.config.domain ? `${this.config.domain}/favicon.ico` : undefined,
-        embeds: [{ url: `${this.config.domain}/vote${url}`, title, description, color }]
+        avatar_url: `${websiteUrl}/favicon.ico`,
+        embeds: [{ url: `${websiteUrl}/vote${url}`, title, description, color }]
       })
     });
 
