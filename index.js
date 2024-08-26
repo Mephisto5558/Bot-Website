@@ -190,7 +190,7 @@ class WebServer {
           const dataPath = e.optionId.replaceAll(/([A-Z])/g, e => `.${e.toLowerCase()}`);
           if (dataPath.split('.').at(-1) == 'spacer') return { optionId: e.optionId, data: e.description };
 
-          const data = this.db.get('guildSettings', `${guild.id}.${dataPath}`) ?? this.db.get('guildSettings', `default.${dataPath}`);
+          const data = this.db.get('guildSettings', `${guild.id}.${dataPath}`) ?? this.db.get('botSettings', `defaultGuild.${dataPath}`);
           return { optionId: e.optionId, data };
         }),
         setNew: async ({ guild, data: dataArray }) => {

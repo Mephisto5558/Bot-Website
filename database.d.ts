@@ -49,12 +49,11 @@ type Database = {
 
   botSettings?: {
     blacklist?: Snowflake[];
+
+    defaultGuild: Record<string, unknown>;
   };
 
-  guildSettings: {
-    default: Record<string, unknown>;
-    [guildId: guildId]: Record<string, unknown> | undefined;
-  };
+  guildSettings: Record<guildId, Record<string, unknown> | undefined>;
 
   userSettings: Record<userId, {
     lastVoted?: Date;
