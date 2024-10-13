@@ -187,7 +187,7 @@ class WebServer {
         getActualSet: ({ guild }) => optionList.map(e => {
           /* eslint-disable-next-line prefer-rest-params */
           if (e.get) return { optionId: e.optionId, data: e.get(arguments) };
-          const dataPath = e.optionId.replaceAll(/([A-Z])/g, e => `.${e.toLowerCase()}`);
+          const dataPath = e.optionId.replaceAll(/[A-Z]/g, e => `.${e.toLowerCase()}`);
           if (dataPath.split('.').at(-1) == 'spacer') return { optionId: e.optionId, data: e.description };
 
           const data = this.db.get('guildSettings', `${guild.id}.${dataPath}`) ?? this.db.get('botSettings', `defaultGuild.${dataPath}`);
@@ -195,7 +195,7 @@ class WebServer {
         }),
         setNew: async ({ guild, data: dataArray }) => {
           for (const { optionId, data } of dataArray) {
-            const dataPath = optionId.replaceAll(/([A-Z])/g, e => `.${e.toLowerCase()}`);
+            const dataPath = optionId.replaceAll(/[A-Z]/g, e => `.${e.toLowerCase()}`);
 
             if (this.db.get('guildSettings', `${guild.id}.${dataPath}`) === data) continue;
             if (data.embed) data.embed.description ??= ' ';
@@ -353,7 +353,7 @@ class WebServer {
       }
 
       const
-        pathStr = path.join(process.cwd(), this.config.customPagesPath, path.normalize(req.path.endsWith('/') ? req.path.slice(0, -1) : req.path).replace(/^(\.\.(\/|\\|$))+/, '')),
+        pathStr = path.join(process.cwd(), this.config.customPagesPath, path.normalize(req.path.endsWith('/') ? req.path.slice(0, -1) : req.path).replace(/^(?:\.{2}(?:\/|\\|$))+/, '')),
         dir = pathStr.slice(0, Math.max(0, pathStr.lastIndexOf(path.sep)));
 
       /** @type {import('.').customPage?}*/
@@ -392,12 +392,11 @@ class WebServer {
     }));
   };
 
-  /* eslint-disable jsdoc/imports-as-dependencies -- see https://github.com/gajus/eslint-plugin-jsdoc/issues/1114 */
   /**
    * @param {Error|import('http-errors').HttpError}err
    * @param {import('express').Request}req
-   * @param {import('express').Response}res*/
-  /* eslint-enable jsdoc/imports-as-dependencies */
+   * @param {import('express').Response}res
+   * @param {import('express').NextFunction}next*/
   #reqErrorHandler = (err, req, res, next) => {
     if (!res.statusCode) this.logError(err);
 
@@ -498,7 +497,7 @@ class WebServer {
 
     return (await readdir(pathStr, { withFileTypes: true })).reduce((acc, file) => {
       const name = escapeHTML(file.isFile() ? file.name.split('.').slice(0, -1).join('.') : file.name);
-      const title = require(path.join(pathStr, file.name))?.title ?? name[0].toUpperCase() + name.slice(1).replaceAll(/[_-]/g, ' ');
+      const title = require(path.join(pathStr, file.name))?.title ?? name[0].toUpperCase() + name.slice(1).replaceAll(/[-_]/g, ' ');
 
       return acc + `<a href='./${escapeHTML(path.basename(reqPath)) + '/' + name}'>` + escapeHTML(title) + '</a>';
     }, '<link rel="stylesheet" href="https://mephisto5558.github.io/Website-Assets/min/css/navButtons.css" crossorigin="anonymous" /><div class="navButton">') + '</div>';
