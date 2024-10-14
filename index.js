@@ -122,12 +122,16 @@ class WebServer {
   }
 
   async #getSettings() {
+    /** @typedef {ConstructorParameters<ReturnType<import('discord-dashboard')['UpdatedClass']>>[0]['settings'][number]}category*/
+    /** @type {category[]}*/
     const categoryOptionList = [];
 
     for (const subFolder of await readdir(this.config.settingsPath, { withFileTypes: true })) {
       if (!subFolder.isDirectory()) continue;
 
       const index = JSON.parse(await readFile(path.join(this.config.settingsPath, subFolder.name, '_index.json'), 'utf8'));
+
+      /** @type {category['categoryOptionsList']}*/
       const optionList = [{
         optionId: `${index.id}.spacer`,
         title: 'Important!',
@@ -184,13 +188,12 @@ class WebServer {
         categoryName: index.name,
         categoryDescription: index.description,
         position: index.position,
-        getActualSet: ({ guild }) => optionList.map(e => {
-          /* eslint-disable-next-line prefer-rest-params */
-          if (e.get) return { optionId: e.optionId, data: e.get(arguments) };
+        getActualSet: option => optionList.map(e => {
+          if (e.get) return { optionId: e.optionId, data: e.get(option) };
           const dataPath = e.optionId.replaceAll(/[A-Z]/g, e => `.${e.toLowerCase()}`);
           if (dataPath.split('.').at(-1) == 'spacer') return { optionId: e.optionId, data: e.description };
 
-          const data = this.db.get('guildSettings', `${guild.id}.${dataPath}`) ?? this.db.get('botSettings', `defaultGuild.${dataPath}`);
+          const data = this.db.get('guildSettings', `${option.guild.id}.${dataPath}`) ?? this.db.get('botSettings', `defaultGuild.${dataPath}`);
           return { optionId: e.optionId, data };
         }),
         setNew: async ({ guild, data: dataArray }) => {

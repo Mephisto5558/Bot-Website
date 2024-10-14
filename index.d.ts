@@ -3,7 +3,7 @@ import type express from 'express';
 import type { Dirent } from 'node:fs';
 import type { MemoryStore } from 'express-session';
 import type { PassportStatic } from 'passport';
-import type { formTypes, Dashboard } from 'discord-dashboard';
+import type { formTypes } from 'discord-dashboard';
 import type { DB as DBClass } from '@mephisto5558/mongoose-db';
 import type { Database } from './database';
 
