@@ -1,4 +1,6 @@
+/* eslint sonarjs/no-nested-functions: ["error", { threshold: 4 }] */
 /* eslint-disable max-lines */
+
 const
   { readdir, readFile } = require('node:fs/promises'),
   DDB = require('discord-dashboard'),
@@ -17,8 +19,10 @@ const
   Strategy = require('passport-discord'),
   DBD = require('discord-dashboard'),
   DarkDashboard = require('dbd-dark-dashboard'),
-
-  VoteSystem = require('./Utils/VoteSystem.js');
+  { HTTP_STATUS_MOVED_PERMANENTLY, HTTP_STATUS_FORBIDDEN, HTTP_STATUS_NOT_FOUND, HTTP_STATUS_INTERNAL_SERVER_ERROR } = require('node:http2').constants,
+  VoteSystem = require('./Utils/VoteSystem.js'),
+  DEFAULT_PORT = 8000,
+  LAST_ENTRY = -1;
 
 class WebServer {
   /**
@@ -37,7 +41,7 @@ class WebServer {
     this.logError = errorLoggingFunction;
     this.config = config;
     this.config.ownerIds ??= [];
-    this.config.port ??= process.env.PORT ?? process.env.SERVER_PORT ?? 8000;
+    this.config.port ??= process.env.PORT ?? process.env.SERVER_PORT ?? DEFAULT_PORT;
     this.config.domain ??= process.env.SERVER_IP ?? process.env.IP ?? 'http://localhost';
     if (!this.config.domain.startsWith('http')) this.config.domain = `http://${this.config.domain}`;
 
@@ -191,7 +195,7 @@ class WebServer {
         getActualSet: option => optionList.map(e => {
           if (e.get) return { optionId: e.optionId, data: e.get(option) };
           const dataPath = e.optionId.replaceAll(/[A-Z]/g, e => `.${e.toLowerCase()}`);
-          if (dataPath.split('.').at(-1) == 'spacer') return { optionId: e.optionId, data: e.description };
+          if (dataPath.split('.').at(LAST_ENTRY) == 'spacer') return { optionId: e.optionId, data: e.description };
 
           const data = this.db.get('guildSettings', `${option.guild.id}.${dataPath}`) ?? this.db.get('botSettings', `defaultGuild.${dataPath}`);
           return { optionId: e.optionId, data };
@@ -342,7 +346,7 @@ class WebServer {
 
       if (req.path === '/') return res.redirect('/home');
       if (req.path.startsWith('/api/') && !/^\/api\/v\d+\//i.test(req.path.endsWith('/') ? req.path : req.path + '/')) res.redirect(req.path.replace('/api/', '/api/v1/'));
-      if (req.path == '/dashboard') return res.redirect(301, '/manage');
+      if (req.path == '/dashboard') return res.redirect(HTTP_STATUS_MOVED_PERMANENTLY, '/manage');
       if (req.path == '/callback') { // Dashboard
         if (req.query.code != undefined) req.session.user.accessToken = req.query.code;
         return next();
@@ -356,7 +360,7 @@ class WebServer {
       }
 
       const
-        pathStr = path.join(process.cwd(), this.config.customPagesPath, path.normalize(req.path.endsWith('/') ? req.path.slice(0, -1) : req.path).replace(/^(?:\.{2}(?:\/|\\|$))+/, '')),
+        pathStr = path.join(process.cwd(), this.config.customPagesPath, path.normalize(req.path.endsWith('/') ? req.path.slice(0, LAST_ENTRY) : req.path).replace(/^(?:\.{2}(?:\/|\\|$))+/, '')),
         dir = pathStr.slice(0, Math.max(0, pathStr.lastIndexOf(path.sep)));
 
       /** @type {import('.').customPage?}*/
@@ -381,8 +385,8 @@ class WebServer {
 
       if (!data) return next();
       if (data.method != undefined && (Array.isArray(data.method) && data.method.some(e => e.toUpperCase() == req.method) || data.method.toUpperCase() !== req.method))
-        return res.setHeader('Allow', data.method.join?.(',') ?? data.method).sendStatus(405);
-      if (data.permissionCheck && !await data.permissionCheck.call(req)) return res.redirect(403, '/error/403');
+        return res.setHeader('Allow', data.method.join?.(',') ?? data.method).sendStatus(HTTP_STATUS_MOVED_PERMANENTLY);
+      if (data.permissionCheck && !await data.permissionCheck.call(req)) return res.redirect(HTTP_STATUS_FORBIDDEN, `/error/${HTTP_STATUS_FORBIDDEN}`);
       if (data.title) res.set('title', data.title);
       if (data.static) {
         const code = String(data.run);
@@ -405,17 +409,17 @@ class WebServer {
 
     // send html only to browser
     if (this.config.errorPagesDir && req.headers['user-agent']?.includes('Mozilla')) {
-      const filePath = path.join(this.config.errorPagesDir, `${err.statusCode ?? 500}.html`);
+      const filePath = path.join(this.config.errorPagesDir, `${err.statusCode ?? HTTP_STATUS_INTERNAL_SERVER_ERROR}.html`);
 
       try {
-        res.status(err.statusCode ?? 500).sendFile(filePath, { root: process.cwd() }); return;
+        res.status(err.statusCode ?? HTTP_STATUS_INTERNAL_SERVER_ERROR).sendFile(filePath, { root: process.cwd() }); return;
       }
       catch (err) {
         if (err.code != 'ENOENT') return this.#reqErrorHandler(err, req, res, next);
       }
     }
 
-    return res.sendStatus(err.statusCode ?? 500);
+    return res.sendStatus(err.statusCode ?? HTTP_STATUS_INTERNAL_SERVER_ERROR);
   };
 
   #setupApp() {
@@ -457,8 +461,8 @@ class WebServer {
         this.#reqErrorHandler,
         (req, res) => {
           if (this.config.errorPagesDir && req.headers['user-agent']?.includes('Mozilla'))
-            return res.status(404).sendFile(path.join(this.config.errorPagesDir, '404.html'), { root: process.cwd() });
-          res.sendStatus(404);
+            return res.status(HTTP_STATUS_NOT_FOUND).sendFile(path.join(this.config.errorPagesDir, `${HTTP_STATUS_NOT_FOUND}.html`), { root: process.cwd() });
+          res.sendStatus(HTTP_STATUS_NOT_FOUND);
         }
       );
   }
@@ -499,7 +503,7 @@ class WebServer {
     if (!dir.some(e => e.isDirectory() && e.name == path.basename(reqPath))) return;
 
     return (await readdir(pathStr, { withFileTypes: true })).reduce((acc, file) => {
-      const name = escapeHTML(file.isFile() ? file.name.split('.').slice(0, -1).join('.') : file.name);
+      const name = escapeHTML(file.isFile() ? file.name.split('.').slice(0, LAST_ENTRY).join('.') : file.name);
       const title = require(path.join(pathStr, file.name))?.title ?? name[0].toUpperCase() + name.slice(1).replaceAll(/[-_]/g, ' ');
 
       return acc + `<a href='./${escapeHTML(path.basename(reqPath)) + '/' + name}'>` + escapeHTML(title) + '</a>';

@@ -8,7 +8,7 @@ import type { DB as DBClass } from '@mephisto5558/mongoose-db';
 import type { Database } from './database';
 
 export { WebServer };
-export type { VoteSystem, FeatureRequest, dashboardSetting, customPage, commands, WebServerConfig };
+export type { VoteSystem, VoteSystemConfig, VoteSystemSettings, FeatureRequest, dashboardSetting, customPage, commands, WebServerConfig };
 export default WebServer;
 
 type Support = { mail?: string; discord?: string };
@@ -53,11 +53,18 @@ type WebServerConfig = {
   webhookUrl?: string;
   errorPagesDir?: string; settingsPath?: string; customPagesPath?: string;
 };
+type VoteSystemSettingsInit = {
+  requireTitle?: boolean; minTitleLength?: number; maxTitleLength?: number;
+  requireBody?: boolean; minBodyLength?: number; maxBodyLength?: number;
+  maxPendingFeatureRequests?: number; webhookMaxVisibleBodyLength?: number;
+};
+type VoteSystemSettings = Required<VoteSystemSettingsInit>;
 
 declare class WebServer {
   constructor(
     client: Discord.Client, db: TypedDB, keys: Keys,
     config?: WebServerConfig,
+    voteSystemSettings?: VoteSystemSettingsInit,
     errorLoggingFunction?: (err: Error, req: express.Request, res: express.Response) => unknown
   );
 
@@ -88,11 +95,22 @@ declare class WebServer {
   logError(err: Error, req: express.Request, res: express.Response): unknown;
 }
 
+type VoteSystemConfig = { domain: string; port?: number; webhookUrl?: string; ownerIds: string[] };
 declare class VoteSystem {
-  constructor(client: Discord.Client<true>, db: TypedDB, config: { domain: string; port?: number; webhookUrl?: string; ownerIds: string[] });
+  /**
+   * @default settings=
+   * ```js
+   * {
+   *  requireTitle: true, minTitleLength: 0, maxTitleLength: 140,
+   *  requireBody: false, minBodyLength: 0, maxBodyLength: 4000,
+   *  maxPendingFeatureRequests: 5, webhookMaxVisibleBodyLength: 2000
+   * }
+   * ```*/
+  constructor(client: Discord.Client<true>, db: TypedDB, config: VoteSystemConfig, settings: VoteSystemSettingsInit);
 
   client: Discord.Client<true>;
-  config: { domain: string; webhookUrl?: string; ownerIds: string[] };
+  config: VoteSystemConfig;
+  settings: VoteSystemSettings;
 
   fetchAll(): FeatureRequest[];
 
@@ -102,13 +120,17 @@ declare class VoteSystem {
   getMany(amount: number, offset?: number, filter?: string, includePendig?: boolean, userId?: Discord.Snowflake): { cards: FeatureRequest[]; moreAvailable: boolean };
   add(title: string, body: string, userId?: Discord.Snowflake): Promise<FeatureRequest | RequestError>;
   approve(featureId: FeatureRequest['id'], userId: Discord.Snowflake): Promise<FeatureRequest | RequestError>;
+  /* eslint-disable-next-line sonarjs/sonar-no-magic-numbers -- HTTP_STATUS_BAD_REQUEST*/
   update(features: FeatureRequest | FeatureRequest[], userId: Discord.Snowflake): Promise<{ success: true } | { code: 400; errors: { id: FeatureRequest['id']; error: string }[] }>;
   delete(featureId: FeatureRequest['id'], userId: Discord.Snowflake): Promise<{ success: true } | RequestError>;
   addVote(featureId: FeatureRequest['id'], userId: Discord.Snowflake, type: 'up' | 'down'): Promise<FeatureRequest | RequestError>;
   sendToWebhook(title: string, description: string, color?: number, url?: string): Promise<{ success: boolean } | RequestError>;
   validate(userId: Discord.Snowflake): RequestError | undefined;
 
-  static formatDesc(params: { title?: string; body?: string }): string;
+  /** returns `RequestError` if something is not valid.*/
+  static validateContent(settings: VoteSystemSettings, title?: string, body?: string): RequestError | undefined;
+
+  static formatDesc(params: { title?: string; body?: string }, maxVisibleBodyLength?: number): string;
 
   /** @param date A date obj or millseconds*/
   static isInCurrentWeek(date: Date | number): boolean;

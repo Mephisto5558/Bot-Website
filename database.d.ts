@@ -6,10 +6,11 @@ export type { Database };
 
 type Snowflake = `${number}`;
 
+/* eslint-disable sonarjs/redundant-type-aliases -- documentation*/
 type sessionId = string;
-type requestId = FeatureRequest['id'];
 type guildId = Snowflake;
 type userId = Snowflake;
+/* eslint-enable sonarjs/redundant-type-aliases */
 
 type Database = {
   website: {
@@ -44,7 +45,7 @@ type Database = {
       };
       loggedInLastTime?: boolean;
     } | undefined>;
-    requests: Record<requestId, FeatureRequest | undefined>;
+    requests: Record<FeatureRequest['id'], FeatureRequest | undefined>;
   };
 
   botSettings?: {
