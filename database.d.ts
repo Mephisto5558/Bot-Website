@@ -4,7 +4,7 @@ import type { FeatureRequest } from '.';
 
 export type { Database };
 
-type Snowflake = `${number}`;
+type Snowflake = `${bigint}`;
 
 /* eslint-disable sonarjs/redundant-type-aliases -- documentation*/
 type sessionId = string;
