@@ -1,6 +1,6 @@
 {
   "name": "@mephisto5558/bot-website",
-  "version": "1.6.2",
+  "version": "1.6.3",
   "scripts": {
     "test": "echo \"Error: no test specified\""
   },
