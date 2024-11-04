@@ -374,7 +374,7 @@ class WebServer {
           return file.includes('.') ? e.name.startsWith(`${file}.`) : e.name.startsWith(file);
         })?.name;
 
-        if (!filename || !subDirs.some(e => e.isFile() && e.name == filename)) {
+        if (!filename || !subDirs.some(e => e.isFile() && e.name.split('.')[0] == filename)) {
           const html = await this.constructor.createNavigationButtons(subDirs, pathStr, req.path);
           return void (html ? res.send(html) : next());
         }
