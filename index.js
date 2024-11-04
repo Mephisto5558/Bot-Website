@@ -371,7 +371,7 @@ class WebServer {
       if (subDirs) {
         const filename = subDirs.find(e => {
           const file = pathStr.slice(pathStr.lastIndexOf(path.sep) + 1);
-          return +file.includes('.') ? e.name.startsWith(file) : e.name.startsWith(`${file}.`);
+          return file.includes('.') ? e.name.startsWith(`${file}.`) : e.name.startsWith(file);
         })?.name;
 
         if (!filename || !subDirs.some(e => e.isFile() && e.name == filename)) {
@@ -504,7 +504,12 @@ class WebServer {
 
     return (await readdir(pathStr, { withFileTypes: true })).reduce((acc, file) => {
       const name = escapeHTML(file.isFile() ? file.name.split('.').slice(0, LAST_ENTRY).join('.') : file.name);
-      const title = require(path.join(pathStr, file.name))?.title ?? name[0].toUpperCase() + name.slice(1).replaceAll(/[-_]/g, ' ');
+
+      let title;
+      try { title = require(path.join(pathStr, file.name))?.title; }
+      catch { /** handled by `title ??=` */ }
+
+      title ??= name[0].toUpperCase() + name.slice(1).replaceAll(/[-_]/g, ' ');
 
       return acc + `<a href='./${escapeHTML(path.basename(reqPath)) + '/' + name}'>` + escapeHTML(title) + '</a>';
     }, '<link rel="stylesheet" href="https://mephisto5558.github.io/Website-Assets/min/css/navButtons.css" crossorigin="anonymous" /><div class="navButton">') + '</div>';
