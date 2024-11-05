@@ -1,6 +1,6 @@
 import type Discord from 'discord.js';
 import type express from 'express';
-import type { Dirent } from 'node:fs';
+import type { PathLike } from 'node:fs';
 import type { MemoryStore } from 'express-session';
 import type { PassportStatic } from 'passport';
 import type { formTypes } from 'discord-dashboard';
@@ -90,7 +90,7 @@ declare class WebServer {
 
   init(commands: commands): Promise<this>;
 
-  static createNavigationButtons(dir: Dirent[], path: string, reqPath: string): Promise<string | undefined>;
+  static createNavigationButtons(dirPath: PathLike, reqPath: string): Promise<string | undefined>;
 
   logError(err: Error, req: express.Request, res: express.Response): unknown;
 }

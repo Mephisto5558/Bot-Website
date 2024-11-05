@@ -63,6 +63,11 @@ class WebServer {
     /* eslint-enable unicorn/no-null */
   }
 
+  /** @returns {typeof import('.').WebServer} needed for better typing*/
+  get #class() {
+    return this.constructor;
+  }
+
   /**
    * @param {import('.').WebServer['client']?}client
    * @param {import('.').WebServer['db']?}db
@@ -370,12 +375,14 @@ class WebServer {
 
       if (subDirs) {
         const filename = subDirs.find(e => {
+          if (!e.isFile()) return false;
+
           const file = pathStr.slice(pathStr.lastIndexOf(path.sep) + 1);
           return file.includes('.') ? e.name.startsWith(`${file}.`) : e.name.startsWith(file);
         })?.name;
 
-        if (!filename || !subDirs.some(e => e.isFile() && e.name.split('.')[0] == filename)) {
-          const html = await this.constructor.createNavigationButtons(subDirs, pathStr, req.path);
+        if (!filename) {
+          const html = await this.#class.createNavigationButtons(pathStr, req.path);
           return void (html ? res.send(html) : next());
         }
 
@@ -405,7 +412,7 @@ class WebServer {
    * @param {import('express').Response}res
    * @param {import('express').NextFunction}next*/
   #reqErrorHandler = (err, req, res, next) => {
-    if (!res.statusCode) this.logError(err);
+    if (err.code != 'ENOENT') this.logError(err);
 
     // send html only to browser
     if (this.config.errorPagesDir && req.headers['user-agent']?.includes('Mozilla')) {
@@ -499,19 +506,21 @@ class WebServer {
   }
 
   /** @type {typeof import('.').WebServer['createNavigationButtons']} */
-  static async createNavigationButtons(dir, pathStr, reqPath) {
-    if (!dir.some(e => e.isDirectory() && e.name == path.basename(reqPath))) return;
+  static async createNavigationButtons(dirPath, reqPath) {
+    const dir = await readdir(dirPath, { withFileTypes: true }).catch(() => { /* emtpy */ });
+    if (!dir) return;
 
-    return (await readdir(pathStr, { withFileTypes: true })).reduce((acc, file) => {
-      const name = escapeHTML(file.isFile() ? file.name.split('.').slice(0, LAST_ENTRY).join('.') : file.name);
+    return dir.reduce((acc, file) => {
+      const name = file.isFile() ? file.name.split('.').slice(0, LAST_ENTRY).join('.') : file.name;
 
       let title;
-      try { title = require(path.join(pathStr, file.name))?.title; }
+      try { title = require(path.join(dirPath, file.name))?.title; }
       catch { /** handled by `title ??=` */ }
 
       title ??= name[0].toUpperCase() + name.slice(1).replaceAll(/[-_]/g, ' ');
 
-      return acc + `<a href='./${escapeHTML(path.basename(reqPath)) + '/' + name}'>` + escapeHTML(title) + '</a>';
+      // '//' can be on dirs and on the `reqPath`'s start
+      return `${acc}<a href=${escapeHTML('/' + reqPath + '/' + name).replaceAll('//', '/')}>${escapeHTML(title)}</a>`;
     }, '<link rel="stylesheet" href="https://mephisto5558.github.io/Website-Assets/min/css/navButtons.css" crossorigin="anonymous" /><div class="navButton">') + '</div>';
   }
 }
