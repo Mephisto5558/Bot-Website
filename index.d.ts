@@ -60,6 +60,9 @@ type VoteSystemSettingsInit = {
 };
 type VoteSystemSettings = Required<VoteSystemSettingsInit>;
 
+/* eslint-disable-next-line sonarjs/sonar-no-magic-numbers -- why is this even considered a magic number if it has its own type?*/
+type HTTP_STATUS_BAD_REQUEST = 400;
+
 declare class WebServer {
   constructor(
     client: Discord.Client, db: TypedDB, keys: Keys,
@@ -120,8 +123,7 @@ declare class VoteSystem {
   getMany(amount: number, offset?: number, filter?: string, includePendig?: boolean, userId?: Discord.Snowflake): { cards: FeatureRequest[]; moreAvailable: boolean };
   add(title: string, body: string, userId?: Discord.Snowflake): Promise<FeatureRequest | RequestError>;
   approve(featureId: FeatureRequest['id'], userId: Discord.Snowflake): Promise<FeatureRequest | RequestError>;
-  /* eslint-disable-next-line sonarjs/sonar-no-magic-numbers -- HTTP_STATUS_BAD_REQUEST*/
-  update(features: FeatureRequest | FeatureRequest[], userId: Discord.Snowflake): Promise<{ success: true } | { code: 400; errors: { id: FeatureRequest['id']; error: string }[] }>;
+  update(features: FeatureRequest | FeatureRequest[], userId: Discord.Snowflake): Promise<{ success: true } | { code: HTTP_STATUS_BAD_REQUEST; errors: { id: FeatureRequest['id']; error: string }[] }>;
   delete(featureId: FeatureRequest['id'], userId: Discord.Snowflake): Promise<{ success: true } | RequestError>;
   addVote(featureId: FeatureRequest['id'], userId: Discord.Snowflake, type: 'up' | 'down'): Promise<FeatureRequest | RequestError>;
   sendToWebhook(title: string, description: string, color?: number, url?: string): Promise<{ success: boolean } | RequestError>;

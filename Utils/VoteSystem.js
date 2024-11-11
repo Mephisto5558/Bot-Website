@@ -1,7 +1,10 @@
 const
   { Colors } = require('discord.js'),
   { sanitize } = require('express-xss-sanitizer'),
-  { HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_FORBIDDEN, HTTP_STATUS_CONFLICT } = require('node:http2').constants,
+  {
+    HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_UNAUTHORIZED, HTTP_STATUS_FORBIDDEN, HTTP_STATUS_CONFLICT,
+    HTTP_STATUS_SERVICE_UNAVAILABLE
+  } = require('node:http2').constants,
   DAYS_IN_WEEK = 7;
 
 module.exports = class VoteSystem {
@@ -14,6 +17,7 @@ module.exports = class VoteSystem {
     this.client = client;
     this.db = db;
     this.config = config;
+    /* eslint-disable sonarjs/sonar-no-magic-numbers -- default values*/
     this.settings = {
       requireTitle: true,
       minTitleLength: 0,
@@ -25,6 +29,7 @@ module.exports = class VoteSystem {
       webhookMaxVisibleBodyLength: 2000,
       ...settings
     };
+    /* eslint-enable sonarjs/sonar-no-magic-numbers */
 
     if (!client.isReady()) throw new Error('Client must be ready!');
   }
@@ -135,7 +140,7 @@ module.exports = class VoteSystem {
       Colors.Orange
     );
 
-    return errorList.length ? { code: 400, errors: errorList } : { success: true };
+    return errorList.length ? { code: HTTP_STATUS_BAD_REQUEST, errors: errorList } : { success: true };
   }
 
   /** @type {import('..').VoteSystem['delete']} */
@@ -167,9 +172,8 @@ module.exports = class VoteSystem {
     if (this.constructor.isInCurrentWeek(lastVoted)) return { errorCode: HTTP_STATUS_FORBIDDEN, error: 'You can only vote once per week.' };
 
     const feature = this.get(featureId);
-    if (!feature) return { errorCode: 400, error: 'Unknown feature ID.' };
+    if (!feature) return { errorCode: HTTP_STATUS_BAD_REQUEST, error: 'Unknown feature ID.' };
 
-    /* eslint-disable-next-line sonarjs/sonar-no-magic-numbers -- counting down one should not be forbidden...*/
     feature.votes = (feature.votes ?? 0) + (type == 'up' ? 1 : -1);
 
     await this.db.update('website', `requests.${featureId}.votes`, feature.votes);
@@ -181,7 +185,7 @@ module.exports = class VoteSystem {
 
   /** @type {import('..').VoteSystem['sendToWebhook']} */
   async sendToWebhook(title, description, color = Colors.White, url = '') {
-    if (!this.config.webhookUrl) return { errorCode: 500, error: 'The backend has no webhook url configured' };
+    if (!this.config.webhookUrl) return { errorCode: HTTP_STATUS_SERVICE_UNAVAILABLE, error: 'The backend has no webhook url configured' };
 
     let websiteUrl = this.config.domain;
     if (this.config.port != undefined) websiteUrl += `:${this.config.port}`;
@@ -202,8 +206,8 @@ module.exports = class VoteSystem {
 
   /** @type {import('..').VoteSystem['validate']} */
   validate(userId) {
-    if (!userId) return { errorCode: 401, error: 'User ID is missing.' };
-    if (this.db.get('botSettings', 'blacklist')?.includes(userId)) return { errorCode: 403, error: 'You have been blacklisted from using the bot.' };
+    if (!userId) return { errorCode: HTTP_STATUS_UNAUTHORIZED, error: 'User ID is missing.' };
+    if (this.db.get('botSettings', 'blacklist')?.includes(userId)) return { errorCode: HTTP_STATUS_FORBIDDEN, error: 'You have been blacklisted from using the bot.' };
   }
 
   /** @type {typeof import('..').VoteSystem['validateContent']} */

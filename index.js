@@ -22,7 +22,8 @@ const
   { HTTP_STATUS_MOVED_PERMANENTLY, HTTP_STATUS_FORBIDDEN, HTTP_STATUS_NOT_FOUND, HTTP_STATUS_INTERNAL_SERVER_ERROR } = require('node:http2').constants,
   VoteSystem = require('./Utils/VoteSystem.js'),
   DEFAULT_PORT = 8000,
-  LAST_ENTRY = -1;
+  ONE_MIN_IN_MS = 6e4,
+  ONE_YEAR_IN_MS = 3.154e10;
 
 class WebServer {
   /**
@@ -200,7 +201,7 @@ class WebServer {
         getActualSet: option => optionList.map(e => {
           if (e.get) return { optionId: e.optionId, data: e.get(option) };
           const dataPath = e.optionId.replaceAll(/[A-Z]/g, e => `.${e.toLowerCase()}`);
-          if (dataPath.split('.').at(LAST_ENTRY) == 'spacer') return { optionId: e.optionId, data: e.description };
+          if (dataPath.split('.').at(-1) == 'spacer') return { optionId: e.optionId, data: e.description };
 
           const data = this.db.get('guildSettings', `${option.guild.id}.${dataPath}`) ?? this.db.get('botSettings', `defaultGuild.${dataPath}`);
           return { optionId: e.optionId, data };
@@ -365,7 +366,7 @@ class WebServer {
       }
 
       const
-        pathStr = path.join(process.cwd(), this.config.customPagesPath, path.normalize(req.path.endsWith('/') ? req.path.slice(0, LAST_ENTRY) : req.path).replace(/^(?:\.{2}(?:\/|\\|$))+/, '')),
+        pathStr = path.join(process.cwd(), this.config.customPagesPath, path.normalize(req.path.endsWith('/') ? req.path.slice(0, -1) : req.path).replace(/^(?:\.{2}(?:\/|\\|$))+/, '')),
         dir = pathStr.slice(0, Math.max(0, pathStr.lastIndexOf(path.sep)));
 
       /** @type {import('.').customPage?}*/
@@ -437,7 +438,7 @@ class WebServer {
       .use(
         compression(),
         rateLimit({
-          windowMs: 6e4, // 1min
+          windowMs: ONE_MIN_IN_MS,
           max: 100,
           message: '<body style="background-color:#111;color:#ff0000"><p style="text-align:center;top:50%;position:relative;font-size:40;">Sorry, you have been ratelimited!</p></body>'
         }),
@@ -451,7 +452,7 @@ class WebServer {
           saveUninitialized: false,
           store: this.sessionStore,
           cookie: {
-            maxAge: 3.154e10, // 356 days
+            maxAge: ONE_YEAR_IN_MS,
             secure: this.config.domain.startsWith('https'),
             httpOnly: this.config.domain.startsWith('https'),
             sameSite: 'lax',
@@ -511,7 +512,7 @@ class WebServer {
     if (!dir) return;
 
     return dir.reduce((acc, file) => {
-      const name = file.isFile() ? file.name.split('.').slice(0, LAST_ENTRY).join('.') : file.name;
+      const name = file.isFile() ? file.name.split('.').slice(0, -1).join('.') : file.name;
 
       let title;
       try { title = require(path.join(dirPath, file.name))?.title; }
