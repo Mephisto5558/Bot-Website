@@ -60,7 +60,7 @@ type VoteSystemSettingsInit = {
 };
 type VoteSystemSettings = Required<VoteSystemSettingsInit>;
 
-/* eslint-disable-next-line sonarjs/sonar-no-magic-numbers -- why is this even considered a magic number if it has its own type?*/
+/* eslint-disable-next-line custom/sonar-no-magic-numbers -- why is this even considered a magic number if it has its own type?*/
 type HTTP_STATUS_BAD_REQUEST = 400;
 
 declare class WebServer {
