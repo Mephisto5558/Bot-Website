@@ -41,7 +41,7 @@
     "@types/express-session": "^1.18.0",
     "@types/passport": "^1.0.17",
     "discord.js": "^14.16.3",
-    "eslint": "9.14.0"
+    "eslint": "9.15.0"
   },
   "repository": {
     "type": "git",
