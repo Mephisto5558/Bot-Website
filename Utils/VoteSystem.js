@@ -35,10 +35,10 @@ module.exports = class VoteSystem {
   }
 
   /** @type {import('..').VoteSystem['fetchAll']} */
-  fetchAll = () => Object.entries(this.db.get('website', 'requests') ?? {});
+  fetchAll = () => Object.values(this.db.get('website', 'requests') ?? {});
 
   /** @type {import('..').VoteSystem['get']} */
-  get = id => this.db.get('website', 'requests' + (id ? `.${id}` : ''));
+  get = id => this.db.get('website', `requests.${id}`);
 
   /**
    * @typedef {import('..').FeatureRequest}FeatureRequest
@@ -49,7 +49,7 @@ module.exports = class VoteSystem {
 
   /** @type {import('..').VoteSystem['getMany']} */
   getMany = (amount, offset = 0, filter = '', includePending = false, userId = '') => {
-    const cards = Object.values(this.get()).filter(e => ((includePending && this.config.ownerIds.includes(userId)) || !e.pending)
+    const cards = this.fetchAll().filter(e => ((includePending && this.config.ownerIds.includes(userId)) || !e.pending)
       && (e.title.includes(filter) || e.body.includes(filter) || e.id.includes(filter)));
 
     return { cards: amount ? cards.slice(offset, offset + amount) : cards.slice(offset), moreAvailable: !!(amount && cards.length > offset + amount) };

@@ -116,10 +116,7 @@ declare class VoteSystem {
   settings: VoteSystemSettings;
 
   fetchAll(): FeatureRequest[];
-
   get(id: FeatureRequest['id']): FeatureRequest | undefined;
-  get(id?: undefined): Record<FeatureRequest['id'], FeatureRequest>;
-
   getMany(amount: number, offset?: number, filter?: string, includePendig?: boolean, userId?: Discord.Snowflake): { cards: FeatureRequest[]; moreAvailable: boolean };
   add(title: string, body: string, userId?: Discord.Snowflake): Promise<FeatureRequest | RequestError>;
   approve(featureId: FeatureRequest['id'], userId: Discord.Snowflake): Promise<FeatureRequest | RequestError>;
