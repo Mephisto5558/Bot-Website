@@ -19,7 +19,7 @@ const
   Strategy = require('passport-discord'),
   DBD = require('discord-dashboard'),
   DarkDashboard = require('dbd-dark-dashboard'),
-  { HTTP_STATUS_MOVED_PERMANENTLY, HTTP_STATUS_FORBIDDEN, HTTP_STATUS_NOT_FOUND, HTTP_STATUS_INTERNAL_SERVER_ERROR } = require('node:http2').constants,
+  { HTTP_STATUS_MOVED_PERMANENTLY, HTTP_STATUS_FORBIDDEN, HTTP_STATUS_NOT_FOUND, HTTP_STATUS_INTERNAL_SERVER_ERROR, HTTP_STATUS_METHOD_NOT_ALLOWED } = require('node:http2').constants,
   VoteSystem = require('./Utils/VoteSystem.js'),
   DEFAULT_PORT = 8000,
   ONE_MIN_IN_MS = 6e4,
@@ -393,7 +393,7 @@ class WebServer {
 
       if (!data) return next();
       if (data.method != undefined && (Array.isArray(data.method) && data.method.some(e => e.toUpperCase() == req.method) || data.method.toUpperCase() !== req.method))
-        return res.setHeader('Allow', data.method.join?.(',') ?? data.method).sendStatus(HTTP_STATUS_MOVED_PERMANENTLY);
+        return res.setHeader('Allow', data.method.join?.(',') ?? data.method).sendStatus(HTTP_STATUS_METHOD_NOT_ALLOWED);
       if (data.permissionCheck && !await data.permissionCheck.call(req)) return res.redirect(HTTP_STATUS_FORBIDDEN, `/error/${HTTP_STATUS_FORBIDDEN}`);
       if (data.title) res.set('title', data.title);
       if (data.static) {
