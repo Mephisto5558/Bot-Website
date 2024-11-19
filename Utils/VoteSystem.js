@@ -56,7 +56,7 @@ module.exports = class VoteSystem {
   };
 
   /** @type {import('..').VoteSystem['add']} */
-  async add(title, body, userId = '') {
+  async add(title, body, userId) {
     const error = this.validate(userId);
     if (error) return error;
 
@@ -87,25 +87,27 @@ module.exports = class VoteSystem {
 
   /** @type {import('..').VoteSystem['approve']} */
   async approve(featureId, userId) {
-    if (!this.config.ownerIds.includes(userId))
-      return { errorCode: HTTP_STATUS_FORBIDDEN, error: "You don't have permission to approve feature requests." };
+    const error = this.validate(userId, true);
+    if (error) return error;
 
-    const request = this.get(featureId);
-    if (!request) return { errorCode: HTTP_STATUS_BAD_REQUEST, error: 'Unknown feature ID.' };
-    if (!request.pending) return { errorCode: HTTP_STATUS_CONFLICT, error: 'This feature is already approved.' };
+    /** @type {FeatureRequest}*/
+    const featureReq = this.get(featureId);
+    if (!featureReq.pending) return { errorCode: HTTP_STATUS_CONFLICT, error: 'This feature request is already approved.' };
 
-    request.votes ??= 0;
-    delete request.pending;
+    featureReq.votes ??= 0;
+    delete featureReq.pending;
 
-    await this.#update(featureId, request);
+    await this.#update(featureId, featureReq);
 
-    await this.sendToWebhook('New Approved Feature Request', this.constructor.formatDesc(request, this.settings.webhookMaxVisibleBodyLength), Colors.Blue, `?q=${featureId}`);
-    return request;
+    await this.sendToWebhook('New Approved Feature Request', this.constructor.formatDesc(featureReq, this.settings.webhookMaxVisibleBodyLength), Colors.Blue, `?q=${featureId}`);
+    return featureReq;
   }
 
   /** @type {import('..').VoteSystem['update']} */
   async update(features, userId) {
-    if (!this.config.ownerIds.includes(userId)) return { errorCode: HTTP_STATUS_FORBIDDEN, error: 'You don\'t have permission to update feature requests.' };
+    const error = this.validate(userId, true);
+    if (error) return error;
+
     if (!Array.isArray(features)) features = [features];
 
     const
@@ -114,7 +116,7 @@ module.exports = class VoteSystem {
 
     for (const { id, title: oTitle, body, pending } of features) {
       if (!this.get(id)) {
-        errorList.push({ id, error: 'Unknown feature ID.' });
+        errorList.push({ id, error: 'Unknown feature request ID.' });
         break;
       }
 
@@ -146,17 +148,17 @@ module.exports = class VoteSystem {
   /** @type {import('..').VoteSystem['delete']} */
   async delete(featureId, userId) {
     const requestAuthor = featureId.split('_')[0];
-    if (!this.config.ownerIds.includes(userId) && requestAuthor != userId)
-      return { errorCode: HTTP_STATUS_FORBIDDEN, error: 'You don\'t have permission to delete that feature request.' };
 
-    const request = this.get(featureId);
-    if (!request) return { errorCode: HTTP_STATUS_BAD_REQUEST, error: 'Unknown feature ID.' };
+    const error = this.validate(userId, requestAuthor, featureId);
+    if (error) return error;
+
+    /** @type {FeatureRequest}*/
+    const featureReq = this.get(featureId);
 
     await this.db.delete('website', `requests.${featureId}`);
-
     await this.sendToWebhook(
-      `Feature Request has been ${request.pending ? 'denied' : 'deleted'} by ${requestAuthor == userId ? 'the author' : 'a dev'}`,
-      this.constructor.formatDesc(request, this.settings.webhookMaxVisibleBodyLength), Colors.Red
+      `Feature Request has been ${featureReq.pending ? 'denied' : 'deleted'} by ${requestAuthor == userId ? 'the author' : 'a dev'}`,
+      this.constructor.formatDesc(featureReq, this.settings.webhookMaxVisibleBodyLength), Colors.Red
     );
 
     return { success: true };
@@ -164,23 +166,22 @@ module.exports = class VoteSystem {
 
   /** @type {import('..').VoteSystem['addVote']} */
   async addVote(featureId, userId, type = 'up') {
-    const error = this.validate(userId);
+    const error = this.validate(userId, featureId);
     if (error) return error;
     if (!['up', 'down'].includes(type)) return { errorCode: HTTP_STATUS_BAD_REQUEST, error: 'Invalid vote type. Use "up" or "down"' };
 
     const { lastVoted } = this.db.get('userSettings', userId) ?? {};
     if (this.constructor.isInCurrentWeek(lastVoted)) return { errorCode: HTTP_STATUS_FORBIDDEN, error: 'You can only vote once per week.' };
 
-    const feature = this.get(featureId);
-    if (!feature) return { errorCode: HTTP_STATUS_BAD_REQUEST, error: 'Unknown feature ID.' };
+    /** @type {FeatureRequest}*/
+    const featureReq = this.get(featureId);
+    featureReq.votes = (featureReq.votes ?? 0) + (type == 'up' ? 1 : -1);
 
-    feature.votes = (feature.votes ?? 0) + (type == 'up' ? 1 : -1);
-
-    await this.db.update('website', `requests.${featureId}.votes`, feature.votes);
+    await this.db.update('website', `requests.${featureId}.votes`, featureReq.votes);
     await this.db.update('userSettings', `${userId}.lastVoted`, new Date());
 
-    await this.sendToWebhook(`Feature Request has been ${type} voted`, feature.title + `\n\nVotes: ${feature.votes} `, Colors.Blurple, `?q=${featureId} `);
-    return feature;
+    await this.sendToWebhook(`Feature Request has been ${type} voted`, featureReq.title + `\n\nVotes: ${featureReq.votes} `, Colors.Blurple, `?q=${featureId} `);
+    return featureReq;
   }
 
   /** @type {import('..').VoteSystem['sendToWebhook']} */
@@ -205,9 +206,17 @@ module.exports = class VoteSystem {
   }
 
   /** @type {import('..').VoteSystem['validate']} */
-  validate(userId) {
+  validate(userId, requireBeingOwner, featureId) {
     if (!userId) return { errorCode: HTTP_STATUS_UNAUTHORIZED, error: 'User ID is missing.' };
     if (this.db.get('botSettings', 'blacklist')?.includes(userId)) return { errorCode: HTTP_STATUS_FORBIDDEN, error: 'You have been blacklisted from using the bot.' };
+    if (!(requireBeingOwner === userId || requireBeingOwner === true && this.config.ownerIds.includes(userId)))
+      return { errorCode: HTTP_STATUS_FORBIDDEN, error: 'You do not have permission to perform this action.' };
+
+    /* eslint-disable-next-line prefer-rest-params -- only proper way to check if the param was given, independent of its type.*/
+    if (1 in arguments) {
+      if (!featureId) return { errorCode: HTTP_STATUS_BAD_REQUEST, error: 'Feature ID is missing.' };
+      if (!this.get(featureId)) return { errorCode: HTTP_STATUS_BAD_REQUEST, error: 'Unknown featureReq ID.' };
+    }
   }
 
   /** @type {typeof import('..').VoteSystem['validateContent']} */

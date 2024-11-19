@@ -118,13 +118,13 @@ declare class VoteSystem {
   fetchAll(): FeatureRequest[];
   get(id: FeatureRequest['id']): FeatureRequest | undefined;
   getMany(amount: number, offset?: number, filter?: string, includePendig?: boolean, userId?: Discord.Snowflake): { cards: FeatureRequest[]; moreAvailable: boolean };
-  add(title: string, body: string, userId?: Discord.Snowflake): Promise<FeatureRequest | RequestError>;
+  add(title: string, body: string, userId: Discord.Snowflake): Promise<FeatureRequest | RequestError>;
   approve(featureId: FeatureRequest['id'], userId: Discord.Snowflake): Promise<FeatureRequest | RequestError>;
   update(features: FeatureRequest | FeatureRequest[], userId: Discord.Snowflake): Promise<{ success: true } | { code: HTTP_STATUS_BAD_REQUEST; errors: { id: FeatureRequest['id']; error: string }[] }>;
   delete(featureId: FeatureRequest['id'], userId: Discord.Snowflake): Promise<{ success: true } | RequestError>;
   addVote(featureId: FeatureRequest['id'], userId: Discord.Snowflake, type: 'up' | 'down'): Promise<FeatureRequest | RequestError>;
   sendToWebhook(title: string, description: string, color?: number, url?: string): Promise<{ success: boolean } | RequestError>;
-  validate(userId: Discord.Snowflake): RequestError | undefined;
+  validate(userId: Discord.Snowflake, requireBeingOwner: boolean | Discord.Snowflake, featureId: unknown): RequestError | undefined;
 
   /** returns `RequestError` if something is not valid.*/
   static validateContent(settings: VoteSystemSettings, title?: string, body?: string): RequestError | undefined;
