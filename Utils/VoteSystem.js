@@ -209,7 +209,7 @@ module.exports = class VoteSystem {
   validate(userId, requireBeingOwner, featureId) {
     if (!userId) return { errorCode: HTTP_STATUS_UNAUTHORIZED, error: 'User ID is missing.' };
     if (this.db.get('botSettings', 'blacklist')?.includes(userId)) return { errorCode: HTTP_STATUS_FORBIDDEN, error: 'You have been blacklisted from using the bot.' };
-    if (!(requireBeingOwner === userId || requireBeingOwner === true && this.config.ownerIds.includes(userId)))
+    if (!(requireBeingOwner === userId || this.config.ownerIds.includes(userId)))
       return { errorCode: HTTP_STATUS_FORBIDDEN, error: 'You do not have permission to perform this action.' };
 
     /* eslint-disable-next-line prefer-rest-params -- only proper way to check if the param was given, independent of its type.*/
