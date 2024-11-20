@@ -213,7 +213,7 @@ module.exports = class VoteSystem {
       return { errorCode: HTTP_STATUS_FORBIDDEN, error: 'You do not have permission to perform this action.' };
 
     /* eslint-disable-next-line prefer-rest-params -- only proper way to check if the param was given, independent of its type.*/
-    if (1 in arguments) {
+    if (2 in arguments) {
       if (!featureId) return { errorCode: HTTP_STATUS_BAD_REQUEST, error: 'Feature ID is missing.' };
       if (!this.get(featureId)) return { errorCode: HTTP_STATUS_BAD_REQUEST, error: 'Unknown featureReq ID.' };
     }
