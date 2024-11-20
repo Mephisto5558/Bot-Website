@@ -135,7 +135,7 @@ module.exports = class VoteSystem {
 
     await Promise.allSettled(promiseList);
 
-    await this.sendToWebhook(
+    void this.sendToWebhook(
       'Feature Requests have been edited',
       'The following feature request(s) have been edited by a dev:\n'
       + features.reduce((acc, { id }) => errorList.some(e => e.id == id) ? acc : `${acc}\n- [${id}](${this.config.domain}/vote?q=${id})`, ''),
