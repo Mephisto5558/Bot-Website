@@ -22,8 +22,9 @@ const
   { HTTP_STATUS_MOVED_PERMANENTLY, HTTP_STATUS_FORBIDDEN, HTTP_STATUS_NOT_FOUND, HTTP_STATUS_INTERNAL_SERVER_ERROR, HTTP_STATUS_METHOD_NOT_ALLOWED } = require('node:http2').constants,
   VoteSystem = require('./Utils/VoteSystem.js'),
   DEFAULT_PORT = 8000,
-  ONE_MIN_IN_MS = 6e4,
-  ONE_YEAR_IN_MS = 3.154e10;
+  RATELIMIT_MAX_REQUESTS = 100,
+  RATELIMIT_MS = 6e4, // 1min in ms
+  MAX_COOKIE_AGE = 3.154e10; // 1y in ms
 
 class WebServer {
   /**
@@ -438,8 +439,8 @@ class WebServer {
       .use(
         compression(),
         rateLimit({
-          windowMs: ONE_MIN_IN_MS,
-          max: 100,
+          windowMs: RATELIMIT_MS,
+          max: RATELIMIT_MAX_REQUESTS,
           message: '<body style="background-color:#111;color:#ff0000"><p style="text-align:center;top:50%;position:relative;font-size:40;">Sorry, you have been ratelimited!</p></body>'
         }),
         bodyParser.json({ limit: '100kb' }),
@@ -452,7 +453,7 @@ class WebServer {
           saveUninitialized: false,
           store: this.sessionStore,
           cookie: {
-            maxAge: ONE_YEAR_IN_MS,
+            maxAge: MAX_COOKIE_AGE,
             secure: this.config.domain.startsWith('https'),
             httpOnly: this.config.domain.startsWith('https'),
             sameSite: 'lax',

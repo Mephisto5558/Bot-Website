@@ -17,8 +17,8 @@ module.exports = class VoteSystem {
     this.client = client;
     this.db = db;
     this.config = config;
-    /* eslint-disable custom/sonar-no-magic-numbers -- default values*/
     this.settings = {
+      /* eslint-disable @typescript-eslint/no-magic-numbers -- default values */
       requireTitle: true,
       minTitleLength: 0,
       maxTitleLength: 140,
@@ -28,8 +28,8 @@ module.exports = class VoteSystem {
       maxPendingFeatureRequests: 5,
       webhookMaxVisibleBodyLength: 2000,
       ...settings
+      /* eslint-enable @typescript-eslint/no-magic-numbers */
     };
-    /* eslint-enable custom/sonar-no-magic-numbers */
 
     if (!client.isReady()) throw new Error('Client must be ready!');
   }
