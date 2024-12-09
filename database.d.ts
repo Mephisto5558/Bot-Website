@@ -6,7 +6,7 @@ export type { Database };
 
 type Snowflake = `${bigint}`;
 
-/* eslint-disable sonarjs/redundant-type-aliases -- documentation*/
+/* eslint-disable sonarjs/redundant-type-aliases -- documentation */
 type sessionId = string;
 type guildId = Snowflake;
 type userId = Snowflake;

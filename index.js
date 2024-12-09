@@ -31,7 +31,7 @@ class WebServer {
    * @param {import('.').WebServer['db']}db
    * @param {import('.').WebServer['keys']} keys
    * @param {import('.').WebServerConfig?}config
-   * @param {import('.').WebServer['logError']}errorLoggingFunction*/
+   * @param {import('.').WebServer['logError']}errorLoggingFunction */
   constructor(client, db, keys, config, errorLoggingFunction = console.error) {
     config ??= { support: {} };
 
@@ -64,7 +64,7 @@ class WebServer {
     /* eslint-enable unicorn/no-null */
   }
 
-  /** @returns {typeof import('.').WebServer} needed for better typing*/
+  /** @returns {typeof import('.').WebServer} needed for better typing */
   get #class() {
     return this.constructor;
   }
@@ -75,7 +75,7 @@ class WebServer {
    * @param {import('.').WebServer['keys']?} keys
    * @param {import('.').WebServerConfig?}config
    * @param {import('.').WebServer['logError']?}errorLoggingFunction
-   * @throws {Error} on invalid data*/
+   * @throws {Error} on invalid data */
   #checkConstructorParams(client, db, keys, config, errorLoggingFunction) {
     if (!client?.options.intents.has(GatewayIntentBits.Guilds)) throw new Error('Client must have the "Guilds" gateway intent.');
     if (!db?.cache) throw new Error('Missing db property');
@@ -132,8 +132,8 @@ class WebServer {
   }
 
   async #getSettings() {
-    /** @typedef {ConstructorParameters<ReturnType<import('discord-dashboard')['UpdatedClass']>>[0]['settings'][number]}category*/
-    /** @type {category[]}*/
+    /** @typedef {ConstructorParameters<ReturnType<import('discord-dashboard')['UpdatedClass']>>[0]['settings'][number]}category */
+    /** @type {category[]} */
     const categoryOptionList = [];
 
     for (const subFolder of await readdir(this.config.settingsPath, { withFileTypes: true })) {
@@ -141,7 +141,7 @@ class WebServer {
 
       const index = JSON.parse(await readFile(path.join(this.config.settingsPath, subFolder.name, '_index.json'), 'utf8'));
 
-      /** @type {category['categoryOptionsList']}*/
+      /** @type {category['categoryOptionsList']} */
       const optionList = [{
         optionId: `${index.id}.spacer`,
         title: 'Important!',
@@ -163,7 +163,7 @@ class WebServer {
       for (const file of await readdir(path.join(this.config.settingsPath, subFolder.name))) {
         if (!file.endsWith('.js')) continue;
 
-        /** @type {import('.').dashboardSetting}*/
+        /** @type {import('.').dashboardSetting} */
         const setting = require(path.join(process.cwd(), this.config.settingsPath, subFolder.name, file));
 
         if (setting.type == 'spacer') {
@@ -369,7 +369,7 @@ class WebServer {
         pathStr = path.join(process.cwd(), this.config.customPagesPath, path.normalize(req.path.endsWith('/') ? req.path.slice(0, -1) : req.path).replace(/^(?:\.{2}(?:\/|\\|$))+/, '')),
         dir = pathStr.slice(0, Math.max(0, pathStr.lastIndexOf(path.sep)));
 
-      /** @type {import('.').customPage?}*/
+      /** @type {import('.').customPage?} */
       let data, subDirs;
       try { subDirs = await readdir(dir, { withFileTypes: true }); }
       catch { /* empty */ }
@@ -408,10 +408,10 @@ class WebServer {
   };
 
   /**
-   * @param {Error|import('http-errors').HttpError}err
+   * @param {Error | import('http-errors').HttpError}err
    * @param {import('express').Request}req
    * @param {import('express').Response}res
-   * @param {import('express').NextFunction}next*/
+   * @param {import('express').NextFunction}next */
   #reqErrorHandler = (err, req, res, next) => {
     if (err.code != 'ENOENT') this.logError(err);
 

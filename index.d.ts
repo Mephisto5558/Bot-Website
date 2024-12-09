@@ -49,7 +49,7 @@ type WebServerConfig = {
    * ```js
    * if (port) `${WebServer['config']['domain']}:${WebServer['config']['port']}`
    * else WebServer['config']['domain']
-   * ```*/
+   * ``` */
   webhookUrl?: string;
   errorPagesDir?: string; settingsPath?: string; customPagesPath?: string;
 };
@@ -84,7 +84,7 @@ declare class WebServer {
   sessionStore: MemoryStore | null;
   dashboardOptionCount: unknown[] | null;
 
-  /** modified default settings of embedBuilder*/
+  /** modified default settings of embedBuilder */
   formTypes: (Omit<formTypes, 'embedBuilder'> & { embedBuilder: ReturnType<(typeof formTypes)['embedBuilder']>; _embedBuilder: formTypes['embedBuilder'] }) | null;
   dashboard: Dashboard | null;
   router: express.Router | null;
@@ -108,7 +108,7 @@ declare class VoteSystem {
    *  requireBody: false, minBodyLength: 0, maxBodyLength: 4000,
    *  maxPendingFeatureRequests: 5, webhookMaxVisibleBodyLength: 2000
    * }
-   * ```*/
+   * ``` */
   constructor(client: Discord.Client<true>, db: TypedDB, config: VoteSystemConfig, settings: VoteSystemSettingsInit);
 
   client: Discord.Client<true>;
@@ -126,12 +126,12 @@ declare class VoteSystem {
   sendToWebhook(title: string, description: string, color?: number, url?: string): Promise<{ success: boolean } | RequestError>;
   validate(userId: Discord.Snowflake, requireBeingOwner: boolean | Discord.Snowflake, featureId: unknown): RequestError | undefined;
 
-  /** returns `RequestError` if something is not valid.*/
+  /** returns `RequestError` if something is not valid. */
   static validateContent(settings: VoteSystemSettings, title?: string, body?: string): RequestError | undefined;
 
   static formatDesc(params: { title?: string; body?: string }, maxVisibleBodyLength?: number): string;
 
-  /** @param date A date obj or millseconds*/
+  /** @param date A date obj or millseconds */
   static isInCurrentWeek(date: Date | number): boolean;
 }
 
@@ -190,7 +190,7 @@ type CreateObjectEntries<TValue, TValueInitial> = TValue extends object ? {
 declare class TypedDB extends DBClass {
   /**
    * generates required database entries from {@link ./Templates/db_collections.json}.
-   * @param overwrite overwrite existing collection, default: `false`*/
+   * @param overwrite overwrite existing collection, default: `false` */
   generate(overwrite?: boolean): Promise<void>;
 
   get(): undefined;

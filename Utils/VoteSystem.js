@@ -12,7 +12,7 @@ module.exports = class VoteSystem {
    * @param {import('discord.js').Client<true>}client
    * @param {import('@mephisto5558/mongoose-db').DB}db
    * @param {import('..').VoteSystemConfig}config
-   * @param {import('..').VoteSystemSettings}settings*/
+   * @param {import('..').VoteSystemSettings}settings */
   constructor(client, db, config = {}, settings = {}) {
     this.client = client;
     this.db = db;
@@ -44,7 +44,7 @@ module.exports = class VoteSystem {
    * @typedef {import('..').FeatureRequest}FeatureRequest
    * @param {FeatureRequest['id']}id
    * @param {FeatureRequest}data
-   * @returns {Promise<FeatureRequest | void>}*/
+   * @returns {Promise<FeatureRequest | void>} */
   #update = async (id, data) => this.db.update('website', `requests.${id}`, data);
 
   /** @type {import('..').VoteSystem['getMany']} */
@@ -90,7 +90,7 @@ module.exports = class VoteSystem {
     const error = this.validate(userId, true);
     if (error) return error;
 
-    /** @type {FeatureRequest}*/
+    /** @type {FeatureRequest} */
     const featureReq = this.get(featureId);
     if (!featureReq.pending) return { errorCode: HTTP_STATUS_CONFLICT, error: 'This feature request is already approved.' };
 
@@ -152,7 +152,7 @@ module.exports = class VoteSystem {
     const error = this.validate(userId, requestAuthor, featureId);
     if (error) return error;
 
-    /** @type {FeatureRequest}*/
+    /** @type {FeatureRequest} */
     const featureReq = this.get(featureId);
 
     await this.db.delete('website', `requests.${featureId}`);
@@ -173,7 +173,7 @@ module.exports = class VoteSystem {
     const { lastVoted } = this.db.get('userSettings', userId) ?? {};
     if (this.constructor.isInCurrentWeek(lastVoted)) return { errorCode: HTTP_STATUS_FORBIDDEN, error: 'You can only vote once per week.' };
 
-    /** @type {FeatureRequest}*/
+    /** @type {FeatureRequest} */
     const featureReq = this.get(featureId);
     featureReq.votes = (featureReq.votes ?? 0) + (type == 'up' ? 1 : -1);
 
@@ -212,7 +212,7 @@ module.exports = class VoteSystem {
     if (!(requireBeingOwner === userId || this.config.ownerIds.includes(userId)))
       return { errorCode: HTTP_STATUS_FORBIDDEN, error: 'You do not have permission to perform this action.' };
 
-    /* eslint-disable-next-line prefer-rest-params -- only proper way to check if the param was given, independent of its type.*/
+    /* eslint-disable-next-line prefer-rest-params -- only proper way to check if the param was given, independent of its type. */
     if (2 in arguments) {
       if (!featureId) return { errorCode: HTTP_STATUS_BAD_REQUEST, error: 'Feature ID is missing.' };
       if (!this.get(featureId)) return { errorCode: HTTP_STATUS_BAD_REQUEST, error: 'Unknown featureReq ID.' };
