@@ -31,7 +31,7 @@
     "express-async-handler": "^1.2.0",
     "express-rate-limit": "^7.5.0",
     "express-session": "^1.18.1",
-    "express-xss-sanitizer": "^1.2.1",
+    "express-xss-sanitizer": "^2.0.0",
     "passport": "^0.7.0",
     "passport-discord": "^0.1.4"
   },
