@@ -1,13 +1,15 @@
-import type { APIUser, GuildFeature } from 'discord.js';
+import type { APIUser } from 'discord.js';
 import type { Cookie } from 'express-session';
+import type { Profile } from 'passport-discord';
 import type { FeatureRequest } from '.';
+import type { sessionId } from './webServer';
 
 export type { Database };
+export { type sessionId } from './webServer';
 
 type Snowflake = `${bigint}`;
 
 /* eslint-disable sonarjs/redundant-type-aliases -- documentation */
-type sessionId = string;
 type guildId = Snowflake;
 type userId = Snowflake;
 /* eslint-enable sonarjs/redundant-type-aliases */
@@ -26,23 +28,7 @@ type Database = {
           data: string | null;
         };
       };
-      user?: APIUser & {
-        avatar_decoration_data: {
-          asset: string;
-          sku_id: string;
-        } | null;
-        banner_color: `#${number}` | null;
-        tag: `${string}#${number}`;
-        avatarURL: string | null;
-        guilds: {
-          id: Snowflake;
-          name: string;
-          icon: string | null;
-          owner: boolean;
-          permissions: `${bigint}`;
-          features: GuildFeature[];
-        }[];
-      };
+      user?: Profile & APIUser;
       loggedInLastTime?: boolean;
     } | undefined>;
     requests: Record<FeatureRequest['id'], FeatureRequest | undefined>;
