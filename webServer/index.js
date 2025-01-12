@@ -1,319 +1,150 @@
-/* eslint sonarjs/no-nested-functions: ["error", { threshold: 4 }] */
-/* eslint-disable max-lines */
-
 const
-  { readdir, readFile } = require('node:fs/promises'),
-  DDB = require('discord-dashboard'),
-  { GatewayIntentBits, Status } = require('discord.js'),
-  { xss } = require('express-xss-sanitizer'),
-  asyncHandler = require('express-async-handler'),
-  bodyParser = require('body-parser'),
-  compression = require('compression'),
-  cors = require('cors'),
-  escapeHTML = require('escape-html'),
-  express = require('express'),
-  passport = require('passport'),
+  { readFile, readdir } = require('node:fs/promises'),
   path = require('node:path'),
-  rateLimit = require('express-rate-limit'),
-  session = require('express-session'),
+  { HTTP_STATUS_MOVED_PERMANENTLY, HTTP_STATUS_FORBIDDEN, HTTP_STATUS_NOT_FOUND, HTTP_STATUS_METHOD_NOT_ALLOWED } = require('node:http2').constants,
+  { OAuth2Scopes, ALLOWED_SIZES } = require('discord.js'),
+  { Authenticator } = require('passport'),
   Strategy = require('passport-discord'),
   DBD = require('discord-dashboard'),
   DarkDashboard = require('dbd-dark-dashboard'),
-  { HTTP_STATUS_MOVED_PERMANENTLY, HTTP_STATUS_FORBIDDEN, HTTP_STATUS_NOT_FOUND, HTTP_STATUS_INTERNAL_SERVER_ERROR, HTTP_STATUS_METHOD_NOT_ALLOWED } = require('node:http2').constants,
-  VoteSystem = require('./Utils/VoteSystem.js'),
-  DEFAULT_PORT = 8000,
+  asyncHandler = require('express-async-handler'),
+  express = require('express'),
+  escapeHTML = require('escape-html'),
+  { xss } = require('express-xss-sanitizer'),
+  bodyParser = require('body-parser'),
+  compression = require('compression'),
+  cors = require('cors'),
+  rateLimit = require('express-rate-limit'),
+  session = require('express-session'),
+
   RATELIMIT_MAX_REQUESTS = 100,
   RATELIMIT_MS = 6e4, // 1min in ms
   MAX_COOKIE_AGE = 3.154e10; // 1y in ms
 
-class WebServer {
+
+module.exports = class WebServerSetupper {
+  client; authenticator; dashboardTheme; dashboard; router;
+
   /**
-   * @param {import('.').WebServer['client']}client
-   * @param {import('.').WebServer['db']}db
-   * @param {import('.').WebServer['keys']} keys
-   * @param {import('.').WebServerConfig?}config
-   * @param {import('.').WebServer['logError']}errorLoggingFunction */
-  constructor(client, db, keys, config, errorLoggingFunction = console.error) {
-    config ??= { support: {} };
-
-    this.#checkConstructorParams(client, db, keys, config, errorLoggingFunction);
-
+   * @param {import('discord.js').Client<true>}client
+   * @param {ConstructorParameters<typeof import('.').WebServerSetupper>[1]}baseConfig */
+  constructor(client, baseConfig) {
     this.client = client;
-    this.db = db;
-    this.logError = errorLoggingFunction;
-    this.config = config;
-    this.config.ownerIds ??= [];
-    this.config.port ??= process.env.PORT ?? process.env.SERVER_PORT ?? DEFAULT_PORT;
-    this.config.domain ??= process.env.SERVER_IP ?? process.env.IP ?? 'http://localhost';
-    if (!this.config.domain.startsWith('http')) this.config.domain = `http://${this.config.domain}`;
-
-    this.config.baseUrl = config.port == undefined ? this.config.domain : this.config.domain + ':' + this.config.port;
-    this.keys = keys;
-
-    this.initiated = false;
-
-    /* eslint-disable unicorn/no-null -- `null` is appropriate here */
-    // properties set after this.init() ran
-    this.passport = null;
-    this.sessionStore = null;
-    this.dashboardOptionCount = null;
-    this.formTypes = null;
-    this.dashboard = null;
-    this.router = null;
-    this.app = null;
-    this.voteSystem = null;
-    /* eslint-enable unicorn/no-null */
+    this.baseConfig = baseConfig;
   }
 
-  /** @returns {typeof import('.').WebServer} needed for better typing */
-  get #class() {
-    return this.constructor;
-  }
-
-  /**
-   * @param {import('.').WebServer['client']?}client
-   * @param {import('.').WebServer['db']?}db
-   * @param {import('.').WebServer['keys']?} keys
-   * @param {import('.').WebServerConfig?}config
-   * @param {import('.').WebServer['logError']?}errorLoggingFunction
-   * @throws {Error} on invalid data */
-  #checkConstructorParams(client, db, keys, config, errorLoggingFunction) {
-    if (!client?.options.intents.has(GatewayIntentBits.Guilds)) throw new Error('Client must have the "Guilds" gateway intent.');
-    if (!db?.cache) throw new Error('Missing db property');
-    if (!keys?.secret) throw new Error('Missing discord application secret');
-    if (!keys.dbdLicense) throw new Error('Missing dbdLicense. Get one here: https://assistantscenter.com/discord-dashboard/v2');
-    if (!config.domain.startsWith('http://') && !this.config.domain.startsWith('https://')) throw new Error('config.domain must start with "http://" or "https://"!');
-    if (typeof errorLoggingFunction != 'function') throw new Error('Invalid errorLoggingFunction');
-  }
-
-  #setupPassport() {
-    this.passport = passport.use(new Strategy({
-      clientID: this.client.user.id,
-      clientSecret: this.keys.secret,
-      callbackURL: '/auth/discord/callback',
-      scope: ['identify', 'guilds']
-    }, (_accessToken, _refreshToken, user, done) => {
-      // Compatibility with Discord-Dashboard
-      user.tag = `${user.username}#${user.discriminator}`;
-      /* eslint-disable-next-line unicorn/no-null -- `null` is appropriate here */
-      user.avatarURL = user.avatar ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=1024` : null;
-
-      done(undefined, user);
-    }));
-
-    this.passport.serializeUser((user, done) => done(undefined, user));
-    this.passport.deserializeUser((user, done) => done(undefined, user));
-  }
-
-  #setupSessionStore() {
-    this.sessionStore = new session.MemoryStore();
-    this.sessionStore.get = (sid, cb) => {
-      const data = this.db.get('website', `sessions.${sid}`);
-
-      if (data?.user) {
-        if (data.passport) data.passport.user = data.user;
-        else data.passport = { user: data.user };
-      }
-      /* eslint-disable-next-line unicorn/no-null -- `null` must be used here */
-      return cb(null, data);
-    };
-    this.sessionStore.set = async (sid, sessionData, cb) => {
-      if (sessionData.passport?.user) {
-        sessionData.user = sessionData.passport.user;
-
-        delete sessionData.passport.user;
-        if (!Object.keys(sessionData.passport).length) delete sessionData.passport;
-      }
-
-      await this.db.update('website', `sessions.${sid}`, sessionData);
-      /* eslint-disable-next-line unicorn/no-null -- `null` must be used here */
-      return cb(null);
-    };
-    this.sessionStore.destroy = (sid, cb) => this.db.delete('website', `sessions.${sid}`).then(() => cb?.());
-  }
-
-  async #getSettings() {
-    /** @typedef {ConstructorParameters<ReturnType<import('discord-dashboard')['UpdatedClass']>>[0]['settings'][number]}category */
-    /** @type {category[]} */
-    const categoryOptionList = [];
-
-    for (const subFolder of await readdir(this.config.settingsPath, { withFileTypes: true })) {
-      if (!subFolder.isDirectory()) continue;
-
-      const index = JSON.parse(await readFile(path.join(this.config.settingsPath, subFolder.name, '_index.json'), 'utf8'));
-
-      /** @type {category['categoryOptionsList']} */
-      const optionList = [{
-        optionId: `${index.id}.spacer`,
-        title: 'Important!',
-        description: 'You need to press the submit button on the bottom of the page to save settings!',
-        optionType: 'spacer',
-        position: -1
-      }];
-
-      if (!index.disableToggle) {
-        optionList.push({
-          optionId: `${index.id}.enable`,
-          optionName: 'Enable Module',
-          optionDescription: 'Enable this Module',
-          position: 0,
-          optionType: DDB.formTypes.switch()
-        });
-      }
-
-      for (const file of await readdir(path.join(this.config.settingsPath, subFolder.name))) {
-        if (!file.endsWith('.js')) continue;
-
-        /** @type {import('.').dashboardSetting} */
-        const setting = require(path.join(process.cwd(), this.config.settingsPath, subFolder.name, file));
-
-        if (setting.type == 'spacer') {
-          optionList.push({
-            optionId: `${index.id}.spacer`,
-            title: setting.name,
-            description: setting.description,
-            optionType: setting.type,
-            position: setting.position
-          });
-        }
-        else {
-          if (this.formTypes[setting.type]) setting.type = this.formTypes[setting.type];
-
-          optionList.push({
-            optionId: `${index.id}.${setting.id}`,
-            optionName: setting.name,
-            optionDescription: setting.description,
-            optionType: typeof setting.type == 'function' ? await setting.type.call(this) : setting.type,
-            position: setting.position,
-            allowedCheck: ({ guild, user }) => {
-              if (this.db.get('botSettings', 'blacklist').includes(user.id)) return { allowed: false, errorMessage: 'You have been blacklisted from using the bot.' };
-              if (setting.auth === false) return { allowed: false, errorMessage: 'This feature has been disabled.' };
-              return setting.auth?.(guild, user) ?? { allowed: true };
-            }
-          });
-        }
-      }
-
-      categoryOptionList.push({
-        categoryId: index.id,
-        categoryName: index.name,
-        categoryDescription: index.description,
-        position: index.position,
-        getActualSet: option => optionList.map(e => {
-          if (e.get) return { optionId: e.optionId, data: e.get(option) };
-          const dataPath = e.optionId.replaceAll(/[A-Z]/g, e => `.${e.toLowerCase()}`);
-          if (dataPath.split('.').at(-1) == 'spacer') return { optionId: e.optionId, data: e.description };
-
-          const data = this.db.get('guildSettings', `${option.guild.id}.${dataPath}`) ?? this.db.get('botSettings', `defaultGuild.${dataPath}`);
-          return { optionId: e.optionId, data };
-        }),
-        setNew: async ({ guild, data: dataArray }) => {
-          for (const { optionId, data } of dataArray) {
-            const dataPath = optionId.replaceAll(/[A-Z]/g, e => `.${e.toLowerCase()}`);
-
-            if (this.db.get('guildSettings', `${guild.id}.${dataPath}`) === data) continue;
-            if (data.embed) data.embed.description ??= ' ';
-
-            await this.db.update('guildSettings', `${guild.id}.${dataPath}`, data);
-          }
+  /** @type {import('.').WebServerSetupper['setupAuth']} */
+  setupAuth(callbackURL = '/auth/discord/callback') {
+    this.authenticator = new Authenticator().use(
+      new Strategy(
+        {
+          callbackURL,
+          clientSecret: this.baseConfig.clientSecret,
+          clientID: this.client.user.id,
+          scope: [OAuth2Scopes.Identify, OAuth2Scopes.Guilds]
         },
-        categoryOptionsList: optionList.toSorted((a, b) => a.position - b.position)
-      });
-    }
+        (_accessToken, _refreshToken, user, done) => done(undefined, user)
+      )
+    );
 
-    return categoryOptionList.sort((a, b) => a.position - b.position);
+    this.authenticator.serializeUser((user, done) => done(undefined, user));
+    this.authenticator.deserializeUser((user, done) => done(undefined, user));
+
+    return this.authenticator;
   }
 
-  /** @param {import('.').commands}commands */
-  async #setupDashboard(commands) {
-    this.dashboardOptionCount = [];
+  /** @type {import('.').WebServerSetupper['setupDashboardTheme']} */
+  setupDashboardTheme(config) {
+    /*
+    return SoftUITheme({
+      information: {
+        createdBy: this.client.application.owner.tag,
+        iconURL: this.client.user.displayAvatarURL(),
+        websiteTitle: `${this.client.user.username} | Dashboard`,
+        websiteName: `${this.client.user.username} | Dashboard`,
+        websiteUrl: baseUrl,
+        dashboardUrl: baseUrl,
+        supporteMail: Support.Mail,
+        supportServer: Support.Discord,
+        imageFavicon: this.user.displayAvatarURL(),
+        pageBackGround: 'linear-gradient(#2CA8FF, #155b8d)',
+        preloader: 'Loading...',
+        loggedIn: 'Successfully signed in.',
+        mainColor: '#2CA8FF',
+        subColor: '#ebdbdb'
+      },
+      index: {
+        card: {
+          category: `${this.client.user.username} Dashboard - The center of everything`,
+          title: `Welcome to the ${this.client.user.username} dashboard where you can control the features and settings of the bot.`,
+          description: 'Look up commands and configurate servers on the left side bar!',
+          image: 'https://i.imgur.com/axnP93g.png'
+        },
+        information: {},
+        feeds: {},
+      },
+      commands
+    }); */
 
-    await DBD.useLicense(this.keys.dbdLicense);
+    /* eslint-disable-next-line new-cap -- this is a function that does stuff a class usually does. */
+    this.dashboardTheme = DarkDashboard({
+      information: {
+        createdBy: this.client.application.owner?.owner?.username ?? this.client.application.owner?.username,
+        iconURL: this.client.user.displayAvatarURL(),
+        websiteTitle: `${this.client.user.username} | Dashboard`,
+        websiteName: `${this.client.user.username} | Dashboard`,
+        websiteUrl: this.baseConfig.baseURL,
+        dashboardUrl: this.baseConfig.baseURL,
+        /* eslint-disable-next-line @typescript-eslint/no-magic-numbers -- 4th smallest size */
+        imageFavicon: this.client.user.displayAvatarURL({ size: ALLOWED_SIZES[4] }),
+        pageBackGround: 'linear-gradient(#2CA8FF, #155b8d)',
+        preloader: 'Loading...',
+        loggedIn: 'Successfully signed in.',
+        mainColor: '#2CA8FF',
+        subColor: '#ebdbdb',
+        ...config.information
+      },
+      index: {
+        card: {
+          category: `${this.client.user.username} Dashboard - The center of everything`,
+          title: `Welcome to the ${this.client.user.username} dashboard where you can control the features and settings of the bot.`,
+          description: 'Look up commands and configurate servers on the left side bar!',
+          image: 'https://i.imgur.com/axnP93g.png'
+        },
+        information: {},
+        feeds: {},
+        ...config.index
+      },
+      commands: config.commands
+    });
+
+    return this.dashboardTheme;
+  }
+
+  /** @type {import('.').WebServerSetupper['setupDashboard']} */
+  async setupDashboard(licenseId, config) {
+    await DBD.useLicense(licenseId);
 
     /* eslint-disable-next-line new-cap -- UpdatedClass is none of mine (and, returns a class) */
     const DBDUpdated = DBD.UpdatedClass();
+
     this.dashboard = new DBDUpdated({
-      port: this.config.port,
-      domain: this.config.domain,
       acceptPrivacyPolicy: true,
       minimizedConsoleLogs: true,
       noCreateServer: true,
       useUnderMaintenance: false,
       useCategorySet: true,
-      html404: this.config.errorPagesDir ? await readFile(path.join(this.config.errorPagesDir, '404.html'), 'utf8') : undefined,
-      redirectUri: `${this.config.baseUrl}/discord/callback`,
-      sessionStore: this.sessionStore,
+      html404: config.errorPagesDir && !config.html404 ? await readFile(path.join(config.errorPagesDir, '404.html'), 'utf8') : undefined,
       bot: this.client,
-      ownerIDs: this.config.ownerIds,
       client: {
         id: this.client.user.id,
-        secret: this.keys.secret
+        secret: this.baseConfig.clientSecret
       },
       invite: {
-        scopes: ['bot', 'applications.commands'],
-        permissions: '412317240384'
+        scopes: this.client.application.installParams.scopes,
+        permissions: this.client.application.installParams.permissions
       },
-
-      /* theme: SoftUITheme({
-           information: {
-             createdBy: this.application.owner.tag,
-             iconURL: this.user.displayAvatarURL(),
-             websiteTitle: `${this.user.username} | Dashboard`,
-             websiteName: `${this.user.username} | Dashboard`,
-             websiteUrl: baseUrl,
-             dashboardUrl: baseUrl,
-             supporteMail: Support.Mail,
-             supportServer: Support.Discord,
-             imageFavicon: this.user.displayAvatarURL(),
-             pageBackGround: 'linear-gradient(#2CA8FF, #155b8d)',
-             preloader: 'Loading...',
-             loggedIn: 'Successfully signed in.',
-             mainColor: '#2CA8FF',
-             subColor: '#ebdbdb'
-           },
-           index: {
-             card: {
-               category: `${this.user.username} Dashboard - The center of everything`,
-               title: 'Welcome to the Teufelsbot dashboard where you can control the features and settings of the bot.',
-               description: 'Look up commands and configurate servers on the left side bar!',
-               image: 'https://i.imgur.com/axnP93g.png'
-             },
-             information: {},
-             feeds: {},
-           },
-           commands
-         }), */
-
-      /* eslint-disable-next-line new-cap -- this is a function that does stuff a class usually does. */
-      theme: DarkDashboard({
-        information: {
-          createdBy: this.client.application.owner.username,
-          iconURL: this.client.user.displayAvatarURL(),
-          websiteTitle: `${this.client.user.username} | Dashboard`,
-          websiteName: `${this.client.user.username} | Dashboard`,
-          websiteUrl: this.config.baseUrl,
-          dashboardUrl: this.config.baseUrl,
-          supporteMail: this.config.support.mail,
-          supportServer: this.config.support.discord,
-          imageFavicon: this.client.user.displayAvatarURL(),
-          pageBackGround: 'linear-gradient(#2CA8FF, #155b8d)',
-          preloader: 'Loading...',
-          loggedIn: 'Successfully signed in.',
-          mainColor: '#2CA8FF',
-          subColor: '#ebdbdb'
-        },
-        index: {
-          card: {
-            category: `${this.client.user.username} Dashboard - The center of everything`,
-            title: `Welcome to the ${this.client.user.username} dashboard where you can control the features and settings of the bot.`,
-            description: 'Look up commands and configurate servers on the left side bar!',
-            image: 'https://i.imgur.com/axnP93g.png'
-          },
-          information: {},
-          feeds: {}
-        },
-        commands
-      }),
+      theme: this.dashboardTheme,
       underMaintenance: {
         title: 'Under Maintenance',
         contentTitle: '<p id="content-title" style="color: #ddd9d9">This page is under maintenance</p>',
@@ -333,17 +164,20 @@ class WebServer {
         craneCabinColor: '#8b8b8b',
         craneStandColors: ['#6a6a6a', undefined, '#f29b8b']
       },
-      settings: this.settings
+      ...config
     });
 
     await this.dashboard.init();
+    return this.dashboard;
   }
 
-  #setupRouter = () => {
+  /** @type {import('.').WebServerSetupper['setupRouter']} */
+  setupRouter(customPagesPath, webServer) {
     /* eslint-disable-next-line new-cap -- Router is a function that returns a class */
     this.router = express.Router();
     this.router.all('*', asyncHandler(async (req, res, next) => {
       Object.defineProperty(req.session, 'guilds', { // Dashboard
+        /** @this {import('express-session')['Session'] & { user?: import('.').session['user'] }} */
         get() { return this.user?.guilds; },
         set(val) {
           this.user ??= {};
@@ -362,16 +196,16 @@ class WebServer {
         /* eslint-disable new-cap */
         if (req.session.user?.accessToken && !req.AssistantsSecureStorage.GetUser(req.session.user.id))
           req.AssistantsSecureStorage.SaveUser(req.session.user.id, req.session.user.accessToken);
-        /* eslint-enable new-cap */
+          /* eslint-enable new-cap */
         return next();
       }
+      if (!customPagesPath) return next();
 
       const
-        pathStr = path.join(process.cwd(), this.config.customPagesPath, path.normalize(req.path.endsWith('/') ? req.path.slice(0, -1) : req.path).replace(/^(?:\.{2}(?:\/|\\|$))+/, '')),
+        pathStr = path.join(process.cwd(), customPagesPath, path.normalize(req.path.endsWith('/') ? req.path.slice(0, -1) : req.path).replace(/^(?:\.{2}(?:\/|\\|$))+/, '')),
         dir = pathStr.slice(0, Math.max(0, pathStr.lastIndexOf(path.sep)));
 
-      /** @type {import('.').customPage?} */
-      let data, subDirs;
+      let /** @type {import('..').customPage | undefined} */data, subDirs;
       try { subDirs = await readdir(dir, { withFileTypes: true }); }
       catch { /* empty */ }
 
@@ -384,7 +218,7 @@ class WebServer {
         })?.name;
 
         if (!filename) {
-          const html = await this.#class.createNavigationButtons(pathStr, req.path);
+          const html = await WebServerSetupper.createNavigationButtons(pathStr, req.path);
           return void (html ? res.send(html) : next());
         }
 
@@ -392,46 +226,14 @@ class WebServer {
         data = await require(path.join(dir, filename));
       }
 
-      if (!data) return next();
-      if (data.method != undefined && (Array.isArray(data.method) && data.method.some(e => e.toUpperCase() == req.method) || data.method.toUpperCase() !== req.method))
-        return res.setHeader('Allow', data.method.join?.(',') ?? data.method).sendStatus(HTTP_STATUS_METHOD_NOT_ALLOWED);
-      if (data.permissionCheck && !await data.permissionCheck.call(req)) return res.redirect(HTTP_STATUS_FORBIDDEN, `/error/${HTTP_STATUS_FORBIDDEN}`);
-      if (data.title) res.set('title', data.title);
-      if (data.static) {
-        const code = String(data.run);
-        return res.send(code.slice(code.indexOf('{') + 1, code.lastIndexOf('}')));
-      }
-      if (typeof data.run == 'function') return data.run.call(this, res, req, next);
-      if (data.run instanceof URL) return res.redirect(data.run.toString());
-
-      return res.send(JSON.stringify(data.run ?? data));
+      return this.#handleCustomSite.call(webServer, req, res, next, data);
     }));
-  };
 
-  /**
-   * @param {Error | import('http-errors').HttpError}err
-   * @param {import('express').Request}req
-   * @param {import('express').Response}res
-   * @param {import('express').NextFunction}next */
-  #reqErrorHandler = (err, req, res, next) => {
-    if (err.code != 'ENOENT') this.logError(err);
+    return this.router;
+  }
 
-    // send html only to browser
-    if (this.config.errorPagesDir && req.headers['user-agent']?.includes('Mozilla')) {
-      const filePath = path.join(this.config.errorPagesDir, `${err.statusCode ?? HTTP_STATUS_INTERNAL_SERVER_ERROR}.html`);
-
-      try {
-        res.status(err.statusCode ?? HTTP_STATUS_INTERNAL_SERVER_ERROR).sendFile(filePath, { root: process.cwd() }); return;
-      }
-      catch (err) {
-        if (err.code != 'ENOENT') return this.#reqErrorHandler(err, req, res, next);
-      }
-    }
-
-    return res.sendStatus(err.statusCode ?? HTTP_STATUS_INTERNAL_SERVER_ERROR);
-  };
-
-  #setupApp() {
+  /** @type {import('.').WebServerSetupper['setupApp']} */
+  setupApp(secret, sessionStore, handlers = [], config = {}) {
     this.app = express()
       .disable('x-powered-by')
       .set('json spaces', 2)
@@ -447,67 +249,57 @@ class WebServer {
         bodyParser.urlencoded({ extended: true, limit: '100kb' }),
         xss(),
         session({
+          secret,
           name: 'sessionId',
-          secret: this.keys.secret,
           resave: false,
           saveUninitialized: false,
-          store: this.sessionStore,
+          store: sessionStore,
           cookie: {
             maxAge: MAX_COOKIE_AGE,
-            secure: this.config.domain.startsWith('https'),
-            httpOnly: this.config.domain.startsWith('https'),
+            secure: config.domain?.startsWith('https'),
+            httpOnly: config.domain?.startsWith('https'),
             sameSite: 'lax',
             path: '/'
           }
         }),
-        passport.initialize(),
-        passport.session()
+        this.authenticator.initialize(),
+        this.authenticator.session()
       )
-      .use('/api/:v/internal', cors({ origin: this.config.baseUrl }))
+      .use('/api/:v/internal', cors({ origin: this.baseConfig.baseURL }))
       .use(
-        this.router,
-        this.dashboard.getApp(),
-        this.#reqErrorHandler,
+        ...handlers,
         (req, res) => {
-          if (this.config.errorPagesDir && req.headers['user-agent']?.includes('Mozilla'))
-            return res.status(HTTP_STATUS_NOT_FOUND).sendFile(path.join(this.config.errorPagesDir, `${HTTP_STATUS_NOT_FOUND}.html`), { root: process.cwd() });
+          if (config.errorPagesDir && req.headers['user-agent']?.includes('Mozilla'))
+            return res.status(HTTP_STATUS_NOT_FOUND).sendFile(path.join(config.errorPagesDir, `${HTTP_STATUS_NOT_FOUND}.html`), { root: process.cwd() });
           res.sendStatus(HTTP_STATUS_NOT_FOUND);
         }
       );
+
+    return this.app;
   }
 
-  /** @type {import('.').WebServer['init']} */
-  async init(commands) {
-    while (this.client.ws.status != Status.Ready) await new Promise(res => setTimeout(res, 10));
-    await this.client.application.fetch();
+  /**
+   * @param {express.Request}req
+   * @param {express.Response}res
+   * @param {express.NextFunction}next
+   * @param {import('..').customPage | undefined}data */
+  async #handleCustomSite(req, res, next, data) {
+    if (!data) return next();
+    if (data.method != undefined && (Array.isArray(data.method) && data.method.some(e => e.toUpperCase() == req.method) || data.method.toUpperCase() !== req.method))
+      return res.setHeader('Allow', data.method.join?.(',') ?? data.method).sendStatus(HTTP_STATUS_METHOD_NOT_ALLOWED);
+    if (data.permissionCheck && !await data.permissionCheck.call(req)) return res.redirect(HTTP_STATUS_FORBIDDEN, `/error/${HTTP_STATUS_FORBIDDEN}`);
+    if (data.title) res.set('title', data.title);
+    if (data.static) {
+      const code = String(data.run);
+      return res.send(code.slice(code.indexOf('{') + 1, code.lastIndexOf('}')));
+    }
+    if (typeof data.run == 'function') return data.run.call(this, res, req, next);
+    if (data.run instanceof URL) return res.redirect(data.run.toString());
 
-    if (this.initiated) throw new Error('Already initiated');
-
-    this.formTypes = {
-      ...DBD.formTypes, _embedBuilder: DBD.formTypes.embedBuilder, embedBuilder: DBD.formTypes.embedBuilder({
-        username: this.client.user.username,
-        avatarURL: this.client.user.displayAvatarURL({ forceStatic: true }),
-        defaultJson: {}
-      })
-    };
-
-    this.#setupPassport();
-    this.#setupSessionStore();
-    this.settings = await this.#getSettings();
-
-    await this.#setupDashboard(commands);
-    this.#setupRouter();
-    this.#setupApp();
-
-    this.voteSystem = new VoteSystem(this.client, this.db, this.config);
-
-    this.app.listen(this.config.port, () => { console.log(`Website is online on ${this.config.baseUrl}.`); });
-
-    this.initiated = true;
-    return this;
+    return res.send(JSON.stringify(data.run ?? data));
   }
 
-  /** @type {typeof import('.').WebServer['createNavigationButtons']} */
+  /** @type {typeof import('..').WebServer['createNavigationButtons']} */
   static async createNavigationButtons(dirPath, reqPath) {
     const dir = await readdir(dirPath, { withFileTypes: true }).catch(() => { /* emtpy */ });
     if (!dir) return;
@@ -525,6 +317,4 @@ class WebServer {
       return `${acc}<a href=${escapeHTML('/' + reqPath + '/' + name).replaceAll('//', '/')}>${escapeHTML(title)}</a>`;
     }, '<link rel="stylesheet" href="https://mephisto5558.github.io/Website-Assets/min/css/navButtons.css" crossorigin="anonymous" /><div class="navButton">') + '</div>';
   }
-}
-
-module.exports = { WebServer, default: WebServer };
+};

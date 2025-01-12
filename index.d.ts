@@ -6,6 +6,7 @@ import type { PassportStatic } from 'passport';
 import type { formTypes } from 'discord-dashboard';
 import type { DB as DBClass } from '@mephisto5558/mongoose-db';
 import type { Database } from './database';
+import type { DashboardOptions, DashboardThemeOptions } from './webServer';
 
 export { WebServer };
 export type { VoteSystem, VoteSystemConfig, VoteSystemSettings, FeatureRequest, dashboardSetting, customPage, commands, WebServerConfig };
@@ -50,7 +51,7 @@ type WebServerConfig = {
    * if (port) `${WebServer['config']['domain']}:${WebServer['config']['port']}`
    * else WebServer['config']['domain']
    * ``` */
-  webhookUrl?: string;
+  webhookUrl?: string; callbackURL?: string;
   errorPagesDir?: string; settingsPath?: string; customPagesPath?: string;
 };
 type VoteSystemSettingsInit = {
@@ -66,7 +67,6 @@ declare class WebServer {
   constructor(
     client: Discord.Client, db: TypedDB, keys: Keys,
     config?: WebServerConfig,
-    voteSystemSettings?: VoteSystemSettingsInit,
     errorLoggingFunction?: (err: Error, req: express.Request, res: express.Response) => unknown
   );
 
@@ -90,14 +90,16 @@ declare class WebServer {
   app: express.Express | null;
   voteSystem: VoteSystem | null;
 
-  init(commands: commands): Promise<this>;
-
-  static createNavigationButtons(dirPath: PathLike, reqPath: string): Promise<string | undefined>;
+  init(dashboardConfig: DashboardOptions, themeConfig?: DashboardThemeOptions, voteSystemConfig?: VoteSystemConfig, voteSystemSettings?: VoteSystemSettingsInit): Promise<this>;
 
   logError(err: Error, req: express.Request, res: express.Response): unknown;
+
+  toJSON(...props: [Parameters<typeof Discord.flatten>[1]]): ReturnType<typeof Discord.flatten>;
+
+  static createNavigationButtons(dirPath: PathLike, reqPath: string): Promise<string | undefined>;
 }
 
-type VoteSystemConfig = { domain: string; port?: number; webhookUrl?: string; ownerIds: string[] };
+type VoteSystemConfig = { domain: string; port?: number; webhookUrl?: string; ownerIds?: string[] };
 declare class VoteSystem {
   /**
    * @default settings=
