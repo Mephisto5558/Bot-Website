@@ -92,6 +92,8 @@ declare class WebServer {
 
   init(commands: commands): Promise<this>;
 
+  toJSON(...props: [Parameters<typeof Discord.flatten>[1]]): ReturnType<typeof Discord.flatten>;
+
   static createNavigationButtons(dirPath: PathLike, reqPath: string): Promise<string | undefined>;
 
   logError(err: Error, req: express.Request, res: express.Response): unknown;

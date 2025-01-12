@@ -4,7 +4,7 @@
 const
   { readdir, readFile } = require('node:fs/promises'),
   DDB = require('discord-dashboard'),
-  { GatewayIntentBits, Status } = require('discord.js'),
+  { GatewayIntentBits, Status, flatten } = require('discord.js'),
   { xss } = require('express-xss-sanitizer'),
   asyncHandler = require('express-async-handler'),
   bodyParser = require('body-parser'),
@@ -505,6 +505,11 @@ class WebServer {
 
     this.initiated = true;
     return this;
+  }
+
+  /** @type {import('.').WebServer['toJSON']} */
+  toJSON(...props) { // Prevents recursion error when WebServer is bound to Client
+    return flatten(Object.fromEntries(Object.entries(this).filter(([k]) => k != 'client')), ...props);
   }
 
   /** @type {typeof import('.').WebServer['createNavigationButtons']} */
