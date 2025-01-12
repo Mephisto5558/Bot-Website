@@ -204,7 +204,7 @@ class WebServer {
     this.router = this.#setupper.setupRouter(this.config.customPagesPath, this);
     this.app = this.#setupper.setupApp(this.keys.secret, this.sessionStore, [this.router, this.dashboard.getApp(), this.#reqErrorHandler.bind(this)]);
 
-    this.voteSystem = new VoteSystem(this.client, this.db, voteSystemConfig, voteSystemSettings);
+    this.voteSystem = new VoteSystem(this.client, this.db, { ownerIds: this.config.ownerIds, ...voteSystemConfig }, voteSystemSettings);
 
     this.app.listen(this.config.port, () => { console.log(`Website is online on ${this.config.baseUrl}.`); });
 
