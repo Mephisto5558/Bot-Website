@@ -186,7 +186,7 @@ module.exports = class WebServerSetupper {
       });
 
       if (req.path === '/') return res.redirect('/home');
-      if (req.path.startsWith('/api/') && !/^\/api\/v\d+\//i.test(req.path.endsWith('/') ? req.path : req.path + '/')) res.redirect(req.path.replace('/api/', '/api/v1/'));
+      if (req.path.startsWith('/api/') && !/^\/api\/v\d+\//i.test(req.path.endsWith('/') ? req.path : req.path + '/')) return res.redirect(req.path.replace('/api/', '/api/v1/'));
       if (req.path == '/dashboard') return res.redirect(HTTP_STATUS_MOVED_PERMANENTLY, '/manage');
       if (req.path == '/callback') { // Dashboard
         if (req.query.code != undefined) req.session.user.accessToken = req.query.code;
