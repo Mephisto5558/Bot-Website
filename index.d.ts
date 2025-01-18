@@ -92,7 +92,7 @@ declare class WebServer {
 
   init(commands: commands): Promise<this>;
 
-  toJSON(...props: [Parameters<typeof Discord.flatten>[1]]): ReturnType<typeof Discord.flatten>;
+  valueOf(): string;
 
   static createNavigationButtons(dirPath: PathLike, reqPath: string): Promise<string | undefined>;
 
