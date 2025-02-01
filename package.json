@@ -24,7 +24,7 @@
     "body-parser": "^1.20.2",
     "compression": "^1.7.5",
     "cors": "^2.8.5",
-    "dbd-dark-dashboard": "github:Mephisto5558/Dark-Dashboard",
+    "dbd-soft-ui": "^1.7.40-beta.1",
     "discord-dashboard": "^2.3.62",
     "escape-html": "^1.0.3",
     "express": "^4.21.2",
@@ -41,8 +41,8 @@
     "@types/express-session": "1.18.1",
     "@types/passport": "^1.0.17",
     "@types/passport-discord": "^0.1.14",
-    "discord.js": "^14.17.2",
-    "eslint": "^9.17.0"
+    "discord.js": "^14.17.3",
+    "eslint": "^9.18.0"
   },
   "repository": {
     "type": "git",

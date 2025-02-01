@@ -2,11 +2,11 @@ const
   { readFile, readdir } = require('node:fs/promises'),
   path = require('node:path'),
   { HTTP_STATUS_MOVED_PERMANENTLY, HTTP_STATUS_FORBIDDEN, HTTP_STATUS_NOT_FOUND, HTTP_STATUS_METHOD_NOT_ALLOWED } = require('node:http2').constants,
-  { OAuth2Scopes, ALLOWED_SIZES } = require('discord.js'),
+  { OAuth2Scopes } = require('discord.js'),
   { Authenticator } = require('passport'),
   Strategy = require('passport-discord'),
   DBD = require('discord-dashboard'),
-  DarkDashboard = require('dbd-dark-dashboard'),
+  /** @type {(config: import('dbd-soft-ui').themeConfig) => unknown}*/SoftUITheme = require('dbd-soft-ui'),
   asyncHandler = require('express-async-handler'),
   express = require('express'),
   escapeHTML = require('escape-html'),
@@ -55,70 +55,77 @@ module.exports = class WebServerSetupper {
 
   /** @type {import('.').WebServerSetupper['setupDashboardTheme']} */
   setupDashboardTheme(config) {
-    /*
-    return SoftUITheme({
-      information: {
-        createdBy: this.client.application.owner.tag,
-        iconURL: this.client.user.displayAvatarURL(),
-        websiteTitle: `${this.client.user.username} | Dashboard`,
-        websiteName: `${this.client.user.username} | Dashboard`,
-        websiteUrl: baseUrl,
-        dashboardUrl: baseUrl,
-        supporteMail: Support.Mail,
-        supportServer: Support.Discord,
-        imageFavicon: this.user.displayAvatarURL(),
-        pageBackGround: 'linear-gradient(#2CA8FF, #155b8d)',
-        preloader: 'Loading...',
-        loggedIn: 'Successfully signed in.',
-        mainColor: '#2CA8FF',
-        subColor: '#ebdbdb'
+    /* eslint-disable-next-line new-cap */
+    this.dashboardTheme = SoftUITheme({
+      websiteName: `${this.client.user.username} | Dashboard`,
+      colorScheme: 'dark',
+      icons: {
+        favicon: this.client.user.displayAvatarURL(),
+        sidebar: {}
       },
+      preloader: {},
       index: {
-        card: {
-          category: `${this.client.user.username} Dashboard - The center of everything`,
-          title: `Welcome to the ${this.client.user.username} dashboard where you can control the features and settings of the bot.`,
-          description: 'Look up commands and configurate servers on the left side bar!',
-          image: 'https://i.imgur.com/axnP93g.png'
-        },
-        information: {},
-        feeds: {},
+        graph: {
+          enabled: true,
+          lineGraph: false,
+          title: 'Memory Usage',
+          tag: 'Memory (MB)',
+          max: 100
+        }
       },
-      commands
-    }); */
-
-    /* eslint-disable-next-line new-cap -- this is a function that does stuff a class usually does. */
-    this.dashboardTheme = DarkDashboard({
-      information: {
-        createdBy: this.client.application.owner?.owner?.username ?? this.client.application.owner?.username,
-        iconURL: this.client.user.displayAvatarURL(),
-        websiteTitle: `${this.client.user.username} | Dashboard`,
-        websiteName: `${this.client.user.username} | Dashboard`,
-        websiteUrl: this.baseConfig.baseURL,
-        dashboardUrl: this.baseConfig.baseURL,
-        /* eslint-disable-next-line @typescript-eslint/no-magic-numbers -- 4th smallest size */
-        imageFavicon: this.client.user.displayAvatarURL({ size: ALLOWED_SIZES[4] }),
-        pageBackGround: 'linear-gradient(#2CA8FF, #155b8d)',
-        preloader: 'Loading...',
-        loggedIn: 'Successfully signed in.',
-        mainColor: '#2CA8FF',
-        subColor: '#ebdbdb',
-        ...config.information
+      admin: {
+        pterodactyl: {
+          enabled: true,
+          apiKey: 'ptlc_ci9V0fmFFN4amkjryiOY5kUNNcVGO5fWbaxQCjkHSDD', // todo
+          panelLink: 'https://pro.pylexnodes.net/',
+          serverUUIDs: ['029987ba-215c-4c04-bf71-e27b29c102ac']
+        }
       },
-      index: {
-        card: {
-          category: `${this.client.user.username} Dashboard - The center of everything`,
-          title: `Welcome to the ${this.client.user.username} dashboard where you can control the features and settings of the bot.`,
-          description: 'Look up commands and configurate servers on the left side bar!',
-          image: 'https://i.imgur.com/axnP93g.png'
-        },
-        information: {},
-        feeds: {},
-        ...config.index
+      meta: {
+        author: (this.client.application.owner.owner ?? this.client.application.owner).username,
+        owner: (this.client.application.owner.owner ?? this.client.application.owner).username
       },
       commands: config.commands
     });
 
     return this.dashboardTheme;
+
+    /*
+      information: {
+           supportServer: Support.Discord,
+         },
+      index: {
+           card: {
+             category: `${this.client.user.username} Dashboard - The center of everything`,
+             title: `Welcome to the ${this.client.user.username} dashboard where you can control the features and settings of the bot.`,
+             description: 'Look up commands and configurate servers on the left side bar!',
+             image: 'https://i.imgur.com/axnP93g.png'
+           }
+         }, */
+
+    // this.dashboardTheme = DarkDashboard({
+    //   information: {
+    //     websiteUrl: this.baseConfig.baseURL,
+    //     dashboardUrl: this.baseConfig.baseURL,
+    //     /* eslint-disable-next-line @typescript-eslint/no-magic-numbers -- 4th smallest size */
+    //     pageBackGround: 'linear-gradient(#2CA8FF, #155b8d)',
+    //     preloader: 'Loading...',
+    //     loggedIn: 'Successfully signed in.',
+    //     mainColor: '#2CA8FF',
+    //     subColor: '#ebdbdb',
+    //     ...config.information
+    //   },
+    //   index: {
+    //     card: {
+    //       category: `${this.client.user.username} Dashboard - The center of everything`,
+    //       title: `Welcome to the ${this.client.user.username} dashboard where you can control the features and settings of the bot.`,
+    //       description: 'Look up commands and configurate servers on the left side bar!',
+    //       image: 'https://i.imgur.com/axnP93g.png'
+    //     },
+    //     ...config.index
+    //   },
+    //   commands: config.commands
+    // });
   }
 
   /** @type {import('.').WebServerSetupper['setupDashboard']} */
@@ -131,9 +138,11 @@ module.exports = class WebServerSetupper {
     this.dashboard = new DBDUpdated({
       acceptPrivacyPolicy: true,
       minimizedConsoleLogs: true,
+      redirectUri: '/discord/callback', // it's always this, but is still required to be configured
       noCreateServer: true,
       useUnderMaintenance: false,
       useCategorySet: true,
+      useTheme404: false, // todo: how does it look
       html404: config.errorPagesDir && !config.html404 ? await readFile(path.join(config.errorPagesDir, '404.html'), 'utf8') : undefined,
       bot: this.client,
       client: {

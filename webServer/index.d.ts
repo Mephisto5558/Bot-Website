@@ -1,9 +1,9 @@
-import type { MemoryStore, Store } from 'express-session';
+import type { MemoryStore } from 'express-session';
 import type { default as DB, NoCacheDB } from '@mephisto5558/mongoose-db';
+import type SoftUITheme from 'dbd-soft-ui';
 import type { Profile } from 'passport-discord';
 import type { Client } from 'discord.js';
 import type { Authenticator } from 'passport';
-import type DarkDashboard from 'dbd-dark-dashboard';
 import type { Database } from '../database';
 import type { Handler, Router, Express } from 'express';
 
@@ -12,10 +12,9 @@ type sessionId = string;
 export type session = NonNullable<Database['website']['sessions'][sessionId]>;
 
 type originalDashboardOptions = ConstructorParameters<Dashboard>[0];
-type originalDashboardThemeOptions = Parameters<DarkDashboard>[0];
+type originalDashboardThemeOptions = Parameters<typeof SoftUITheme>[0];
 
-interface DashboardThemeOptions extends Omit<originalDashboardThemeOptions, 'information' | 'index'> {
-  information?: originalDashboardThemeOptions['information'];
+interface DashboardThemeOptions extends Omit<originalDashboardThemeOptions, 'index'> {
   index?: originalDashboardThemeOptions['index'];
 }
 
@@ -71,7 +70,7 @@ declare class WebServerSetupper {
   /** @param callbackURL default `/auth/discord/callback` */
   setupAuth(callbackURL?: string): Authenticator;
 
-  setupDashboardTheme(config: DashboardThemeOptions): DarkDashboard;
+  setupDashboardTheme(config: DashboardThemeOptions): ReturnType<typeof SoftUITheme>;
 
   setupDashboard(licenseId: string, config: DashboardOptions): Promise<Dashboard>;
 
