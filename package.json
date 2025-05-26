@@ -20,7 +20,7 @@
     "node": ">=20.11.0"
   },
   "dependencies": {
-    "@types/express": "^4.17.21",
+    "@types/express": "^4.17.22",
     "body-parser": "^2.2.0",
     "compression": "^1.8.0",
     "cors": "^2.8.5",
@@ -41,8 +41,8 @@
     "@types/express-session": "1.18.1",
     "@types/passport": "^1.0.17",
     "@types/passport-discord": "^0.1.14",
-    "discord.js": "^14.18.0",
-    "eslint": "^9.20.1"
+    "discord.js": "^14.19.3",
+    "eslint": "^9.27.0"
   },
   "repository": {
     "type": "git",
