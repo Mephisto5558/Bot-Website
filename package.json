@@ -38,7 +38,7 @@
   "devDependencies": {
     "@mephisto5558/eslint-config": "latest",
     "@mephisto5558/mongoose-db": "latest",
-    "@types/express-session": "1.18.1",
+    "@types/express-session": "1.18.2",
     "@types/passport": "^1.0.17",
     "@types/passport-discord": "^0.1.14",
     "discord.js": "^14.19.3",
