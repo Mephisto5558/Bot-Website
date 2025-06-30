@@ -6,12 +6,10 @@ const
   { Authenticator } = require('passport'),
   Strategy = require('passport-discord'),
   DBD = require('discord-dashboard'),
-  /** @type {(config: import('dbd-soft-ui').themeConfig) => unknown}*/SoftUITheme = require('dbd-soft-ui'),
-  asyncHandler = require('express-async-handler'),
+  /** @type {(config: import('dbd-soft-ui').themeConfig) => unknown}*/ SoftUITheme = require('dbd-soft-ui'),
   express = require('express'),
   escapeHTML = require('escape-html'),
   { xss } = require('express-xss-sanitizer'),
-  bodyParser = require('body-parser'),
   compression = require('compression'),
   cors = require('cors'),
   rateLimit = require('express-rate-limit'),
@@ -186,7 +184,7 @@ module.exports = class WebServerSetupper {
   setupRouter(customPagesPath, webServer) {
     /* eslint-disable-next-line new-cap -- Router is a function that returns a class */
     this.router = express.Router();
-    this.router.all('*', asyncHandler(async (req, res, next) => {
+    this.router.use(async (req, res, next) => {
       Object.defineProperty(req.session, 'guilds', { // Dashboard
         /** @this {import('express-session')['Session'] & { user?: import('.').session['user'] }} */
         get() { return this.user?.guilds; },
@@ -198,7 +196,7 @@ module.exports = class WebServerSetupper {
 
       if (req.path === '/') return res.redirect('/home');
       if (req.path.startsWith('/api/') && !/^\/api\/v\d+\//i.test(req.path.endsWith('/') ? req.path : req.path + '/')) return res.redirect(req.path.replace('/api/', '/api/v1/'));
-      if (req.path == '/dashboard') return res.redirect(HTTP_STATUS_MOVED_PERMANENTLY, '/manage');
+      if (req.path == '/dashboard') return res.status(HTTP_STATUS_MOVED_PERMANENTLY).redirect('/manage');
       if (req.path == '/callback') { // Dashboard
         if (req.query.code != undefined) req.session.user.accessToken = req.query.code;
         return next();
@@ -238,7 +236,7 @@ module.exports = class WebServerSetupper {
       }
 
       return this.#handleCustomSite.call(webServer, req, res, next, data);
-    }));
+    });
 
     return this.router;
   }
@@ -256,8 +254,8 @@ module.exports = class WebServerSetupper {
           max: RATELIMIT_MAX_REQUESTS,
           message: '<body style="background-color:#111;color:#ff0000"><p style="text-align:center;top:50%;position:relative;font-size:40;">Sorry, you have been ratelimited!</p></body>'
         }),
-        bodyParser.json({ limit: '100kb' }),
-        bodyParser.urlencoded({ extended: true, limit: '100kb' }),
+        express.json({ limit: '100kb' }),
+        express.urlencoded({ extended: true, limit: '100kb' }),
         xss(),
         session({
           secret,
