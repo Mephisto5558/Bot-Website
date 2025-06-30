@@ -18,7 +18,7 @@ module.exports = class VoteSystem {
     this.db = db;
     this.config = config;
     this.settings = {
-      /* eslint-disable @typescript-eslint/no-magic-numbers -- default values */
+      /* eslint-disable @typescript-eslint/no-magic-numbers, @typescript-eslint/no-unnecessary-condition -- default values */
       requireTitle: true,
       minTitleLength: 0,
       maxTitleLength: 140,
@@ -27,6 +27,29 @@ module.exports = class VoteSystem {
       maxBodyLength: 4000,
       maxPendingFeatureRequests: 5,
       webhookMaxVisibleBodyLength: 2000,
+      userChangeNotificationEmbed: {
+        approved: {
+          title: 'New Approved Feature Request',
+          color: Colors.Blue,
+          ...settings.userChangeNotificationEmbed?.approved
+        },
+        denied: {
+          title: 'Feature Request has been denied',
+          color: Colors.Red,
+          ...settings.userChangeNotificationEmbed?.denied
+        },
+        deleted: {
+          title: 'Feature Request has been deleted',
+          color: Colors.Red,
+          ...settings.userChangeNotificationEmbed?.deleted
+        },
+        updated: {
+          title: 'Feature Requests have been edited',
+          description: 'The following feature request(s) have been edited by a dev:',
+          color: Colors.Orange,
+          ...settings.userChangeNotificationEmbed?.updated
+        }
+      },
       ...settings
       /* eslint-enable @typescript-eslint/no-magic-numbers */
     };
@@ -99,7 +122,14 @@ module.exports = class VoteSystem {
 
     await this.#update(featureId, featureReq);
 
-    await this.sendToWebhook('New Approved Feature Request', this.constructor.formatDesc(featureReq, this.settings.webhookMaxVisibleBodyLength), Colors.Blue, `?q=${featureId}`);
+    void this.sendToWebhook(
+      this.settings.userChangeNotificationEmbed.approved.title,
+      this.constructor.formatDesc(featureReq, this.settings.webhookMaxVisibleBodyLength),
+      this.settings.userChangeNotificationEmbed.approved.color,
+      `?q=${featureId}`
+    );
+    void this.notifyAuthor(featureReq, 'approved');
+
     return featureReq;
   }
 
@@ -130,6 +160,7 @@ module.exports = class VoteSystem {
       const data = { ...this.get(id), title, body: sanitize(body.trim()) };
       if (pending !== undefined) data.pending = pending;
 
+      if (userId != this.constructor.getRequestAuthor(id)) void this.notifyAuthor(data, 'updated');
       promiseList.push(this.db.update('website', `requests.${id}`, data));
     }
 
@@ -138,10 +169,10 @@ module.exports = class VoteSystem {
     let url = this.config.domain;
     if (this.config.port != undefined) url += `:${this.config.port}`;
     void this.sendToWebhook(
-      'Feature Requests have been edited',
-      'The following feature request(s) have been edited by a dev:\n'
-      + features.reduce((acc, { id }) => errorList.some(e => e.id == id) ? acc : `${acc}\n- [${id}](${url}/vote?q=${id})`, ''),
-      Colors.Orange
+      this.settings.userChangeNotificationEmbed.updated.title,
+      this.settings.userChangeNotificationEmbed.updated.description
+      + features.reduce((acc, { id }) => errorList.some(e => e.id == id) ? acc : `${acc}\n- [${id}](${url}/vote?q=${id})`, '\n'),
+      this.settings.userChangeNotificationEmbed.updated.color
     );
 
     return errorList.length ? { code: HTTP_STATUS_BAD_REQUEST, errors: errorList } : { success: true };
@@ -159,9 +190,11 @@ module.exports = class VoteSystem {
 
     await this.db.delete('website', `requests.${featureId}`);
     void this.sendToWebhook(
-      `Feature Request has been ${featureReq.pending ? 'denied' : 'deleted'} by ${requestAuthor == userId ? 'the author' : 'a dev'}`,
-      this.constructor.formatDesc(featureReq, this.settings.webhookMaxVisibleBodyLength), Colors.Red
+      `${this.settings.userChangeNotificationEmbed[featureReq.pending ? 'denied' : 'deleted'].title} by ${requestAuthor == userId ? 'the author' : 'a dev'}`,
+      this.constructor.formatDesc(featureReq, this.settings.webhookMaxVisibleBodyLength),
+      this.settings.userChangeNotificationEmbed[featureReq.pending ? 'denied' : 'deleted'].color
     );
+    if (requestAuthor != userId) void this.notifyAuthor(featureReq, featureReq.pending ? 'denied' : 'deleted');
 
     return { success: true };
   }
@@ -203,6 +236,32 @@ module.exports = class VoteSystem {
     });
 
     return { success: res.ok };
+  }
+
+  /** @type {import('..').VoteSystem['notifyAuthor']} */
+  async notifyAuthor(request, mode) {
+    const embedData = this.settings.userChangeNotificationEmbed;
+    const websiteUrl = this.config.domain + (this.config.port ?? 0 ? `:${this.config.port}` : '');
+
+    const userId = this.constructor.getRequestAuthor(request);
+    if (!userId) return;
+
+    try {
+      await (await this.client.users.fetch(userId)).send({
+        embeds: [{
+          title: embedData[mode].title,
+          description: `${embedData[mode].description}\n\n"${request.title}"\n${websiteUrl}/vote?q=${request.id}`, // TODO: remove hardcoded /vote
+          color: embedData[mode].color
+        }]
+      });
+    }
+    catch (err) {
+      const
+        UNKNOWN_USER = 10_013,
+        CANNOT_SEND = 50_007;
+
+      if (![UNKNOWN_USER, CANNOT_SEND].includes(err.code)) throw err;
+    }
   }
 
   /** @type {import('..').VoteSystem['validate']} */
@@ -253,6 +312,7 @@ module.exports = class VoteSystem {
 
   /** @type {typeof import('..').VoteSystem['getRequestAuthor']}*/
   static getRequestAuthor(request) {
-    return (request.id ?? request).split('_')[0];
+    const userId = (request.id ?? request).split('_')[0];
+    return Number.isNaN(Number(userId)) ? '' : userId;
   }
 };

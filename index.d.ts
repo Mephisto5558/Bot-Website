@@ -57,6 +57,11 @@ type VoteSystemSettingsInit = {
   requireTitle?: boolean; minTitleLength?: number; maxTitleLength?: number;
   requireBody?: boolean; minBodyLength?: number; maxBodyLength?: number;
   maxPendingFeatureRequests?: number; webhookMaxVisibleBodyLength?: number;
+  userChangeNotificationEmbed?: Record<'approved' | 'denied' | 'deleted' | 'updated', {
+    title?: string;
+    description?: string;
+    color?: number | Discord.ColorResolvable;
+  } | undefined>;
 };
 type VoteSystemSettings = Required<VoteSystemSettingsInit>;
 
@@ -128,6 +133,7 @@ declare class VoteSystem {
   delete(featureId: FeatureRequest['id'], userId: Discord.Snowflake): Promise<{ success: true } | RequestError>;
   addVote(featureId: FeatureRequest['id'], userId: Discord.Snowflake, type: 'up' | 'down'): Promise<FeatureRequest | RequestError>;
   sendToWebhook(title: string, description: string, color?: number, url?: string): Promise<{ success: boolean } | RequestError>;
+  notifyAuthor(feature: FeatureRequest, mode: keyof VoteSystemSettings['userChangeNotificationEmbed']): Promise<void>;
   validate(userId: Discord.Snowflake, requireBeingOwner: boolean | Discord.Snowflake, featureId: unknown): RequestError | undefined;
 
   /** returns `RequestError` if something is not valid. */
