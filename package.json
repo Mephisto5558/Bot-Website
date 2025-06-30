@@ -1,6 +1,6 @@
 {
   "name": "@mephisto5558/bot-website",
-  "version": "1.7.5",
+  "version": "1.7.7",
   "scripts": {
     "test": "echo \"Error: no test specified\""
   },
@@ -20,9 +20,9 @@
     "node": ">=20.11.0"
   },
   "dependencies": {
-    "@types/express": "^4.17.21",
-    "body-parser": "^1.20.2",
-    "compression": "^1.7.5",
+    "@types/express": "^4.17.22",
+    "body-parser": "^2.2.0",
+    "compression": "^1.8.0",
     "cors": "^2.8.5",
     "dbd-soft-ui": "^1.7.40-beta.1",
     "discord-dashboard": "^2.3.62",
@@ -38,11 +38,11 @@
   "devDependencies": {
     "@mephisto5558/eslint-config": "latest",
     "@mephisto5558/mongoose-db": "latest",
-    "@types/express-session": "1.18.1",
+    "@types/express-session": "1.18.2",
     "@types/passport": "^1.0.17",
     "@types/passport-discord": "^0.1.14",
-    "discord.js": "^14.17.3",
-    "eslint": "^9.18.0"
+    "discord.js": "^14.21.0",
+    "eslint": "^9.30.0"
   },
   "repository": {
     "type": "git",

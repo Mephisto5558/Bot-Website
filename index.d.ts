@@ -58,10 +58,15 @@ type VoteSystemSettingsInit = {
   requireTitle?: boolean; minTitleLength?: number; maxTitleLength?: number;
   requireBody?: boolean; minBodyLength?: number; maxBodyLength?: number;
   maxPendingFeatureRequests?: number; webhookMaxVisibleBodyLength?: number;
+  userChangeNotificationEmbed?: Record<'approved' | 'denied' | 'deleted' | 'updated', {
+    title?: string;
+    description?: string;
+    color?: number | Discord.ColorResolvable;
+  } | undefined>;
 };
 type VoteSystemSettings = Required<VoteSystemSettingsInit>;
 
-declare const HTTP_STATUS_BAD_REQUEST = 400;
+declare type HTTP_STATUS_BAD_REQUEST = 400; /* eslint-disable-line @typescript-eslint/no-magic-numbers */
 
 declare class WebServer {
   constructor(
@@ -94,7 +99,7 @@ declare class WebServer {
 
   logError(err: Error, req: express.Request, res: express.Response): unknown;
 
-  toJSON(...props: [Parameters<typeof Discord.flatten>[1]]): ReturnType<typeof Discord.flatten>;
+  valueOf(): string;
 
   static createNavigationButtons(dirPath: PathLike, reqPath: string): Promise<string | undefined>;
 }
@@ -123,11 +128,12 @@ declare class VoteSystem {
   approve(featureId: FeatureRequest['id'], userId: Discord.Snowflake): Promise<FeatureRequest | RequestError>;
   update(features: FeatureRequest | FeatureRequest[], userId: Discord.Snowflake): Promise<
     { success: true }
-    | { code: typeof HTTP_STATUS_BAD_REQUEST; errors: { id: FeatureRequest['id']; error: string }[] }
+    | { code: HTTP_STATUS_BAD_REQUEST; errors: { id: FeatureRequest['id']; error: string }[] }
   >;
   delete(featureId: FeatureRequest['id'], userId: Discord.Snowflake): Promise<{ success: true } | RequestError>;
   addVote(featureId: FeatureRequest['id'], userId: Discord.Snowflake, type: 'up' | 'down'): Promise<FeatureRequest | RequestError>;
   sendToWebhook(title: string, description: string, color?: number, url?: string): Promise<{ success: boolean } | RequestError>;
+  notifyAuthor(feature: FeatureRequest, mode: keyof VoteSystemSettings['userChangeNotificationEmbed']): Promise<void>;
   validate(userId: Discord.Snowflake, requireBeingOwner: boolean | Discord.Snowflake, featureId: unknown): RequestError | undefined;
 
   /** returns `RequestError` if something is not valid. */
@@ -137,6 +143,8 @@ declare class VoteSystem {
 
   /** @param date A date obj or millseconds */
   static isInCurrentWeek(date: Date | number): boolean;
+
+  static getRequestAuthor(request: FeatureRequest | FeatureRequest['id']): Discord.Snowflake;
 }
 
 

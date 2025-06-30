@@ -4,7 +4,7 @@ const
   path = require('node:path'),
   { readdir, readFile } = require('node:fs/promises'),
   { HTTP_STATUS_INTERNAL_SERVER_ERROR } = require('node:http2').constants,
-  { GatewayIntentBits, Status, flatten } = require('discord.js'),
+  { GatewayIntentBits, Status } = require('discord.js'),
   DBD = require('discord-dashboard'),
   VoteSystem = require('./voteSystem'),
   WebServerSetupper = require('./webServer'),
@@ -212,9 +212,8 @@ class WebServer {
     return this;
   }
 
-  /** @type {import('.').WebServer['toJSON']} */
-  toJSON(...props) { // Prevents recursion error when WebServer is bound to Client
-    return flatten(Object.fromEntries(Object.entries(this).filter(([k]) => k != 'client')), ...props);
+  valueOf() {
+    return `WebServer on ${this.config.baseUrl}`; // Prevents recursion with discord.js Client#toJSON()
   }
 }
 
