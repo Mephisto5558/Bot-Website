@@ -1,5 +1,5 @@
 const
-  { readFile, readdir } = require('node:fs/promises'),
+  { readdir } = require('node:fs/promises'),
   path = require('node:path'),
   { HTTP_STATUS_MOVED_PERMANENTLY, HTTP_STATUS_FORBIDDEN, HTTP_STATUS_NOT_FOUND, HTTP_STATUS_METHOD_NOT_ALLOWED } = require('node:http2').constants,
   { OAuth2Scopes } = require('discord.js'),
@@ -145,8 +145,7 @@ module.exports = class WebServerSetupper {
       noCreateServer: true,
       useUnderMaintenance: false,
       useCategorySet: true,
-      useTheme404: false,
-      html404: config.errorPagesDir && !config.html404 ? await readFile(path.join(config.errorPagesDir, '404.html'), 'utf8') : undefined,
+      useTheme404: true,
       bot: this.client,
       client: {
         id: this.client.user.id,
