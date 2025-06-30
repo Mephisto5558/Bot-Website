@@ -67,7 +67,7 @@ module.exports = class VoteSystem {
     if (err) return err;
 
     const featureRequestAutoApprove = this.db.get('userSettings', `${userId}.featureRequestAutoApprove`);
-    if (!featureRequestAutoApprove && Object.keys(this.db.cache.filter((_, k) => k.split('_') == userId)).length >= this.settings.maxPendingFeatureRequests)
+    if (!featureRequestAutoApprove && Object.keys(this.db.cache.filter((_, k) => this.constructor.getRequestAuthor(k) == userId)).length >= this.settings.maxPendingFeatureRequests)
       return { errorCode: HTTP_STATUS_FORBIDDEN, error: `You may only have up to ${this.settings.maxPendingFeatureRequests} pending feature requests` };
 
     const id = `${userId}_${Date.now()}`;
