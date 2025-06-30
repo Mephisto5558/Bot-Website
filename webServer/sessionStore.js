@@ -29,14 +29,13 @@ module.exports = class MongoStore extends MemoryStore {
 
   /** @type {import('.').MongoStore['set']} */
   async set(sid, sessionData, cb) {
-    if ('user' in sessionData.passport) {
+    if (sessionData.passport && 'user' in sessionData.passport) {
       sessionData.user = sessionData.passport.user;
 
       delete sessionData.passport.user;
       if (!Object.keys(sessionData.passport).length) delete sessionData.passport;
     }
 
-    // todo doesn't this overwrite discord-dashboard data? // maybe not because it is read from db first
     await this.db.update('website', `sessions.${sid}`, sessionData);
     return cb?.(null);
   }
