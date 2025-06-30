@@ -61,7 +61,10 @@ module.exports = class WebServerSetupper {
       colorScheme: 'dark',
       icons: {
         favicon: this.client.user.displayAvatarURL(),
-        sidebar: {}
+        sidebar: {
+          darkUrl: this.client.user.displayAvatarURL(),
+          lightUrl: this.client.user.displayAvatarURL()
+        }
       },
       preloader: {},
       index: {
@@ -142,7 +145,7 @@ module.exports = class WebServerSetupper {
       noCreateServer: true,
       useUnderMaintenance: false,
       useCategorySet: true,
-      useTheme404: false, // todo: how does it look
+      useTheme404: false,
       html404: config.errorPagesDir && !config.html404 ? await readFile(path.join(config.errorPagesDir, '404.html'), 'utf8') : undefined,
       bot: this.client,
       client: {
