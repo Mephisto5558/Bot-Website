@@ -149,7 +149,7 @@ module.exports = class VoteSystem {
 
   /** @type {import('..').VoteSystem['delete']} */
   async delete(featureId, userId) {
-    const requestAuthor = featureId.split('_')[0];
+    const requestAuthor = this.constructor.getRequestAuthor(featureId);
 
     const error = this.validate(userId, requestAuthor, featureId);
     if (error) return error;
@@ -158,7 +158,7 @@ module.exports = class VoteSystem {
     const featureReq = this.get(featureId);
 
     await this.db.delete('website', `requests.${featureId}`);
-    await this.sendToWebhook(
+    void this.sendToWebhook(
       `Feature Request has been ${featureReq.pending ? 'denied' : 'deleted'} by ${requestAuthor == userId ? 'the author' : 'a dev'}`,
       this.constructor.formatDesc(featureReq, this.settings.webhookMaxVisibleBodyLength), Colors.Red
     );
@@ -182,7 +182,7 @@ module.exports = class VoteSystem {
     await this.db.update('website', `requests.${featureId}.votes`, featureReq.votes);
     await this.db.update('userSettings', `${userId}.lastVoted`, new Date());
 
-    await this.sendToWebhook(`Feature Request has been ${type} voted`, featureReq.title + `\n\nVotes: ${featureReq.votes} `, Colors.Blurple, `?q=${featureId} `);
+    await this.sendToWebhook(`Feature Request has been ${type} voted`, featureReq.title + `\n\nVotes: ${featureReq.votes} `, Colors.Blurple, `?q=${featureId}`);
     return featureReq;
   }
 
@@ -190,9 +190,7 @@ module.exports = class VoteSystem {
   async sendToWebhook(title, description, color = Colors.White, url = '') {
     if (!this.config.webhookUrl) return { errorCode: HTTP_STATUS_SERVICE_UNAVAILABLE, error: 'The backend has no webhook url configured' };
 
-    let websiteUrl = this.config.domain;
-    if (this.config.port != undefined) websiteUrl += `:${this.config.port}`;
-
+    const websiteUrl = this.config.domain + (this.config.port ?? 0 ? `:${this.config.port}` : '');
     const res = await fetch(this.config.webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -200,7 +198,7 @@ module.exports = class VoteSystem {
         username: 'Teufelsbot Feature Requests',
         /* eslint-disable-next-line camelcase */
         avatar_url: `${websiteUrl}/favicon.ico`,
-        embeds: [{ url: `${websiteUrl}/vote${url}`, title, description, color }]
+        embeds: [{ url: `${websiteUrl}/vote${url}`, title, description, color }] // TODO: remove hardcoded /vote
       })
     });
 
@@ -251,5 +249,10 @@ module.exports = class VoteSystem {
     nextWeek.setDate(firstDayOfWeek.getDate() + DAYS_IN_WEEK);
 
     return date >= firstDayOfWeek && date < nextWeek;
+  }
+
+  /** @type {typeof import('..').VoteSystem['getRequestAuthor']}*/
+  static getRequestAuthor(request) {
+    return (request.id ?? request).split('_')[0];
   }
 };

@@ -137,6 +137,8 @@ declare class VoteSystem {
 
   /** @param date A date obj or millseconds */
   static isInCurrentWeek(date: Date | number): boolean;
+
+  static getRequestAuthor(request: FeatureRequest | FeatureRequest['id']): Discord.Snowflake;
 }
 
 
