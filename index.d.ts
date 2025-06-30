@@ -4,6 +4,7 @@ import type { PathLike } from 'node:fs';
 import type { MemoryStore } from 'express-session';
 import type { PassportStatic } from 'passport';
 import type { formTypes } from 'discord-dashboard';
+import type { FormTypes } from 'dbd-soft-ui';
 import type { DB as DBClass } from '@mephisto5558/mongoose-db';
 import type { Database } from './database';
 import type { DashboardOptions, DashboardThemeOptions } from './webServer';
@@ -24,7 +25,7 @@ type FeatureRequest = {
   { votes: number; pending: undefined }
   | { votes?: number; pending: true }
 );
-type formTypes_ = Omit<formTypes, 'embedBuilder'> & { embedBuilder: ReturnType<(typeof formTypes)['embedBuilder']>; _embedBuilder: formTypes['embedBuilder'] };
+type formTypes_ = Omit<formTypes & FormTypes, 'embedBuilder'> & { embedBuilder: ReturnType<(typeof formTypes)['embedBuilder']>; _embedBuilder: formTypes['embedBuilder'] };
 
 type dashboardSetting = {
   id: string;

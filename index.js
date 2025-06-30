@@ -6,6 +6,7 @@ const
   { HTTP_STATUS_INTERNAL_SERVER_ERROR } = require('node:http2').constants,
   { GatewayIntentBits, Status } = require('discord.js'),
   DBD = require('discord-dashboard'),
+  DBDSoftUI = require('dbd-soft-ui'),
   VoteSystem = require('./voteSystem'),
   WebServerSetupper = require('./webServer'),
   MongoStore = require('./webServer/sessionStore'),
@@ -76,7 +77,7 @@ class WebServer {
         optionId: `${index.id}.spacer`,
         title: 'Important!',
         description: 'You need to press the submit button on the bottom of the page to save settings!',
-        optionType: 'spacer',
+        optionType: DBDSoftUI.formTypes.spacer(),
         position: -1
       }];
 
@@ -101,7 +102,7 @@ class WebServer {
             optionId: `${index.id}.spacer`,
             title: setting.name,
             description: setting.description,
-            optionType: setting.type,
+            optionType: DBDSoftUI.formTypes[setting.type](),
             position: setting.position
           });
         }
@@ -185,7 +186,7 @@ class WebServer {
     if (this.initiated) throw new Error('Already initiated');
 
     this.formTypes = {
-      ...DBD.formTypes, _embedBuilder: DBD.formTypes.embedBuilder, embedBuilder: DBD.formTypes.embedBuilder({
+      ...DBDSoftUI.formTypes, ...DBD.formTypes, _embedBuilder: DBD.formTypes.embedBuilder, embedBuilder: DBD.formTypes.embedBuilder({
         username: this.client.user.username,
         avatarURL: this.client.user.displayAvatarURL({ forceStatic: true }),
         defaultJson: {}
