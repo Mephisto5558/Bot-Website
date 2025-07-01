@@ -21,8 +21,6 @@
 
 A website & dashboard for my discord bot with an easy way of adding new dashboard settings & pages.
 
-### Note that this library currently uses a deprecated (but working) library for its dashboard.
-
 ## Requirements
 - Node.js 16.9.0 or newer
 - A [free license key from Assistants Center](https://assistantscenter.com/discord-dashboard/v2)
@@ -52,11 +50,13 @@ const db = /* Your database (@mephisto5558/mongoose-db) instance */;
 const keys = {
  secret: /* Your Discord application secret */,
  dbdLicense: /* Your discord-dashboard license */,
- webhookURL: /* Your webhook URL for the voting system. This is optional. */
 };
+const config = {
+  // for all properties see Intellisense or https://github.com/Mephisto5558/Bot-Website/blob/c2943a770c694c7723ec4f089fc4995c3ce2f275/index.d.ts#L50C1-L60C3
+}
 
 const webServer = new WebServer(client, db, keys);
-await webServer.init();
+await webServer.init([], { votingPath: 'vote' });
 console.log('Website is online.');
 ```
 
