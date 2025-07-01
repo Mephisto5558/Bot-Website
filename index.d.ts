@@ -34,8 +34,8 @@ type dashboardSetting = {
   type: formTypes_ | keyof formTypes_ | ((this: WebServer) => formTypes_ | Promise<formTypes_>);
   position: number;
 
-  get?(this: WebServer, option: category['categoryOptionsList'][0], setting: optionOptions): unknown;
-  set?(this: WebServer, option: category['categoryOptionsList'][0], setting: optionOptions): unknown;
+  get?(this: WebServer, option: category['categoryOptionsList'][0], setting: Omit<optionOptions, 'newData'>): unknown;
+  set?(this: WebServer, option: category['categoryOptionsList'][0], setting: Omit<optionOptions, 'newData'> & { data: unknown }): unknown;
 };
 type methods = 'get' | 'post' | 'put' | 'delete' | 'patch';
 type customPage = {
