@@ -11,7 +11,8 @@
     "index.js",
     "index.d.ts",
     "database.d.ts",
-    "voteSystem"
+    "voteSystem",
+    "webServer"
   ],
   "keywords": [],
   "author": "Mephisto5558",
