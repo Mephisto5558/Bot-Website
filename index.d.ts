@@ -105,7 +105,7 @@ declare class WebServer {
   static createNavigationButtons(dirPath: PathLike, reqPath: string): Promise<string | undefined>;
 }
 
-type VoteSystemConfig = { domain: string; port?: number; webhookUrl?: string; ownerIds?: string[] };
+type VoteSystemConfig = { domain: string; port?: number; votingPath: string; webhookUrl?: string; ownerIds?: string[] };
 declare class VoteSystem {
   /**
    * @default settings=
