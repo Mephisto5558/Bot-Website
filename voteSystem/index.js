@@ -72,7 +72,8 @@ module.exports = class VoteSystem {
 
   /** @type {import('..').VoteSystem['getMany']} */
   getMany = (amount, offset = 0, filter = '', includePending = false, userId = '') => {
-    const cards = this.fetchAll().filter(e => ((includePending && this.config.ownerIds.includes(userId)) || !e.pending)
+    /* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- left side is a boolean check */
+    const cards = this.fetchAll().filter(e => ((includePending && this.config.ownerIds?.includes(userId)) || !e.pending)
       && (e.title.includes(filter) || e.body.includes(filter) || e.id.includes(filter)));
 
     return { cards: amount ? cards.slice(offset, offset + amount) : cards.slice(offset), moreAvailable: !!(amount && cards.length > offset + amount) };
@@ -166,12 +167,11 @@ module.exports = class VoteSystem {
 
     await Promise.allSettled(promiseList);
 
-    let url = this.config.domain;
-    if (this.config.port != undefined) url += `:${this.config.port}`;
+    const url = this.config.domain + (this.config.port ?? 0 ? `:${this.config.port}` : '') + `/${this.config.votingPath}`;
     void this.sendToWebhook(
       this.settings.userChangeNotificationEmbed.updated.title,
       this.settings.userChangeNotificationEmbed.updated.description
-      + features.reduce((acc, { id }) => errorList.some(e => e.id == id) ? acc : `${acc}\n- [${id}](${url}/vote?q=${id})`, '\n'),
+      + features.reduce((acc, { id }) => errorList.some(e => e.id == id) ? acc : `${acc}\n- [${id}](${url}?q=${id})`, '\n'),
       this.settings.userChangeNotificationEmbed.updated.color
     );
 
@@ -231,7 +231,7 @@ module.exports = class VoteSystem {
         username: 'Teufelsbot Feature Requests',
         /* eslint-disable-next-line camelcase */
         avatar_url: `${websiteUrl}/favicon.ico`,
-        embeds: [{ url: `${websiteUrl}/vote${url}`, title, description, color }] // TODO: remove hardcoded /vote
+        embeds: [{ url: `${websiteUrl}/${this.config.votingPath}${url}`, title, description, color }]
       })
     });
 
@@ -241,7 +241,7 @@ module.exports = class VoteSystem {
   /** @type {import('..').VoteSystem['notifyAuthor']} */
   async notifyAuthor(request, mode) {
     const embedData = this.settings.userChangeNotificationEmbed;
-    const websiteUrl = this.config.domain + (this.config.port ?? 0 ? `:${this.config.port}` : '');
+    const websiteUrl = this.config.domain + (this.config.port ?? 0 ? `:${this.config.port}` : '') + '/' + this.config.votingPath;
 
     const userId = this.constructor.getRequestAuthor(request);
     if (!userId) return;
@@ -250,7 +250,7 @@ module.exports = class VoteSystem {
       await (await this.client.users.fetch(userId)).send({
         embeds: [{
           title: embedData[mode].title,
-          description: `${embedData[mode].description}\n\n"${request.title}"\n${websiteUrl}/vote?q=${request.id}`, // TODO: remove hardcoded /vote
+          description: `${embedData[mode].description}\n\n"${request.title}"\n${websiteUrl}?q=${request.id}`,
           color: embedData[mode].color
         }]
       });

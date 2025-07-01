@@ -11,7 +11,7 @@
     "index.js",
     "index.d.ts",
     "database.d.ts",
-    "Utils/VoteSystem.js"
+    "voteSystem"
   ],
   "keywords": [],
   "author": "Mephisto5558",
@@ -20,16 +20,14 @@
     "node": ">=20.11.0"
   },
   "dependencies": {
-    "@types/express": "^4.17.22",
-    "body-parser": "^2.2.0",
+    "@types/express": "^5.0.3",
     "compression": "^1.8.0",
     "cors": "^2.8.5",
-    "dbd-dark-dashboard": "github:Mephisto5558/Dark-Dashboard",
+    "dbd-soft-ui": "^1.7.40-beta.1",
     "discord-dashboard": "^2.3.62",
     "escape-html": "^1.0.3",
-    "express": "^4.21.2",
-    "express-async-handler": "^1.2.0",
-    "express-rate-limit": "^7.5.0",
+    "express": "^5.1.0",
+    "express-rate-limit": "^7.5.1",
     "express-session": "^1.18.1",
     "express-xss-sanitizer": "^2.0.0",
     "passport": "^0.7.0",
@@ -41,8 +39,8 @@
     "@types/express-session": "1.18.2",
     "@types/passport": "^1.0.17",
     "@types/passport-discord": "^0.1.14",
-    "discord.js": "^14.19.3",
-    "eslint": "^9.27.0"
+    "discord.js": "^14.21.0",
+    "eslint": "^9.30.0"
   },
   "repository": {
     "type": "git",

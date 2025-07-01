@@ -4,8 +4,10 @@ import type { PathLike } from 'node:fs';
 import type { MemoryStore } from 'express-session';
 import type { PassportStatic } from 'passport';
 import type { formTypes } from 'discord-dashboard';
+import type { FormTypes } from 'dbd-soft-ui';
 import type { DB as DBClass } from '@mephisto5558/mongoose-db';
 import type { Database } from './database';
+import type { DashboardOptions, DashboardThemeOptions } from './webServer';
 
 export { WebServer };
 export type { VoteSystem, VoteSystemConfig, VoteSystemSettings, FeatureRequest, dashboardSetting, customPage, commands, WebServerConfig };
@@ -23,7 +25,7 @@ type FeatureRequest = {
   { votes: number; pending: undefined }
   | { votes?: number; pending: true }
 );
-type formTypes_ = Omit<formTypes, 'embedBuilder'> & { embedBuilder: ReturnType<(typeof formTypes)['embedBuilder']>; _embedBuilder: formTypes['embedBuilder'] };
+type formTypes_ = Omit<formTypes & FormTypes, 'embedBuilder'> & { embedBuilder: ReturnType<(typeof formTypes)['embedBuilder']>; _embedBuilder: formTypes['embedBuilder'] };
 
 type dashboardSetting = {
   id: string;
@@ -31,6 +33,9 @@ type dashboardSetting = {
   description: string;
   type: formTypes_ | keyof formTypes_ | ((this: WebServer) => formTypes_ | Promise<formTypes_>);
   position: number;
+
+  get?(this: WebServer, option: category['categoryOptionsList'][0], setting: Omit<optionOptions, 'newData'>): unknown;
+  set?(this: WebServer, option: category['categoryOptionsList'][0], setting: Omit<optionOptions, 'newData'> & { data: unknown }): unknown;
 };
 type methods = 'get' | 'post' | 'put' | 'delete' | 'patch';
 type customPage = {
@@ -50,7 +55,7 @@ type WebServerConfig = {
    * if (port) `${WebServer['config']['domain']}:${WebServer['config']['port']}`
    * else WebServer['config']['domain']
    * ``` */
-  webhookUrl?: string;
+  webhookUrl?: string; callbackURL?: string; defaultAPIVersion?: string;
   errorPagesDir?: string; settingsPath?: string; customPagesPath?: string;
 };
 type VoteSystemSettingsInit = {
@@ -71,7 +76,6 @@ declare class WebServer {
   constructor(
     client: Discord.Client, db: TypedDB, keys: Keys,
     config?: WebServerConfig,
-    voteSystemSettings?: VoteSystemSettingsInit,
     errorLoggingFunction?: (err: Error, req: express.Request, res: express.Response) => unknown
   );
 
@@ -95,16 +99,16 @@ declare class WebServer {
   app: express.Express | null;
   voteSystem: VoteSystem | null;
 
-  init(commands: commands): Promise<this>;
+  init(dashboardConfig: DashboardOptions, themeConfig?: DashboardThemeOptions, voteSystemConfig?: VoteSystemConfig, voteSystemSettings?: VoteSystemSettingsInit): Promise<this>;
+
+  logError(err: Error, req: express.Request, res: express.Response): unknown;
 
   valueOf(): string;
 
   static createNavigationButtons(dirPath: PathLike, reqPath: string): Promise<string | undefined>;
-
-  logError(err: Error, req: express.Request, res: express.Response): unknown;
 }
 
-type VoteSystemConfig = { domain: string; port?: number; webhookUrl?: string; ownerIds: string[] };
+type VoteSystemConfig = { domain: string; port?: number; votingPath: string; webhookUrl?: string; ownerIds?: string[] };
 declare class VoteSystem {
   /**
    * @default settings=
