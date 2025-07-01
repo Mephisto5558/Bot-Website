@@ -109,7 +109,7 @@ class WebServer {
         else {
           if (this.formTypes[setting.type]) setting.type = this.formTypes[setting.type];
 
-          optionList.push({
+          const option = {
             optionId: `${index.id}.${setting.id}`,
             optionName: setting.name,
             optionDescription: setting.description,
@@ -120,7 +120,19 @@ class WebServer {
               if (setting.auth === false) return { allowed: false, errorMessage: 'This feature has been disabled.' };
               return setting.auth?.(guild, user) ?? { allowed: true };
             }
-          });
+          };
+
+          optionList.push(option);
+          if (setting.get) {
+            option.getActualSet = function getWrapper(...args) {
+              return setting.get.call(this, option, ...args);
+            };
+          }
+          if (setting.set) {
+            option.setNew = function setWrapper(...args) {
+              return setting.set.call(this, option, ...args);
+            };
+          }
         }
       }
 
@@ -130,7 +142,7 @@ class WebServer {
         categoryDescription: index.description,
         position: index.position,
         getActualSet: option => optionList.map(e => {
-          if (e.get) return { optionId: e.optionId, data: e.get(option) };
+          if (e.getActualSet) return { optionId: e.optionId, data: e.getActualSet.call(this, option) };
           const dataPath = e.optionId.replaceAll(/[A-Z]/g, e => `.${e.toLowerCase()}`);
           if (dataPath.split('.').at(-1) == 'spacer') return { optionId: e.optionId, data: e.description };
 
@@ -138,7 +150,8 @@ class WebServer {
           return { optionId: e.optionId, data };
         }),
         setNew: async ({ guild, data: dataArray }) => {
-          for (const { optionId, data } of dataArray) {
+          for (const { optionId, data } of dataArray) { // TODO is it "data" or "newData"?
+            if (optionList.some(e => e.optionId == optionId)) return optionList.find(e => e.optionId == optionId).set.call(this, { optionId, data });
             const dataPath = optionId.replaceAll(/[A-Z]/g, e => `.${e.toLowerCase()}`);
 
             if (this.db.get('guildSettings', `${guild.id}.${dataPath}`) === data) continue;
