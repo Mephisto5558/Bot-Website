@@ -1,5 +1,3 @@
-/* eslint-disable unicorn/no-null -- `null` must be used here */
-
 const { MemoryStore } = require('express-session');
 
 module.exports = class MongoStore extends MemoryStore {
@@ -24,7 +22,7 @@ module.exports = class MongoStore extends MemoryStore {
       else data.passport = { user: data.user };
     }
 
-    return cb(null, data);
+    return cb(null, data); /* eslint-disable-line unicorn/no-null -- `null` must be used here */
   }
 
   /** @type {import('.').MongoStore['set']} */
@@ -37,12 +35,12 @@ module.exports = class MongoStore extends MemoryStore {
     }
 
     await this.db.update('website', `sessions.${sid}`, sessionData);
-    return cb?.(null);
+    return cb?.(null); /* eslint-disable-line unicorn/no-null -- `null` must be used here */
   }
 
   /** @type {import('.').MongoStore['destroy']} */
   async destroy(sid, cb) {
     await this.db.delete('website', `sessions.${sid}`);
-    return cb?.();
+    return cb?.(null); /* eslint-disable-line unicorn/no-null -- `null` must be used here */
   }
 };
