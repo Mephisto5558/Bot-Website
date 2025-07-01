@@ -209,8 +209,6 @@ module.exports.WebServerSetupper = class WebServerSetupper {
           max: RATELIMIT_MAX_REQUESTS,
           message: '<body style="background-color:#111;color:#ff0000"><p style="text-align:center;top:50%;position:relative;font-size:40;">Sorry, you have been ratelimited!</p></body>'
         }),
-        express.json({ limit: '100kb' }),
-        express.urlencoded({ extended: true, limit: '100kb' }),
         xss(),
         session({
           secret,
