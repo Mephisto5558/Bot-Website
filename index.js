@@ -152,7 +152,11 @@ class WebServer {
         setNew: async ({ guild, data: dataArray }) => {
           for (const { optionId, data } of dataArray) {
             const option = optionList.find(e => e.optionId == optionId);
-            if (option.setNew) return option.setNew.call(this, { guild, optionId, data });
+            if (option?.setNew) {
+              await option.setNew.call(this, { guild, optionId, data });
+              continue;
+            }
+
             const dataPath = optionId.replaceAll(/[A-Z]/g, e => `.${e.toLowerCase()}`);
 
             if (this.db.get('guildSettings', `${guild.id}.${dataPath}`) === data) continue;
