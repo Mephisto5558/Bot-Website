@@ -52,7 +52,7 @@ type WebServerConfig = {
    * if (port) `${WebServer['config']['domain']}:${WebServer['config']['port']}`
    * else WebServer['config']['domain']
    * ``` */
-  webhookUrl?: string; callbackURL?: string;
+  webhookUrl?: string; callbackURL?: string; defaultAPIVersion?: string;
   errorPagesDir?: string; settingsPath?: string; customPagesPath?: string;
 };
 type VoteSystemSettingsInit = {

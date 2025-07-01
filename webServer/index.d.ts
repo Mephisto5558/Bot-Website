@@ -12,11 +12,7 @@ type sessionId = string;
 export type session = NonNullable<Database['website']['sessions'][sessionId]>;
 
 type originalDashboardOptions = ConstructorParameters<Dashboard>[0];
-type originalDashboardThemeOptions = Parameters<typeof SoftUITheme>[0];
-
-interface DashboardThemeOptions extends Omit<originalDashboardThemeOptions, 'index'> {
-  index?: originalDashboardThemeOptions['index'];
-}
+type DashboardThemeOptions = Parameters<typeof SoftUITheme>[0];
 
 interface DashboardOptions extends Omit<originalDashboardOptions, 'client' | 'invite' | 'theme'> {
   errorPagesDir?: string;
@@ -30,7 +26,7 @@ interface DashboardOptions extends Omit<originalDashboardOptions, 'client' | 'in
 }
 
 
-declare class MongoStore extends MemoryStore {
+export declare class MongoStore extends MemoryStore {
   db: DB | NoCacheDB;
 
   constructor(db: DB | NoCacheDB);
@@ -52,7 +48,7 @@ declare class MongoStore extends MemoryStore {
   ): Promise<ReturnType<NonNullable<CB>>>;
 }
 
-declare class WebServerSetupper {
+export declare class WebServerSetupper {
   client: Client<true>;
   authenticator: Awaited<ReturnType<WebServerSetupper['setupAuth']>>;
   dashboardTheme: Awaited<ReturnType<WebServerSetupper['setupDashboardTheme']>>;
@@ -64,6 +60,7 @@ declare class WebServerSetupper {
     baseConfig: {
       clientSecret: string;
       baseURL: string;
+      defaultAPIVersion: number;
     }
   );
 
@@ -77,7 +74,7 @@ declare class WebServerSetupper {
   setupRouter(customPagesPath?: string): Router;
 
   setupApp(
-    secret: string, handlers?: Handler[],
-    config?: { domain?: string; baseUrl?: string }
+    secret: string, handlers?: Handler[], sessionStore?: Express.SessionStore,
+    config?: { domain?: string; baseUrl?: string; errorPagesDir?: string }
   ): Express;
 }

@@ -20,7 +20,7 @@ const
   MAX_COOKIE_AGE = 3.154e10; // 1y in ms
 
 
-module.exports = class WebServerSetupper {
+module.exports.WebServerSetupper = class WebServerSetupper {
   client; authenticator; dashboardTheme; dashboard; router;
 
   /**
@@ -65,68 +65,14 @@ module.exports = class WebServerSetupper {
         }
       },
       preloader: {},
-      index: {
-        graph: {
-          enabled: true,
-          lineGraph: false,
-          title: 'Memory Usage',
-          tag: 'Memory (MB)',
-          max: 100
-        }
-      },
-      admin: {
-        pterodactyl: {
-          enabled: true,
-          apiKey: 'ptlc_ci9V0fmFFN4amkjryiOY5kUNNcVGO5fWbaxQCjkHSDD', // todo
-          panelLink: 'https://pro.pylexnodes.net/',
-          serverUUIDs: ['029987ba-215c-4c04-bf71-e27b29c102ac']
-        }
-      },
       meta: {
         author: (this.client.application.owner.owner ?? this.client.application.owner).username,
         owner: (this.client.application.owner.owner ?? this.client.application.owner).username
       },
-      commands: config.commands
+      ...config
     });
 
     return this.dashboardTheme;
-
-    /*
-      information: {
-           supportServer: Support.Discord,
-         },
-      index: {
-           card: {
-             category: `${this.client.user.username} Dashboard - The center of everything`,
-             title: `Welcome to the ${this.client.user.username} dashboard where you can control the features and settings of the bot.`,
-             description: 'Look up commands and configurate servers on the left side bar!',
-             image: 'https://i.imgur.com/axnP93g.png'
-           }
-         }, */
-
-    // this.dashboardTheme = DarkDashboard({
-    //   information: {
-    //     websiteUrl: this.baseConfig.baseURL,
-    //     dashboardUrl: this.baseConfig.baseURL,
-    //     /* eslint-disable-next-line @typescript-eslint/no-magic-numbers -- 4th smallest size */
-    //     pageBackGround: 'linear-gradient(#2CA8FF, #155b8d)',
-    //     preloader: 'Loading...',
-    //     loggedIn: 'Successfully signed in.',
-    //     mainColor: '#2CA8FF',
-    //     subColor: '#ebdbdb',
-    //     ...config.information
-    //   },
-    //   index: {
-    //     card: {
-    //       category: `${this.client.user.username} Dashboard - The center of everything`,
-    //       title: `Welcome to the ${this.client.user.username} dashboard where you can control the features and settings of the bot.`,
-    //       description: 'Look up commands and configurate servers on the left side bar!',
-    //       image: 'https://i.imgur.com/axnP93g.png'
-    //     },
-    //     ...config.index
-    //   },
-    //   commands: config.commands
-    // });
   }
 
   /** @type {import('.').WebServerSetupper['setupDashboard']} */
@@ -183,8 +129,8 @@ module.exports = class WebServerSetupper {
   /** @type {import('.').WebServerSetupper['setupRouter']} */
   setupRouter(customPagesPath, webServer) {
     /* eslint-disable-next-line new-cap -- Router is a function that returns a class */
-    this.router = express.Router();
-    this.router.use(async (req, res, next) => {
+    const router = express.Router();
+    router.use(async (req, res, next) => {
       Object.defineProperty(req.session, 'guilds', { // Dashboard
         /** @this {import('express-session')['Session'] & { user?: import('.').session['user'] }} */
         get() { return this.user?.guilds; },
@@ -195,7 +141,11 @@ module.exports = class WebServerSetupper {
       });
 
       if (req.path === '/') return res.redirect('/home');
-      if (req.path.startsWith('/api/') && !/^\/api\/v\d+\//i.test(req.path.endsWith('/') ? req.path : req.path + '/')) return res.redirect(req.path.replace('/api/', '/api/v1/'));
+      if (req.path.startsWith('/api/')) {
+        const pathParts = req.path.split(/\/+/);
+        if (!/^v\d+$/.test(pathParts[2]))
+          return res.redirect(HTTP_STATUS_MOVED_PERMANENTLY, `/api/v${this.baseConfig.defaultAPIVersion}/${pathParts.slice(2).join('/')}`);
+      }
       if (req.path == '/dashboard') return res.status(HTTP_STATUS_MOVED_PERMANENTLY).redirect('/manage');
       if (req.path == '/callback') { // Dashboard
         if (req.query.code != undefined) req.session.user.accessToken = req.query.code;
@@ -211,8 +161,12 @@ module.exports = class WebServerSetupper {
       if (!customPagesPath) return next();
 
       const
-        pathStr = path.join(process.cwd(), customPagesPath, path.normalize(req.path.endsWith('/') ? req.path.slice(0, -1) : req.path).replace(/^(?:\.{2}(?:\/|\\|$))+/, '')),
-        dir = pathStr.slice(0, Math.max(0, pathStr.lastIndexOf(path.sep)));
+        absoluteCustomPagesPath = path.resolve(process.cwd(), customPagesPath),
+        pathStr = path.resolve(absoluteCustomPagesPath, path.normalize('.' + req.path));
+
+      if (!pathStr.startsWith(absoluteCustomPagesPath)) return res.sendStatus(HTTP_STATUS_FORBIDDEN);
+
+      const dir = path.dirname(pathStr);
 
       let /** @type {import('..').customPage | undefined} */data, subDirs;
       try { subDirs = await readdir(dir, { withFileTypes: true }); }
@@ -222,7 +176,7 @@ module.exports = class WebServerSetupper {
         const filename = subDirs.find(e => {
           if (!e.isFile()) return false;
 
-          const file = pathStr.slice(pathStr.lastIndexOf(path.sep) + 1);
+          const file = path.basename(pathStr);
           return file.includes('.') ? e.name.startsWith(`${file}.`) : e.name.startsWith(file);
         })?.name;
 
@@ -238,6 +192,7 @@ module.exports = class WebServerSetupper {
       return this.#handleCustomSite.call(webServer, req, res, next, data);
     });
 
+    this.router = router;
     return this.router;
   }
 
@@ -266,7 +221,7 @@ module.exports = class WebServerSetupper {
           cookie: {
             maxAge: MAX_COOKIE_AGE,
             secure: config.domain?.startsWith('https'),
-            httpOnly: config.domain?.startsWith('https'),
+            httpOnly: true,
             sameSite: 'lax',
             path: '/'
           }
@@ -323,7 +278,8 @@ module.exports = class WebServerSetupper {
       title ??= name[0].toUpperCase() + name.slice(1).replaceAll(/[-_]/g, ' ');
 
       // '//' can be on dirs and on the `reqPath`'s start
-      return `${acc}<a href=${escapeHTML('/' + reqPath + '/' + name).replaceAll('//', '/')}>${escapeHTML(title)}</a>`;
+      return `${acc}<a href="${path.posix.join(reqPath, encodeURIComponent(name))}">${escapeHTML(title)}</a>`;
     }, '<link rel="stylesheet" href="https://mephisto5558.github.io/Website-Assets/min/css/navButtons.css" crossorigin="anonymous" /><div class="navButton">') + '</div>';
   }
 };
+module.exports.MongoStore = require('./sessionStore.js');

@@ -72,6 +72,7 @@ module.exports = class VoteSystem {
 
   /** @type {import('..').VoteSystem['getMany']} */
   getMany = (amount, offset = 0, filter = '', includePending = false, userId = '') => {
+    /* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- left side is a boolean check */
     const cards = this.fetchAll().filter(e => ((includePending && this.config.ownerIds?.includes(userId)) || !e.pending)
       && (e.title.includes(filter) || e.body.includes(filter) || e.id.includes(filter)));
 

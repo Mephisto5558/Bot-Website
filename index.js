@@ -8,8 +8,7 @@ const
   DBD = require('discord-dashboard'),
   DBDSoftUI = require('dbd-soft-ui'),
   VoteSystem = require('./voteSystem'),
-  WebServerSetupper = require('./webServer'),
-  MongoStore = require('./webServer/sessionStore'),
+  { WebServerSetupper, MongoStore } = require('./webServer'),
 
   DEFAULT_PORT = 8000;
 
@@ -30,6 +29,7 @@ class WebServer {
       ownerIds: [],
       domain: process.env.SERVER_IP ?? process.env.IP ?? 'http://localhost',
       port: process.env.PORT ?? process.env.SERVER_PORT ?? DEFAULT_PORT,
+      defaultAPIVersion: 1,
       ...config
     };
     if (!config.domain.startsWith('http')) config.domain = `http://${config.domain}`;
@@ -43,7 +43,7 @@ class WebServer {
     this.keys = keys;
     this.logError = errorLoggingFunction;
 
-    this.#setupper = new WebServerSetupper(this.client, { clientSecret: this.keys.secret, baseURL: this.config.domain });
+    this.#setupper = new WebServerSetupper(this.client, { clientSecret: this.keys.secret, baseURL: this.config.domain, defaultAPIVersion: this.config.defaultAPIVersion });
   }
 
   /**
