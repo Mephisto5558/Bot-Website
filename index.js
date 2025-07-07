@@ -18,11 +18,11 @@ class WebServer {
   dashboardOptionCount = []; initiated = false;
 
   /**
-   * @param {import('.').WebServer['client']}client
-   * @param {import('.').WebServer['db']}db
+   * @param {import('.').WebServer['client']} client
+   * @param {import('.').WebServer['db']} db
    * @param {import('.').WebServer['keys']} keys
-   * @param {import('.').WebServerConfig?}config
-   * @param {import('.').WebServer['logError']}errorLoggingFunction */
+   * @param {import('.').WebServerConfig?} config
+   * @param {import('.').WebServer['logError']} errorLoggingFunction */
   constructor(client, db, keys, config, errorLoggingFunction = console.error) {
     config = {
       support: {},
@@ -47,11 +47,11 @@ class WebServer {
   }
 
   /**
-   * @param {import('.').WebServer['client']?}client
-   * @param {import('.').WebServer['db']?}db
+   * @param {import('.').WebServer['client']?} client
+   * @param {import('.').WebServer['db']?} db
    * @param {import('.').WebServer['keys']?} keys
-   * @param {import('.').WebServerConfig?}config
-   * @param {import('.').WebServer['logError']?}errorLoggingFunction
+   * @param {import('.').WebServerConfig?} config
+   * @param {import('.').WebServer['logError']?} errorLoggingFunction
    * @throws {Error} on invalid data */
   #validateConstructorParams(client, db, keys, config, errorLoggingFunction) {
     if (!client?.options.intents.has(GatewayIntentBits.Guilds)) throw new Error('Client must have the "Guilds" gateway intent.');
@@ -63,7 +63,7 @@ class WebServer {
   }
 
   async #getSettings() {
-    /** @typedef {ConstructorParameters<ReturnType<import('discord-dashboard')['UpdatedClass']>>[0]['settings'][number]}category */
+    /** @typedef {ConstructorParameters<ReturnType<import('discord-dashboard')['UpdatedClass']>>[0]['settings'][number]} category */
     /** @type {category[]} */
     const categoryOptionList = [];
 
@@ -173,10 +173,10 @@ class WebServer {
   }
 
   /**
-   * @param {Error | import('http-errors').HttpError}err
-   * @param {import('express').Request}req
-   * @param {import('express').Response}res
-   * @param {import('express').NextFunction}next */
+   * @param {Error | import('http-errors').HttpError} err
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next */
   #reqErrorHandler(err, req, res, next) {
     if (err.code != 'ENOENT') this.logError(err);
 

@@ -9,10 +9,10 @@ const
 
 module.exports = class VoteSystem {
   /**
-   * @param {import('discord.js').Client<true>}client
-   * @param {import('@mephisto5558/mongoose-db').DB}db
-   * @param {import('..').VoteSystemConfig}config
-   * @param {import('..').VoteSystemSettings}settings */
+   * @param {import('discord.js').Client<true>} client
+   * @param {import('@mephisto5558/mongoose-db').DB} db
+   * @param {import('..').VoteSystemConfig} config
+   * @param {import('..').VoteSystemSettings} settings */
   constructor(client, db, config = {}, settings = {}) {
     this.client = client;
     this.db = db;
@@ -64,9 +64,9 @@ module.exports = class VoteSystem {
   get = id => this.db.get('website', `requests.${id}`);
 
   /**
-   * @typedef {import('..').FeatureRequest}FeatureRequest
-   * @param {FeatureRequest['id']}id
-   * @param {FeatureRequest}data
+   * @typedef {import('..').FeatureRequest} FeatureRequest
+   * @param {FeatureRequest['id']} id
+   * @param {FeatureRequest} data
    * @returns {Promise<FeatureRequest | void>} */
   #update = async (id, data) => this.db.update('website', `requests.${id}`, data);
 
@@ -310,7 +310,7 @@ module.exports = class VoteSystem {
     return date >= firstDayOfWeek && date < nextWeek;
   }
 
-  /** @type {typeof import('..').VoteSystem['getRequestAuthor']}*/
+  /** @type {typeof import('..').VoteSystem['getRequestAuthor']} */
   static getRequestAuthor(request) {
     const userId = (request.id ?? request).split('_')[0];
     return Number.isNaN(Number(userId)) ? '' : userId;

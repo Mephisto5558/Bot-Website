@@ -4,8 +4,8 @@ module.exports = class MongoStore extends MemoryStore {
   db;
 
   /**
-   * @param {ConstructorParameters<typeof import('.').MongoStore>[0]}db
-   * @param {ConstructorParameters<typeof MemoryStore>}rest */
+   * @param {ConstructorParameters<typeof import('.').MongoStore>[0]} db
+   * @param {ConstructorParameters<typeof MemoryStore>} rest */
   constructor(db, ...rest) {
     super(...rest);
 
@@ -14,7 +14,7 @@ module.exports = class MongoStore extends MemoryStore {
 
   /** @type {import('.').MongoStore['get']} */
   async get(sid, cb) {
-    /** @type {null | import('.').session & {passport?: Record<string, unknown>} } */
+    /** @type {null | import('.').session & { passport?: Record<string, unknown> }} */
     const data = await this.db.get('website', `sessions.${sid}`);
 
     if (data && 'user' in data) {

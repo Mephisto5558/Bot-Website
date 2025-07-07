@@ -6,7 +6,7 @@ const
   { Authenticator } = require('passport'),
   Strategy = require('passport-discord'),
   DBD = require('discord-dashboard'),
-  /** @type {(config: import('dbd-soft-ui').themeConfig) => unknown}*/ SoftUITheme = require('dbd-soft-ui'),
+  /** @type {(config: import('dbd-soft-ui').themeConfig) => unknown} */ SoftUITheme = require('dbd-soft-ui'),
   express = require('express'),
   escapeHTML = require('escape-html'),
   { xss } = require('express-xss-sanitizer'),
@@ -24,8 +24,8 @@ module.exports.WebServerSetupper = class WebServerSetupper {
   client; authenticator; dashboardTheme; dashboard; router;
 
   /**
-   * @param {import('discord.js').Client<true>}client
-   * @param {ConstructorParameters<typeof import('.').WebServerSetupper>[1]}baseConfig */
+   * @param {import('discord.js').Client<true>} client
+   * @param {ConstructorParameters<typeof import('.').WebServerSetupper>[1]} baseConfig */
   constructor(client, baseConfig) {
     this.client = client;
     this.baseConfig = baseConfig;
@@ -168,7 +168,7 @@ module.exports.WebServerSetupper = class WebServerSetupper {
 
       const dir = path.dirname(pathStr);
 
-      let /** @type {import('..').customPage | undefined} */data, subDirs;
+      let /** @type {import('..').customPage | undefined} */ data, subDirs;
       try { subDirs = await readdir(dir, { withFileTypes: true }); }
       catch { /* empty */ }
 
@@ -241,10 +241,10 @@ module.exports.WebServerSetupper = class WebServerSetupper {
   }
 
   /**
-   * @param {express.Request}req
-   * @param {express.Response}res
-   * @param {express.NextFunction}next
-   * @param {import('..').customPage | undefined}data */
+   * @param {express.Request} req
+   * @param {express.Response} res
+   * @param {express.NextFunction} next
+   * @param {import('..').customPage | undefined} data */
   async #handleCustomSite(req, res, next, data) {
     if (!data) return next();
     if (data.method != undefined && (Array.isArray(data.method) && data.method.some(e => e.toUpperCase() == req.method) || data.method.toUpperCase() !== req.method))
