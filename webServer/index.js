@@ -245,20 +245,24 @@ module.exports.WebServerSetupper = class WebServerSetupper {
    * @param {express.Response} res
    * @param {express.NextFunction} next
    * @param {import('..').customPage | undefined} data */
-  async #handleCustomSite(req, res, next, data) {
+  #handleCustomSite(req, res, next, data) {
     if (!data) return next();
-    if (data.method != undefined && (Array.isArray(data.method) && data.method.some(e => e.toUpperCase() == req.method) || data.method.toUpperCase() !== req.method))
-      return res.setHeader('Allow', data.method.join?.(',') ?? data.method).sendStatus(HTTP_STATUS_METHOD_NOT_ALLOWED);
-    if (data.permissionCheck && !await data.permissionCheck.call(req)) return res.redirect(HTTP_STATUS_FORBIDDEN, `/error/${HTTP_STATUS_FORBIDDEN}`);
-    if (data.title) res.set('title', data.title);
-    if (data.static) {
-      const code = String(data.run);
-      return res.send(code.slice(code.indexOf('{') + 1, code.lastIndexOf('}')));
-    }
-    if (typeof data.run == 'function') return data.run.call(this, res, req, next);
-    if (data.run instanceof URL) return res.redirect(data.run.toString());
 
-    return res.send(JSON.stringify(data.run ?? data));
+    /* eslint-disable-next-line @typescript-eslint/no-shadow */
+    return this.constructor.runParsed(req, res, next, data, async (req, res, data) => {
+      if (data.method != undefined && (Array.isArray(data.method) && !data.method.some(e => e.toUpperCase() == req.method) || data.method.toUpperCase() !== req.method))
+        return res.setHeader('Allow', data.method.join?.(',') ?? data.method).sendStatus(HTTP_STATUS_METHOD_NOT_ALLOWED);
+      if (data.permissionCheck && !await data.permissionCheck.call(req)) return res.redirect(HTTP_STATUS_FORBIDDEN, `/error/${HTTP_STATUS_FORBIDDEN}`);
+      if (data.title) res.set('title', data.title);
+      if (data.static) {
+        const code = String(data.run);
+        return res.send(code.slice(code.indexOf('{') + 1, code.lastIndexOf('}')));
+      }
+      if (typeof data.run == 'function') return data.run.call(this, res, req, next);
+      if (data.run instanceof URL) return res.redirect(data.run.toString());
+
+      return res.send(JSON.stringify(data.run ?? data));
+    });
   }
 
   /** @type {typeof import('..').WebServer['createNavigationButtons']} */
@@ -278,6 +282,18 @@ module.exports.WebServerSetupper = class WebServerSetupper {
       // '//' can be on dirs and on the `reqPath`'s start
       return `${acc}<a href="${path.posix.join(reqPath, encodeURIComponent(name))}">${escapeHTML(title)}</a>`;
     }, '<link rel="stylesheet" href="https://mephisto5558.github.io/Website-Assets/min/css/navButtons.css" crossorigin="anonymous" /><div class="navButton">') + '</div>';
+  }
+
+  /** @type {typeof import('..').WebServer['runParsed']} */
+  static runParsed(req, res, next, data, fn) {
+    return express.json({ limit: '100kb' })(req, res, err => {
+      if (err) return next(err);
+
+      return express.urlencoded({ extended: true, limit: '100kb' })(req, res, err => {
+        if (err) return next(err);
+        return fn(req, res, data);
+      });
+    });
   }
 };
 module.exports.MongoStore = require('./sessionStore.js');
