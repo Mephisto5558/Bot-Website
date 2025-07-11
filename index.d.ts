@@ -5,13 +5,15 @@ import type { MemoryStore } from 'express-session';
 import type { PassportStatic } from 'passport';
 import type { formTypes } from 'discord-dashboard';
 import type { FormTypes } from 'dbd-soft-ui';
-import type { DB } from '@mephisto5558/mongoose-db';
+import type { DB as DBClass } from '@mephisto5558/mongoose-db';
 import type { Database } from './database';
 import type { DashboardOptions, DashboardThemeOptions } from './webServer';
 
 export { WebServer };
 export type { VoteSystem, VoteSystemConfig, VoteSystemSettings, FeatureRequest, dashboardSetting, customPage, commands, WebServerConfig };
 export default WebServer;
+
+type DB = DBClass<Database>;
 
 type Support = { mail?: string; discord?: string };
 type Keys = { secret: string; dbdLicense: string };
@@ -157,88 +159,13 @@ declare class VoteSystem {
   static getRequestAuthor(request: FeatureRequest | FeatureRequest['id']): Discord.Snowflake;
 }
 
-
-type FlattenedDatabase = { [DBK in keyof Database]: FlattenObject<Database[DBK]>; };
-
-/* https://github.com/blazejkustra/dynamode/blob/fd3abf1e420612811c3eba96ec431e00c28b2783/lib/utils/types.ts#L10
-   Flatten entity  */
-type FlattenObject<TValue> = CollapseEntries<CreateObjectEntries<TValue, TValue>>;
-
-type Entry = { key: string; value: unknown };
-type EmptyEntry<TValue> = { key: ''; value: TValue };
-type ExcludedTypes = Date | Set<unknown> | Map<unknown, unknown> | unknown[];
-type ArrayEncoder = `[${bigint}]`;
-
-type EscapeArrayKey<TKey extends string> = TKey extends `${infer TKeyBefore}.${ArrayEncoder}${infer TKeyAfter}`
-  ? EscapeArrayKey<`${TKeyBefore}${ArrayEncoder}${TKeyAfter}`>
-  : TKey;
-
-// Transforms entries to one flattened type
-type CollapseEntries<TEntry extends Entry> = { [E in TEntry as EscapeArrayKey<E['key']>]: E['value']; };
-
-// Transforms array type to object
-type CreateArrayEntry<TValue, TValueInitial> = OmitItself<
-  TValue extends unknown[] ? Record<ArrayEncoder, TValue[number]> : TValue,
-  TValueInitial
->;
-
-// Omit the type that references itself
-type OmitItself<TValue, TValueInitial> = TValue extends TValueInitial
-  ? EmptyEntry<TValue>
-  : OmitExcludedTypes<TValue, TValueInitial>;
-
-// Omit the type that is listed in ExcludedTypes union
-type OmitExcludedTypes<TValue, TValueInitial> = TValue extends ExcludedTypes
-  ? EmptyEntry<TValue>
-  : CreateObjectEntries<TValue, TValueInitial>;
-
-type CreateObjectEntries<TValue, TValueInitial> = TValue extends object ? {
-
-  // Checks that Key is of type string
-  [TKey in keyof TValue]-?: TKey extends string
-
-    // Nested key can be an object, run recursively to the bottom
-    ? CreateArrayEntry<TValue[TKey], TValueInitial> extends infer TNestedValue
-      ? TNestedValue extends Entry
-        ? TNestedValue['key'] extends ''
-          ? { key: TKey; value: TNestedValue['value'] }
-          : { key: `${TKey}.${TNestedValue['key']}`; value: TNestedValue['value'] } | { key: TKey; value: TValue[TKey] }
-        : never
-      : never
-    : never;
-}[keyof TValue] // Builds entry for each key
-  : EmptyEntry<TValue>;
-
-// Source: https://github.com/Mephisto5558/Teufelsbot/blob/main/globals.d.ts#L339
-declare module '@mephisto5558/mongoose-db' {
-  interface NoCacheDB {
-    /**
-     * generates required database entries from {@link ./Templates/db_collections.json}.
-     * @param overwrite overwrite existing collection, default: `false` */
-    generate(overwrite?: boolean): Promise<void>;
-
-    get<DBK extends keyof Database>(db: DBK): Promise<Database[DBK]>;
-    get<DBK extends keyof Database, K extends keyof FlattenedDatabase[DBK]>(db: DBK, key: K): Promise<
-      Database[DBK] extends Record<string | number, unknown> ? FlattenedDatabase[DBK][K] | undefined : FlattenedDatabase[DBK][K]
-    >;
-    update<DBK extends keyof Database, FDB extends FlattenedDatabase[DBK], K extends keyof FDB>(db: DBK, key: K, value: FDB[K]): Promise<Database[DBK]>;
-    set<DBK extends keyof Database, FDB extends FlattenedDatabase[DBK]>(db: DBK, value: FDB[keyof FDB], overwrite?: boolean): Promise<Database[DBK]>;
-    delete<DBK extends keyof Database>(db: DBK, key?: keyof FlattenedDatabase[DBK]): Promise<boolean>;
-    push<DBK extends keyof Database, FDB extends FlattenedDatabase[DBK], K extends keyof FDB>(db: DBK, key: K, ...value: FDB[K][]): Promise<Database[DBK]>;
-    pushToSet<DBK extends keyof Database, FDB extends FlattenedDatabase[DBK], K extends keyof FDB>(db: DBK, key: K, ...value: FDB[K][]): Promise<Database[DBK]>;
-  }
-
-  // @ts-expect-error 2300 // overwriting the class so ofc it is declared twice
-  interface DB extends NoCacheDB {
-    get(): undefined;
-    get<DBK extends keyof Database>(this: DB, db: DBK): Database[DBK];
-    get<DBK extends keyof Database, K extends keyof FlattenedDatabase[DBK]>(this: DB, db: DBK, key: K): (
-      Database[DBK] extends Record<string | number, unknown> ? FlattenedDatabase[DBK][K] | undefined : FlattenedDatabase[DBK][K]
-    );
-    update<DBK extends keyof Database, FDB extends FlattenedDatabase[DBK], K extends keyof FDB>(this: DB, db: DBK, key: K, value: FDB[K]): Promise<Database[DBK]>;
-    set<DBK extends keyof Database, FDB extends FlattenedDatabase[DBK]>(this: DB, db: DBK, value: FDB[keyof FDB], overwrite?: boolean): Promise<Database[DBK]>;
-    delete<DBK extends keyof Database>(this: DB, db: DBK, key?: keyof FlattenedDatabase[DBK]): Promise<boolean>;
-    push<DBK extends keyof Database, FDB extends FlattenedDatabase[DBK], K extends keyof FDB>(this: DB, db: DBK, key: K, ...value: FDB[K][]): Promise<Database[DBK]>;
-    pushToSet<DBK extends keyof Database, FDB extends FlattenedDatabase[DBK], K extends keyof FDB>(this: DB, db: DBK, key: K, ...value: FDB[K][]): Promise<Database[DBK]>;
-  }
+/* eslint-disable @typescript-eslint/ban-ts-comment -- depending on the module resolution, one of these might not error out. */
+declare module '../node_modules/discord.js/node_modules/discord-api-types/v10' {
+  // @ts-ignore 2300 // overwriting Snowflake
+  export type Snowflake = `${bigint}`;
 }
+declare module 'discord-api-types/v10' {
+  // @ts-ignore 2300 // overwriting Snowflake
+  export type Snowflake = `${bigint}`;
+}
+/* eslint-enable @typescript-eslint/ban-ts-comment */
