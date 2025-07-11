@@ -1,5 +1,5 @@
 import type { MemoryStore } from 'express-session';
-import type { default as DB, NoCacheDB } from '@mephisto5558/mongoose-db';
+import type { DB, NoCacheDB } from '@mephisto5558/mongoose-db';
 import type SoftUITheme from 'dbd-soft-ui';
 import type { Profile } from 'passport-discord';
 import type { Client } from 'discord.js';
@@ -27,9 +27,9 @@ interface DashboardOptions extends Omit<originalDashboardOptions, 'client' | 'in
 
 
 export declare class MongoStore extends MemoryStore {
-  db: DB | NoCacheDB;
+  db: DB<Database> | NoCacheDB<Database>;
 
-  constructor(db: DB | NoCacheDB);
+  constructor(db: MongoStore['db']);
 
   get<P extends Parameters<MemoryStore['get']>, CB extends P[1]>(
     sid: P[0],

@@ -10,7 +10,7 @@ const
 module.exports = class VoteSystem {
   /**
    * @param {import('discord.js').Client<true>} client
-   * @param {import('@mephisto5558/mongoose-db').DB} db
+   * @param {import('@mephisto5558/mongoose-db').DB<import('../database').Database>} db
    * @param {import('..').VoteSystemConfig} config
    * @param {import('..').VoteSystemSettings} settings */
   constructor(client, db, config = {}, settings = {}) {

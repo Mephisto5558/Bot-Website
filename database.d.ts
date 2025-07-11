@@ -5,7 +5,7 @@ import type { FeatureRequest } from '.';
 import type { sessionId } from './webServer';
 
 export type { Database };
-export { type sessionId } from './webServer';
+export type { sessionId } from './webServer';
 
 type Snowflake = `${bigint}`;
 
