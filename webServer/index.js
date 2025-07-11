@@ -249,7 +249,7 @@ module.exports.WebServerSetupper = class WebServerSetupper {
     if (!data) return next();
 
     /* eslint-disable-next-line @typescript-eslint/no-shadow */
-    return this.constructor.runParsed(req, res, next, data, async (req, res, data) => {
+    return WebServerSetupper.runParsed(req, res, next, data, async (req, res, data) => {
       if (data.method != undefined && (Array.isArray(data.method) && !data.method.some(e => e.toUpperCase() == req.method) || data.method.toUpperCase() !== req.method))
         return res.setHeader('Allow', data.method.join?.(',') ?? data.method).sendStatus(HTTP_STATUS_METHOD_NOT_ALLOWED);
       if (data.permissionCheck && !await data.permissionCheck.call(req)) return res.redirect(HTTP_STATUS_FORBIDDEN, `/error/${HTTP_STATUS_FORBIDDEN}`);
