@@ -5,7 +5,7 @@ import type { MemoryStore } from 'express-session';
 import type { PassportStatic } from 'passport';
 import type { formTypes } from 'discord-dashboard';
 import type { FormTypes } from 'dbd-soft-ui';
-import type { DB as DBClass } from '@mephisto5558/mongoose-db';
+import type { DB } from '@mephisto5558/mongoose-db';
 import type { Database } from './database';
 import type { DashboardOptions, DashboardThemeOptions } from './webServer';
 
@@ -66,7 +66,7 @@ type VoteSystemSettingsInit = {
     title?: string;
     description?: string;
     color?: number | Discord.ColorResolvable;
-  } | undefined>;
+  }>;
 };
 type VoteSystemSettings = Required<VoteSystemSettingsInit>;
 
@@ -74,13 +74,13 @@ declare type HTTP_STATUS_BAD_REQUEST = 400;
 
 declare class WebServer {
   constructor(
-    client: Discord.Client, db: TypedDB, keys: Keys,
+    client: Discord.Client, db: DB, keys: Keys,
     config?: WebServerConfig,
     errorLoggingFunction?: (err: Error, req: express.Request, res: express.Response) => unknown
   );
 
   client: Discord.Client<true>;
-  db: TypedDB;
+  db: DB;
   config: Required<WebServerConfig> & { baseUrl: string };
 
   keys: Keys;
@@ -125,7 +125,7 @@ declare class VoteSystem {
    *  maxPendingFeatureRequests: 5, webhookMaxVisibleBodyLength: 2000
    * }
    * ``` */
-  constructor(client: Discord.Client<true>, db: TypedDB, config: VoteSystemConfig, settings: VoteSystemSettingsInit);
+  constructor(client: Discord.Client<true>, db: DB, config: VoteSystemConfig, settings: VoteSystemSettingsInit);
 
   client: Discord.Client<true>;
   config: VoteSystemConfig;
@@ -158,7 +158,7 @@ declare class VoteSystem {
 }
 
 
-type FlattenedDatabase = { [DB in keyof Database]: FlattenObject<Database[DB]>; };
+type FlattenedDatabase = { [DBK in keyof Database]: FlattenObject<Database[DBK]>; };
 
 /* https://github.com/blazejkustra/dynamode/blob/fd3abf1e420612811c3eba96ec431e00c28b2783/lib/utils/types.ts#L10
    Flatten entity  */
@@ -209,21 +209,36 @@ type CreateObjectEntries<TValue, TValueInitial> = TValue extends object ? {
 }[keyof TValue] // Builds entry for each key
   : EmptyEntry<TValue>;
 
-// Source: https://github.com/Mephisto5558/Teufelsbot/blob/main/globals.d.ts#L494
-declare class TypedDB extends DBClass {
-  /**
-   * generates required database entries from {@link ./Templates/db_collections.json}.
-   * @param overwrite overwrite existing collection, default: `false` */
-  generate(overwrite?: boolean): Promise<void>;
+// Source: https://github.com/Mephisto5558/Teufelsbot/blob/main/globals.d.ts#L339
+declare module '@mephisto5558/mongoose-db' {
+  interface NoCacheDB {
+    /**
+     * generates required database entries from {@link ./Templates/db_collections.json}.
+     * @param overwrite overwrite existing collection, default: `false` */
+    generate(overwrite?: boolean): Promise<void>;
 
-  get(): undefined;
-  get<DB extends keyof Database>(db: DB): Database[DB];
-  get<DB extends keyof Database, K extends keyof FlattenedDatabase[DB]>(db: DB, key: K): FlattenedDatabase[DB][K];
+    get<DBK extends keyof Database>(db: DBK): Promise<Database[DBK]>;
+    get<DBK extends keyof Database, K extends keyof FlattenedDatabase[DBK]>(db: DBK, key: K): Promise<
+      Database[DBK] extends Record<string | number, unknown> ? FlattenedDatabase[DBK][K] | undefined : FlattenedDatabase[DBK][K]
+    >;
+    update<DBK extends keyof Database, FDB extends FlattenedDatabase[DBK], K extends keyof FDB>(db: DBK, key: K, value: FDB[K]): Promise<Database[DBK]>;
+    set<DBK extends keyof Database, FDB extends FlattenedDatabase[DBK]>(db: DBK, value: FDB[keyof FDB], overwrite?: boolean): Promise<Database[DBK]>;
+    delete<DBK extends keyof Database>(db: DBK, key?: keyof FlattenedDatabase[DBK]): Promise<boolean>;
+    push<DBK extends keyof Database, FDB extends FlattenedDatabase[DBK], K extends keyof FDB>(db: DBK, key: K, ...value: FDB[K][]): Promise<Database[DBK]>;
+    pushToSet<DBK extends keyof Database, FDB extends FlattenedDatabase[DBK], K extends keyof FDB>(db: DBK, key: K, ...value: FDB[K][]): Promise<Database[DBK]>;
+  }
 
-  update<DB extends keyof Database, FDB extends FlattenedDatabase[DB], K extends keyof FDB>(db: DB, key: K, value: FDB[K]): Promise<Database[DB]>;
-  set<DB extends keyof Database, FDB extends FlattenedDatabase[DB]>(db: DB, value: FDB[keyof FDB], overwrite?: boolean): Promise<Database[DB]>;
-  delete<DB extends keyof Database>(db: DB, key?: keyof FlattenedDatabase[DB]): Promise<boolean>;
-
-  push<DB extends keyof Database, FDB extends FlattenedDatabase[DB], K extends keyof FDB>(db: DB, key: K, ...value: FDB[K][]): Promise<Database[DB]>;
-  pushToSet<DB extends keyof Database, FDB extends FlattenedDatabase[DB], K extends keyof FDB>(db: DB, key: K, ...value: FDB[K][]): Promise<Database[DB]>;
+  // @ts-expect-error 2300 // overwriting the class so ofc it is declared twice
+  interface DB extends NoCacheDB {
+    get(): undefined;
+    get<DBK extends keyof Database>(this: DB, db: DBK): Database[DBK];
+    get<DBK extends keyof Database, K extends keyof FlattenedDatabase[DBK]>(this: DB, db: DBK, key: K): (
+      Database[DBK] extends Record<string | number, unknown> ? FlattenedDatabase[DBK][K] | undefined : FlattenedDatabase[DBK][K]
+    );
+    update<DBK extends keyof Database, FDB extends FlattenedDatabase[DBK], K extends keyof FDB>(this: DB, db: DBK, key: K, value: FDB[K]): Promise<Database[DBK]>;
+    set<DBK extends keyof Database, FDB extends FlattenedDatabase[DBK]>(this: DB, db: DBK, value: FDB[keyof FDB], overwrite?: boolean): Promise<Database[DBK]>;
+    delete<DBK extends keyof Database>(this: DB, db: DBK, key?: keyof FlattenedDatabase[DBK]): Promise<boolean>;
+    push<DBK extends keyof Database, FDB extends FlattenedDatabase[DBK], K extends keyof FDB>(this: DB, db: DBK, key: K, ...value: FDB[K][]): Promise<Database[DBK]>;
+    pushToSet<DBK extends keyof Database, FDB extends FlattenedDatabase[DBK], K extends keyof FDB>(this: DB, db: DBK, key: K, ...value: FDB[K][]): Promise<Database[DBK]>;
+  }
 }

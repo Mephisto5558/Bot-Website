@@ -30,8 +30,8 @@ type Database = {
       };
       user?: Profile & APIUser;
       loggedInLastTime?: boolean;
-    } | undefined>;
-    requests: Record<FeatureRequest['id'], FeatureRequest | undefined>;
+    }>;
+    requests: Record<FeatureRequest['id'], FeatureRequest>;
   };
 
   botSettings?: {
@@ -40,10 +40,10 @@ type Database = {
     defaultGuild: Record<string, unknown>;
   };
 
-  guildSettings: Record<guildId, Record<string, unknown> | undefined>;
+  guildSettings: Record<guildId, Record<string, unknown>>;
 
   userSettings: Record<userId, {
     lastVoted?: Date;
     featureRequestAutoApprove?: boolean;
-  } | undefined>;
+  }>;
 };
