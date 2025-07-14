@@ -3,7 +3,7 @@ import type express from 'express';
 import type { PathLike } from 'node:fs';
 import type { MemoryStore } from 'express-session';
 import type { PassportStatic } from 'passport';
-import type { formTypes } from 'discord-dashboard';
+import type { formTypes, optionOptions } from 'discord-dashboard';
 import type { FormTypes } from 'dbd-soft-ui';
 import type { DB as DBClass } from '@mephisto5558/mongoose-db';
 import type { Database } from './database';
@@ -169,3 +169,16 @@ declare module 'discord-api-types/v10' {
   export type Snowflake = `${bigint}`;
 }
 /* eslint-enable @typescript-eslint/ban-ts-comment */
+
+declare module 'discord-dashboard' {
+  interface optionOptions {
+    guild: { id: Discord.Guild['id'] };
+    user: { id: Discord.User['id'] };
+    newData: unknown;
+  }
+
+  interface allowedCheckOption {
+    guild: { id: Discord.Guild['id'] };
+    user: { id: Discord.User['id'] };
+  }
+}
