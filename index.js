@@ -116,7 +116,7 @@ class WebServer {
             optionType: typeof setting.type == 'function' ? await setting.type.call(this) : setting.type,
             position: setting.position,
             allowedCheck: ({ guild, user }) => {
-              if (this.db.get('botSettings', 'blacklist').includes(user.id)) return { allowed: false, errorMessage: 'You have been blacklisted from using the bot.' };
+              if (this.db.get('botSettings', 'blacklist')?.includes(user.id)) return { allowed: false, errorMessage: 'You have been blacklisted from using the bot.' };
               if (setting.auth === false) return { allowed: false, errorMessage: 'This feature has been disabled.' };
               return setting.auth?.(guild, user) ?? { allowed: true };
             }
