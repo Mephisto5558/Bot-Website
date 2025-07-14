@@ -72,6 +72,7 @@ type VoteSystemSettingsInit = {
 };
 type VoteSystemSettings = Required<VoteSystemSettingsInit>;
 
+/* eslint-disable-next-line @typescript-eslint/no-magic-numbers -- this is like a const */
 declare type HTTP_STATUS_BAD_REQUEST = 400;
 
 declare class WebServer {
