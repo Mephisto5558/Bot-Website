@@ -50,6 +50,7 @@ export declare class MongoStore extends MemoryStore {
 
 export declare class WebServerSetupper {
   client: Client<true>;
+  db: DB<Database>;
   authenticator: Awaited<ReturnType<WebServerSetupper['setupAuth']>>;
   dashboardTheme: Awaited<ReturnType<WebServerSetupper['setupDashboardTheme']>>;
   dashboard: Awaited<ReturnType<WebServerSetupper['setupDashboard']>>;
@@ -57,6 +58,7 @@ export declare class WebServerSetupper {
 
   constructor(
     client: Client<true>,
+    db: DB<Database>,
     baseConfig: {
       clientSecret: string;
       baseURL: string;

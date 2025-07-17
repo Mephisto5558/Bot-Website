@@ -17,17 +17,19 @@ const
 
   RATELIMIT_MAX_REQUESTS = 100,
   RATELIMIT_MS = 6e4, // 1min in ms
-  MAX_COOKIE_AGE = 3.154e10; // 1y in ms
-
+  MAX_COOKIE_AGE = 3.154e10, // 1y in ms
+  VIEW_COOLDOWN_MS = 3e5; // 5min in ms
 
 module.exports.WebServerSetupper = class WebServerSetupper {
-  client; authenticator; dashboardTheme; dashboard; router;
+  client; db; authenticator; dashboardTheme; dashboard; router;
 
   /**
-   * @param {import('discord.js').Client<true>} client
-   * @param {ConstructorParameters<typeof import('.').WebServerSetupper>[1]} baseConfig */
-  constructor(client, baseConfig) {
+   * @param {ConstructorParameters<typeof import('.').WebServerSetupper>[0]} client
+   * @param {ConstructorParameters<typeof import('.').WebServerSetupper>[1]} db
+   * @param {ConstructorParameters<typeof import('.').WebServerSetupper>[2]} baseConfig */
+  constructor(client, db, baseConfig) {
     this.client = client;
+    this.db = db;
     this.baseConfig = baseConfig;
   }
 
@@ -226,6 +228,19 @@ module.exports.WebServerSetupper = class WebServerSetupper {
       )
       .use('/api/:v/internal', cors({ origin: this.baseConfig.baseURL }))
       .use(
+        (req, _, next) => {
+          // only track normal GET requests
+          if (!req.user?.id || req.method != 'GET' || req.xhr || req.accepts('html') === false) return next();
+
+          const pagePath = req.path.replaceAll(/\/+/g, '.') || '.root';
+          const viewData = this.db.get('userSettings', `${req.user.id}.pageViews${pagePath}`);
+          const now = new Date();
+
+          if (!viewData?.lastVisited || now.getTime() - viewData.lastVisited.getTime() > VIEW_COOLDOWN_MS)
+            void this.db.update('userSettings', `${req.user.id}.pageViews${pagePath}`, { count: (viewData?.count ?? 0) + 1, lastVisited: now });
+
+          return next();
+        },
         ...handlers,
         (req, res) => {
           if (config.errorPagesDir && req.headers['user-agent']?.includes('Mozilla'))

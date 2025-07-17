@@ -43,7 +43,7 @@ class WebServer {
     this.keys = keys;
     this.logError = errorLoggingFunction;
 
-    this.#setupper = new WebServerSetupper(this.client, { clientSecret: this.keys.secret, baseURL: this.config.domain, defaultAPIVersion: this.config.defaultAPIVersion });
+    this.#setupper = new WebServerSetupper(this.client, this.db, { clientSecret: this.keys.secret, baseURL: this.config.domain, defaultAPIVersion: this.config.defaultAPIVersion });
   }
 
   /**

@@ -45,5 +45,9 @@ type Database = {
   userSettings: Record<userId, {
     lastVoted?: Date;
     featureRequestAutoApprove?: boolean;
+    pageViews?: Record<string, {
+      count: number;
+      lastVisited: Date;
+    }>;
   }>;
 };
