@@ -173,12 +173,9 @@ module.exports.WebServerSetupper = class WebServerSetupper {
       catch { /* empty */ }
 
       if (subDirs) {
-        const filename = subDirs.find(e => {
-          if (!e.isFile()) return false;
-
-          const file = path.basename(pathStr);
-          return file.includes('.') ? e.name.startsWith(`${file}.`) : e.name.startsWith(file);
-        })?.name;
+        const filename = subDirs
+          .filter(e => e.isFile() && path.parse(e.name).name == path.basename(pathStr))
+          .sort((a, b) => Number(b.name.endsWith('.html')) - Number(a.name.endsWith('.html')) || a.name.localeCompare(b.name))[0]?.name;
 
         if (!filename) {
           const html = await WebServerSetupper.createNavigationButtons(pathStr, req.path);
