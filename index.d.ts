@@ -96,7 +96,7 @@ declare class WebServer {
   dashboardOptionCount: unknown[] | null;
 
   /** modified default settings of embedBuilder */
-  formTypes: (Omit<formTypes, 'embedBuilder'> & { embedBuilder: ReturnType<(typeof formTypes)['embedBuilder']>; _embedBuilder: formTypes['embedBuilder'] }) | null;
+  formTypes: Omit<formTypes, 'embedBuilder'> & { embedBuilder: ReturnType<(typeof formTypes)['embedBuilder']>; _embedBuilder: formTypes['embedBuilder'] } | null;
   dashboard: Dashboard | null;
   router: express.Router | null;
   app: express.Express | null;
