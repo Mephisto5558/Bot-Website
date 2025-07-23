@@ -157,35 +157,37 @@ module.exports.WebServerSetupper = class WebServerSetupper {
         /* eslint-disable new-cap */
         if (req.session.user?.accessToken && !req.AssistantsSecureStorage.GetUser(req.session.user.id))
           req.AssistantsSecureStorage.SaveUser(req.session.user.id, req.session.user.accessToken);
-          /* eslint-enable new-cap */
+        /* eslint-enable new-cap */
         return next();
       }
       if (!customPagesPath) return next();
 
       const
         absoluteCustomPagesPath = path.resolve(process.cwd(), customPagesPath),
-        pathStr = path.resolve(absoluteCustomPagesPath, path.normalize('.' + req.path));
+        parsedPath = path.parse(path.resolve(absoluteCustomPagesPath, path.normalize('.' + req.path)));
 
-      if (!pathStr.startsWith(absoluteCustomPagesPath)) return res.sendStatus(HTTP_STATUS_FORBIDDEN);
-
-      const dir = path.dirname(pathStr);
+      if (!parsedPath.dir.startsWith(absoluteCustomPagesPath)) return res.sendStatus(HTTP_STATUS_FORBIDDEN);
 
       let /** @type {import('..').customPage | undefined} */ data, subDirs;
-      try { subDirs = await readdir(dir, { withFileTypes: true }); }
+      try { subDirs = await readdir(parsedPath.dir, { withFileTypes: true }); }
       catch { /* empty */ }
 
       if (subDirs) {
-        const filename = subDirs
-          .filter(e => e.isFile() && path.parse(e.name).name == path.basename(pathStr))
-          .sort((a, b) => Number(b.name.endsWith('.html')) - Number(a.name.endsWith('.html')) || a.name.localeCompare(b.name))[0]?.name;
+        const filename = subDirs.find(e => e.isFile() && e.name == parsedPath.base)?.name
+          ?? subDirs
+            .filter(e => e.isFile() && path.parse(e.name).name.startsWith(parsedPath.name))
+            .map(e => path.parse(e.name))
+            .sort((a, b) => Number(b.name == parsedPath.name) - Number(a.name == parsedPath.name)
+              || Number(b.ext == '.html') - Number(a.ext == '.html')
+              || a.name.localeCompare(b.name))[0]?.base;
 
         if (!filename) {
-          const html = await WebServerSetupper.createNavigationButtons(pathStr, req.path);
+          const html = await WebServerSetupper.createNavigationButtons(parsedPath.dir, req.path);
           return void (html ? res.send(html) : next());
         }
 
-        if (filename.endsWith('.html')) return res.sendFile(path.join(dir, filename));
-        data = await require(path.join(dir, filename));
+        if (!filename.endsWith('.js')) return res.sendFile(path.join(parsedPath.dir, filename));
+        data = await require(path.join(parsedPath.dir, filename));
       }
 
       return this.#handleCustomSite.call(webServer, req, res, next, data);
