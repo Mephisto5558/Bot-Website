@@ -232,12 +232,12 @@ module.exports.WebServerSetupper = class WebServerSetupper {
           // only track normal GET requests
           if (!req.user?.id || req.method != 'GET' || req.xhr || req.accepts('html') === false) return next();
 
-          const pagePath = req.path.replaceAll(/\/+/g, '.') || '.root';
-          const viewData = this.db.get('userSettings', `${req.user.id}.pageViews${pagePath}`);
+          const pagePath = req.path.split('/').filter(Boolean).join('.') || 'root';
+          const viewData = this.db.get('userSettings', `${req.user.id}.pageViews.${pagePath}`);
           const now = new Date();
 
           if (!viewData?.lastVisited || now.getTime() - viewData.lastVisited.getTime() > VIEW_COOLDOWN_MS)
-            void this.db.update('userSettings', `${req.user.id}.pageViews${pagePath}`, { count: (viewData?.count ?? 0) + 1, lastVisited: now });
+            void this.db.update('userSettings', `${req.user.id}.pageViews.${pagePath}`, { count: (viewData?.count ?? 0) + 1, lastVisited: now });
 
           return next();
         },
