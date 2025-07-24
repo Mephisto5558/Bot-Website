@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@types/express": "^5.0.3",
+    "@types/passport": "^1.0.17",
     "compression": "^1.8.0",
     "cors": "^2.8.5",
     "dbd-soft-ui": "^1.7.40-beta.1",
@@ -38,7 +39,6 @@
     "@mephisto5558/eslint-config": "latest",
     "@mephisto5558/mongoose-db": "latest",
     "@types/express-session": "1.18.2",
-    "@types/passport": "^1.0.17",
     "@types/passport-discord": "^0.1.14",
     "discord.js": "^14.21.0",
     "eslint": "^9.30.0"
