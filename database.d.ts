@@ -28,7 +28,7 @@ type Database = {
           data: string | null;
         };
       };
-      user?: Profile & APIUser;
+      user?: Profile | APIUser;
       loggedInLastTime?: boolean;
     }>;
     requests: Record<FeatureRequest['id'], FeatureRequest>;
