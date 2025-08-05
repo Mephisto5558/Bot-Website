@@ -247,7 +247,7 @@ module.exports = class VoteSystem {
     if (!userId) return;
 
     try {
-      await (await this.client.users.fetch(userId)).send({
+      await this.client.users.send(userId, {
         embeds: [{
           ...embedData[mode],
           description: `${embedData[mode].description ?? ''}\n\n"${request.title}"\n${websiteUrl}?q=${request.id}`
