@@ -40,6 +40,7 @@
     "@mephisto5558/eslint-config": "latest",
     "@mephisto5558/mongoose-db": "latest",
     "@types/express-session": "1.18.2",
+    "better-typescript-lib": "^2.11.0",
     "discord.js": "^14.21.0",
     "eslint": "^9.30.0"
   },
