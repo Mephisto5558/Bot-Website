@@ -140,8 +140,7 @@ declare class VoteSystem {
   add(title: string, body: string, userId: Discord.Snowflake): Promise<FeatureRequest | RequestError>;
   approve(featureId: FeatureRequest['id'], userId: Discord.Snowflake): Promise<FeatureRequest | RequestError>;
   update(features: FeatureRequest | FeatureRequest[], userId: Discord.Snowflake): Promise<
-    { success: true }
-    | { code: HTTP_STATUS_BAD_REQUEST; errors: { id: FeatureRequest['id']; error: string }[] }
+    { success: true } | RequestError | { errorCode: HTTP_STATUS_BAD_REQUEST; errors: { id: FeatureRequest['id']; error: string }[] }
   >;
   delete(featureId: FeatureRequest['id'], userId: Discord.Snowflake): Promise<{ success: true } | RequestError>;
   addVote(featureId: FeatureRequest['id'], userId: Discord.Snowflake, type: 'up' | 'down'): Promise<FeatureRequest | RequestError>;

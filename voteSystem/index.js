@@ -175,7 +175,7 @@ module.exports = class VoteSystem {
       this.settings.userChangeNotificationEmbed.updated.color
     );
 
-    return errorList.length ? { code: HTTP_STATUS_BAD_REQUEST, errors: errorList } : { success: true };
+    return errorList.length ? { errorCode: HTTP_STATUS_BAD_REQUEST, errors: errorList } : { success: true };
   }
 
   /** @type {import('..').VoteSystem['delete']} */
