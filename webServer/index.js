@@ -165,28 +165,35 @@ module.exports.WebServerSetupper = class WebServerSetupper {
         absoluteCustomPagesPath = path.resolve(process.cwd(), customPagesPath),
         parsedPath = path.parse(path.resolve(absoluteCustomPagesPath, path.normalize('.' + req.path)));
 
-      if (!parsedPath.dir.startsWith(absoluteCustomPagesPath)) return res.sendStatus(HTTP_STATUS_FORBIDDEN);
+      if (parsedPath.dir != absoluteCustomPagesPath && !parsedPath.dir.startsWith(absoluteCustomPagesPath + path.sep))
+        return res.sendStatus(HTTP_STATUS_FORBIDDEN);
 
-      let /** @type {import('..').customPage | undefined} */ data, subDirs;
+      let
+        /** @type {import('..').customPage | undefined} */ data,
+        /** @type {import('fs').Dirent[] | undefined} */ subDirs;
       try { subDirs = await readdir(parsedPath.dir, { withFileTypes: true }); }
       catch { /* empty */ }
 
-      if (subDirs) {
-        const filename = subDirs.find(e => e.isFile() && e.name == parsedPath.base)?.name
+      if (subDirs?.length) {
+        const subDir = subDirs.find(e => e.isFile() && e.name == parsedPath.base)
           ?? subDirs
             .filter(e => e.isFile() && path.parse(e.name).name.startsWith(parsedPath.name))
-            .map(e => path.parse(e.name))
-            .sort((a, b) => Number(b.name == parsedPath.name) - Number(a.name == parsedPath.name)
-              || Number(b.ext == '.html') - Number(a.ext == '.html')
-              || a.name.localeCompare(b.name))[0]?.base;
+            .toSorted((a, b) => {
+              a = path.parse(a);
+              b = path.parse(b);
 
-        if (!filename) {
-          const html = await WebServerSetupper.createNavigationButtons(parsedPath.dir, req.path);
+              return Number(b.name == parsedPath.name) - Number(a.name == parsedPath.name)
+                || Number(b.ext == '.html') - Number(a.ext == '.html')
+                || a.name.localeCompare(b.name);
+            })[0];
+
+        if (!subDir) {
+          const html = await WebServerSetupper.createNavigationButtons(path.join(parsedPath.dir, parsedPath.name), req.path);
           return void (html ? res.send(html) : next());
         }
 
-        if (!filename.endsWith('.js')) return res.sendFile(path.join(parsedPath.dir, filename));
-        data = await require(path.join(parsedPath.dir, filename));
+        if (!subDir.name.endsWith('.js')) return res.sendFile(path.join(subDir.path, subDir.name));
+        data = await require(path.join(subDir.path, subDir.name));
       }
 
       return this.#handleCustomSite.call(webServer, req, res, next, data);
