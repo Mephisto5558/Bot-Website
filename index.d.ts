@@ -3,6 +3,7 @@ import type express from 'express';
 import type { PathLike } from 'node:fs';
 import type { MemoryStore } from 'express-session';
 import type { PassportStatic } from 'passport';
+import type Passport from 'passport-discord-auth'
 import type { formTypes, optionOptions } from 'discord-dashboard';
 import type { FormTypes } from 'dbd-soft-ui';
 import type { DB as DBClass } from '@mephisto5558/mongoose-db';
@@ -72,7 +73,6 @@ type VoteSystemSettingsInit = {
 };
 type VoteSystemSettings = Required<VoteSystemSettingsInit>;
 
-/* eslint-disable-next-line @typescript-eslint/no-magic-numbers -- this is like a const */
 declare type HTTP_STATUS_BAD_REQUEST = 400;
 
 declare class WebServer {
@@ -180,5 +180,12 @@ declare module 'discord-dashboard' {
   interface allowedCheckOption {
     guild: { id: Discord.Guild['id'] };
     user: { id: Discord.User['id'] };
+  }
+}
+
+declare global {
+  namespace Express {
+    /* eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-empty-object-type -- needs to be an interface */
+    interface User extends Passport.Profile {}
   }
 }
