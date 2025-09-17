@@ -23,7 +23,6 @@
   "dependencies": {
     "@types/express": "^5.0.3",
     "@types/passport": "^1.0.17",
-    "@types/passport-discord": "^0.1.14",
     "compression": "^1.8.1",
     "cors": "^2.8.5",
     "dbd-soft-ui": "^1.7.40-beta.1",
@@ -34,7 +33,7 @@
     "express-session": "^1.18.2",
     "express-xss-sanitizer": "^2.0.0",
     "passport": "^0.7.0",
-    "passport-discord": "^0.1.4"
+    "passport-discord-auth": "^1.2.0"
   },
   "devDependencies": {
     "@mephisto5558/eslint-config": "latest",

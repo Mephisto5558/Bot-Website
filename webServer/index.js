@@ -2,9 +2,8 @@ const
   { readdir } = require('node:fs/promises'),
   path = require('node:path'),
   { HTTP_STATUS_MOVED_PERMANENTLY, HTTP_STATUS_FORBIDDEN, HTTP_STATUS_NOT_FOUND, HTTP_STATUS_METHOD_NOT_ALLOWED } = require('node:http2').constants,
-  { OAuth2Scopes } = require('discord.js'),
   { Authenticator } = require('passport'),
-  Strategy = require('passport-discord'),
+  { Strategy, Scope } = require('passport-discord-auth'),
   DBD = require('discord-dashboard'),
   /** @type {(config: import('dbd-soft-ui').themeConfig) => unknown} */ SoftUITheme = require('dbd-soft-ui'),
   express = require('express'),
@@ -21,7 +20,7 @@ const
   VIEW_COOLDOWN_MS = 3e5; // 5min in ms
 
 module.exports.WebServerSetupper = class WebServerSetupper {
-  client; db; authenticator; dashboardTheme; dashboard; router;
+  client; db; dashboardTheme; dashboard; router;
 
   /**
    * @param {ConstructorParameters<typeof import('.').WebServerSetupper>[0]} client
@@ -34,14 +33,14 @@ module.exports.WebServerSetupper = class WebServerSetupper {
   }
 
   /** @type {import('.').WebServerSetupper['setupAuth']} */
-  setupAuth(callbackURL = '/auth/discord/callback') {
+  setupAuth(callbackUrl = '/auth/discord/callback') {
     this.authenticator = new Authenticator().use(
       new Strategy(
         {
-          callbackURL,
+          clientId: this.client.user.id,
           clientSecret: this.baseConfig.clientSecret,
-          clientID: this.client.user.id,
-          scope: [OAuth2Scopes.Identify, OAuth2Scopes.Guilds]
+          scope: [Scope.Identify, Scope.Guilds],
+          callbackUrl
         },
         (_accessToken, _refreshToken, user, done) => done(undefined, user)
       )

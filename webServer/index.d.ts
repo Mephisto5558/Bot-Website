@@ -1,7 +1,7 @@
 import type { MemoryStore } from 'express-session';
 import type { DB, NoCacheDB } from '@mephisto5558/mongoose-db';
 import type SoftUITheme from 'dbd-soft-ui';
-import type { Profile } from 'passport-discord';
+import type { Profile } from 'passport-discord-auth';
 import type { Client } from 'discord.js';
 import type { Authenticator } from 'passport';
 import type { Database } from '../database';
@@ -66,8 +66,8 @@ export declare class WebServerSetupper {
     }
   );
 
-  /** @param callbackURL default `/auth/discord/callback` */
-  setupAuth(callbackURL?: string): Authenticator;
+  /** @param callbackUrl default `/auth/discord/callback` */
+  setupAuth(callbackUrl?: string): Authenticator;
 
   setupDashboardTheme(config: DashboardThemeOptions): ReturnType<typeof SoftUITheme>;
 

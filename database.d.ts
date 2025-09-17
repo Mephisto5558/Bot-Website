@@ -1,6 +1,6 @@
 import type { APIUser } from 'discord.js';
 import type { Cookie } from 'express-session';
-import type { Profile } from 'passport-discord';
+import type { Profile } from 'passport-discord-auth';
 import type { FeatureRequest } from '.';
 import type { sessionId } from './webServer';
 
@@ -28,7 +28,7 @@ type Database = {
           data: string | null;
         };
       };
-      user?: Profile | APIUser;
+      user?: Profile;
       loggedInLastTime?: boolean;
     }>;
     requests: Record<FeatureRequest['id'], FeatureRequest>;
