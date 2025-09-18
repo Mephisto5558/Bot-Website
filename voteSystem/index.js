@@ -1,10 +1,10 @@
 const
   { Colors } = require('discord.js'),
-  { sanitize } = require('express-xss-sanitizer'),
   {
     HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_UNAUTHORIZED, HTTP_STATUS_FORBIDDEN, HTTP_STATUS_CONFLICT,
     HTTP_STATUS_SERVICE_UNAVAILABLE
   } = require('node:http2').constants,
+  { sanitize } = require('express-xss-sanitizer'),
   DAYS_IN_WEEK = 7;
 
 module.exports = class VoteSystem {
@@ -151,8 +151,10 @@ module.exports = class VoteSystem {
         break;
       }
 
-      const title = sanitize(oTitle.trim());
-      const err = this.constructor.validateContent(this.settings, title, body.trim());
+      const
+        title = sanitize(oTitle.trim()),
+        err = this.constructor.validateContent(this.settings, title, body.trim());
+
       if (err) {
         errorList.push({ id, error: err.error });
         break;
@@ -180,9 +182,10 @@ module.exports = class VoteSystem {
 
   /** @type {import('..').VoteSystem['delete']} */
   async delete(featureId, userId) {
-    const requestAuthor = this.constructor.getRequestAuthor(featureId);
+    const
+      requestAuthor = this.constructor.getRequestAuthor(featureId),
+      error = this.validate(userId, requestAuthor, featureId);
 
-    const error = this.validate(userId, requestAuthor, featureId);
     if (error) return error;
 
     /** @type {FeatureRequest} */
@@ -223,27 +226,29 @@ module.exports = class VoteSystem {
   async sendToWebhook(title, description, color = Colors.White, url = '') {
     if (!this.config.webhookUrl) return { errorCode: HTTP_STATUS_SERVICE_UNAVAILABLE, error: 'The backend has no webhook url configured' };
 
-    const websiteUrl = this.config.domain + (this.config.port ?? 0 ? `:${this.config.port}` : '');
-    const res = await fetch(this.config.webhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: 'Teufelsbot Feature Requests',
-        /* eslint-disable-next-line camelcase */
-        avatar_url: `${websiteUrl}/favicon.ico`,
-        embeds: [{ url: `${websiteUrl}/${this.config.votingPath}${url}`, title, description, color }]
-      })
-    });
+    const
+      websiteUrl = this.config.domain + (this.config.port ?? 0 ? `:${this.config.port}` : ''),
+      res = await fetch(this.config.webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'Teufelsbot Feature Requests',
+          /* eslint-disable-next-line camelcase */
+          avatar_url: `${websiteUrl}/favicon.ico`,
+          embeds: [{ url: `${websiteUrl}/${this.config.votingPath}${url}`, title, description, color }]
+        })
+      });
 
     return { success: res.ok };
   }
 
   /** @type {import('..').VoteSystem['notifyAuthor']} */
   async notifyAuthor(request, mode) {
-    const embedData = this.settings.userChangeNotificationEmbed;
-    const websiteUrl = this.config.domain + (this.config.port ?? 0 ? `:${this.config.port}` : '') + '/' + this.config.votingPath;
+    const
+      embedData = this.settings.userChangeNotificationEmbed,
+      websiteUrl = this.config.domain + (this.config.port ?? 0 ? `:${this.config.port}` : '') + '/' + this.config.votingPath,
+      userId = this.constructor.getRequestAuthor(request);
 
-    const userId = this.constructor.getRequestAuthor(request);
     if (!userId) return;
 
     try {

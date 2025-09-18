@@ -27,6 +27,7 @@
     "cors": "^2.8.5",
     "dbd-soft-ui": "^1.7.40-beta.1",
     "discord-dashboard": "^2.3.62",
+    "discord.js": "14.x",
     "escape-html": "^1.0.3",
     "express": "^5.1.0",
     "express-rate-limit": "^8.1.0",
@@ -38,10 +39,12 @@
   "devDependencies": {
     "@mephisto5558/eslint-config": "latest",
     "@mephisto5558/mongoose-db": "latest",
+    "@types/compression": "^1.8.1",
+    "@types/escape-html": "^1.0.4",
     "@types/express-session": "^1.18.2",
-    "better-typescript-lib": "latest",
-    "discord.js": "^14.x",
-    "eslint": "^9.30.0"
+    "@types/express-xss-sanitizer": "^2.0.0",
+    "@types/node": "20.x",
+    "better-typescript-lib": "latest"
   },
   "repository": {
     "type": "git",

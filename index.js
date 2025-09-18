@@ -1,14 +1,15 @@
 /* eslint sonarjs/no-nested-functions: ["error", { threshold: 4 }] */
 
 const
-  path = require('node:path'),
-  { readdir, readFile } = require('node:fs/promises'),
-  { HTTP_STATUS_INTERNAL_SERVER_ERROR } = require('node:http2').constants,
   { GatewayIntentBits, Status } = require('discord.js'),
-  DBD = require('discord-dashboard'),
+  { readFile, readdir } = require('node:fs/promises'),
+  { HTTP_STATUS_INTERNAL_SERVER_ERROR } = require('node:http2').constants,
+  path = require('node:path'),
   DBDSoftUI = require('dbd-soft-ui'),
+  DBD = require('discord-dashboard'),
+
   VoteSystem = require('./voteSystem'),
-  { WebServerSetupper, MongoStore } = require('./webServer'),
+  { MongoStore, WebServerSetupper } = require('./webServer'),
 
   DEFAULT_PORT = 8000;
 
@@ -70,16 +71,15 @@ class WebServer {
     for (const subFolder of await readdir(this.config.settingsPath, { withFileTypes: true })) {
       if (!subFolder.isDirectory()) continue;
 
-      const index = JSON.parse(await readFile(path.join(this.config.settingsPath, subFolder.name, '_index.json'), 'utf8'));
-
-      /** @type {category['categoryOptionsList']} */
-      const optionList = [{
-        optionId: `${index.id}.spacer`,
-        title: 'Important!',
-        description: 'You need to press the submit button on the bottom of the page to save settings!',
-        optionType: DBDSoftUI.formTypes.spacer(),
-        position: -1
-      }];
+      const
+        index = JSON.parse(await readFile(path.join(this.config.settingsPath, subFolder.name, '_index.json'), 'utf8')),
+        /** @type {category['categoryOptionsList']} */ optionList = [{
+          optionId: `${index.id}.spacer`,
+          title: 'Important!',
+          description: 'You need to press the submit button on the bottom of the page to save settings!',
+          optionType: DBDSoftUI.formTypes.spacer(),
+          position: -1
+        }];
 
       if (!index.disableToggle) {
         optionList.push({

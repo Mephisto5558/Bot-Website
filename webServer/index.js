@@ -1,23 +1,25 @@
 const
   { readdir } = require('node:fs/promises'),
-  path = require('node:path'),
   { HTTP_STATUS_MOVED_PERMANENTLY, HTTP_STATUS_FORBIDDEN, HTTP_STATUS_NOT_FOUND, HTTP_STATUS_METHOD_NOT_ALLOWED } = require('node:http2').constants,
-  { Authenticator } = require('passport'),
-  { Strategy, Scope } = require('passport-discord-auth'),
-  DBD = require('discord-dashboard'),
-  /** @type {(config: import('dbd-soft-ui').themeConfig) => unknown} */ SoftUITheme = require('dbd-soft-ui'),
-  express = require('express'),
-  escapeHTML = require('escape-html'),
-  { xss } = require('express-xss-sanitizer'),
+  path = require('node:path'),
   compression = require('compression'),
   cors = require('cors'),
+  /** @type {(config: import('dbd-soft-ui').themeConfig) => unknown} */ SoftUITheme = require('dbd-soft-ui'),
+  DBD = require('discord-dashboard'),
+  escapeHTML = require('escape-html'),
+  express = require('express'),
   rateLimit = require('express-rate-limit'),
   session = require('express-session'),
+  { xss } = require('express-xss-sanitizer'),
+  { Authenticator } = require('passport'),
+  { Scope, Strategy } = require('passport-discord-auth'),
 
   RATELIMIT_MAX_REQUESTS = 100,
   RATELIMIT_MS = 6e4, // 1min in ms
   MAX_COOKIE_AGE = 3.154e10, // 1y in ms
   VIEW_COOLDOWN_MS = 3e5; // 5min in ms
+
+module.exports.MongoStore = require('./sessionStore');
 
 module.exports.WebServerSetupper = class WebServerSetupper {
   client; db; dashboardTheme; dashboard; router;
@@ -240,9 +242,10 @@ module.exports.WebServerSetupper = class WebServerSetupper {
           // only track normal GET requests
           if (!req.user?.id || req.method != 'GET' || req.xhr || req.accepts('html') === false) return next();
 
-          const pagePath = req.path.split('/').filter(Boolean).join('.') || 'root';
-          const viewData = this.db.get('userSettings', `${req.user.id}.pageViews.${pagePath}`);
-          const now = new Date();
+          const
+            pagePath = req.path.split('/').filter(Boolean).join('.') || 'root',
+            viewData = this.db.get('userSettings', `${req.user.id}.pageViews.${pagePath}`),
+            now = new Date();
 
           if (!viewData?.lastVisited || now.getTime() - viewData.lastVisited.getTime() > VIEW_COOLDOWN_MS)
             void this.db.update('userSettings', `${req.user.id}.pageViews.${pagePath}`, { count: (viewData?.count ?? 0) + 1, lastVisited: now });
@@ -316,4 +319,3 @@ module.exports.WebServerSetupper = class WebServerSetupper {
     });
   }
 };
-module.exports.MongoStore = require('./sessionStore.js');

@@ -1,18 +1,22 @@
 import type Discord from 'discord.js';
-import type express from 'express';
 import type { PathLike } from 'node:fs';
+import type { DB as DBClass } from '@mephisto5558/mongoose-db';
+import type { FormTypes } from 'dbd-soft-ui';
+import type { formTypes, optionOptions } from 'discord-dashboard';
+import type express from 'express';
 import type { MemoryStore } from 'express-session';
 import type { PassportStatic } from 'passport';
-import type Passport from 'passport-discord-auth'
-import type { formTypes, optionOptions } from 'discord-dashboard';
-import type { FormTypes } from 'dbd-soft-ui';
-import type { DB as DBClass } from '@mephisto5558/mongoose-db';
+import type Passport from 'passport-discord-auth';
 import type { Database } from './database';
 import type { DashboardOptions, DashboardThemeOptions } from './webServer';
 
 export { WebServer };
 export type { VoteSystem, VoteSystemConfig, VoteSystemSettings, FeatureRequest, dashboardSetting, customPage, commands, WebServerConfig };
 export default WebServer;
+
+// Source: https://github.com/microsoft/TypeScript/issues/54451#issue-1732749888
+type Omit<T, K extends keyof T> = { [P in keyof T as P extends K ? never : P]: T[P] };
+
 
 type DB = DBClass<Database>;
 
@@ -28,7 +32,9 @@ type FeatureRequest = {
   { votes: number; pending: undefined }
   | { votes?: number; pending: true }
 );
-type formTypes_ = Omit<formTypes & FormTypes, 'embedBuilder'> & { embedBuilder: ReturnType<(typeof formTypes)['embedBuilder']>; _embedBuilder: formTypes['embedBuilder'] };
+type formTypes_ = Omit<formTypes & FormTypes, 'embedBuilder'> & {
+  embedBuilder: ReturnType<(typeof formTypes)['embedBuilder']>; _embedBuilder: formTypes['embedBuilder'];
+};
 
 type dashboardSetting = {
   id: string;
@@ -96,13 +102,19 @@ declare class WebServer {
   dashboardOptionCount: unknown[] | null;
 
   /** modified default settings of embedBuilder */
-  formTypes: Omit<formTypes, 'embedBuilder'> & { embedBuilder: ReturnType<(typeof formTypes)['embedBuilder']>; _embedBuilder: formTypes['embedBuilder'] } | null;
+  formTypes: Omit<formTypes, 'embedBuilder'> & {
+    embedBuilder: ReturnType<(typeof formTypes)['embedBuilder']>; _embedBuilder: formTypes['embedBuilder'];
+  } | null;
+
   dashboard: Dashboard | null;
   router: express.Router | null;
   app: express.Express | null;
   voteSystem: VoteSystem | null;
 
-  init(dashboardConfig: DashboardOptions, themeConfig?: DashboardThemeOptions, voteSystemConfig?: VoteSystemConfig, voteSystemSettings?: VoteSystemSettingsInit): Promise<this>;
+  init(
+    dashboardConfig: DashboardOptions, themeConfig?: DashboardThemeOptions,
+    voteSystemConfig?: VoteSystemConfig, voteSystemSettings?: VoteSystemSettingsInit
+  ): Promise<this>;
 
   logError(err: Error, req: express.Request, res: express.Response): unknown;
 
@@ -136,7 +148,9 @@ declare class VoteSystem {
 
   fetchAll(): FeatureRequest[];
   get(id: FeatureRequest['id']): FeatureRequest | undefined;
-  getMany(amount: number, offset?: number, filter?: string, includePendig?: boolean, userId?: Discord.Snowflake): { cards: FeatureRequest[]; moreAvailable: boolean };
+  getMany(
+    amount: number, offset?: number, filter?: string, includePendig?: boolean, userId?: Discord.Snowflake
+  ): { cards: FeatureRequest[]; moreAvailable: boolean };
   add(title: string, body: string, userId: Discord.Snowflake): Promise<FeatureRequest | RequestError>;
   approve(featureId: FeatureRequest['id'], userId: Discord.Snowflake): Promise<FeatureRequest | RequestError>;
   update(features: FeatureRequest | FeatureRequest[], userId: Discord.Snowflake): Promise<
@@ -171,16 +185,16 @@ declare module 'discord-api-types/v10' {
 /* eslint-enable @typescript-eslint/ban-ts-comment */
 
 declare module 'discord-dashboard' {
-  interface optionOptions {
+  type optionOptions = {
     guild: { id: Discord.Guild['id'] };
     user: { id: Discord.User['id'] };
     newData: unknown;
-  }
+  };
 
-  interface allowedCheckOption {
+  type allowedCheckOption = {
     guild: { id: Discord.Guild['id'] };
     user: { id: Discord.User['id'] };
-  }
+  };
 }
 
 declare global {

@@ -1,8 +1,7 @@
-import type { APIUser } from 'discord.js';
 import type { Cookie } from 'express-session';
 import type { Profile } from 'passport-discord-auth';
-import type { FeatureRequest } from '.';
 import type { sessionId } from './webServer';
+import type { FeatureRequest } from '.';
 
 export type { Database };
 export type { sessionId } from './webServer';
