@@ -76,7 +76,10 @@ module.exports = class VoteSystem {
     const cards = this.fetchAll().filter(e => ((includePending && this.config.ownerIds?.includes(userId)) || !e.pending)
       && (e.title.includes(filter) || e.body.includes(filter) || e.id.includes(filter)));
 
-    return { cards: amount ? cards.slice(offset, offset + amount) : cards.slice(offset), moreAvailable: !!(amount && cards.length > offset + amount) };
+    return {
+      cards: amount ? cards.slice(offset, offset + amount) : cards.slice(offset),
+      moreAvailable: !!(amount && cards.length > offset + amount)
+    };
   };
 
   /** @type {import('..').VoteSystem['add']} */

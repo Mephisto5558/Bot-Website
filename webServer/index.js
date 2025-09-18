@@ -4,11 +4,11 @@ const
   path = require('node:path'),
   compression = require('compression'),
   cors = require('cors'),
-  /** @type {(config: import('dbd-soft-ui').themeConfig) => unknown} */ SoftUITheme = require('dbd-soft-ui'),
+  /** @type {import('dbd-soft-ui').default} */ SoftUITheme = require('dbd-soft-ui'),
   DBD = require('discord-dashboard'),
   escapeHTML = require('escape-html'),
   express = require('express'),
-  rateLimit = require('express-rate-limit'),
+  rateLimit = require('express-rate-limit').default,
   session = require('express-session'),
   { xss } = require('express-xss-sanitizer'),
   { Authenticator } = require('passport'),
@@ -22,7 +22,7 @@ const
 module.exports.MongoStore = require('./sessionStore');
 
 module.exports.WebServerSetupper = class WebServerSetupper {
-  client; db; dashboardTheme; dashboard; router;
+  client; db;
 
   /**
    * @param {ConstructorParameters<typeof import('.').WebServerSetupper>[0]} client
@@ -137,6 +137,10 @@ module.exports.WebServerSetupper = class WebServerSetupper {
       Object.defineProperty(req.session, 'guilds', { // Dashboard
         /** @this {import('express-session')['Session'] & { user?: import('.').session['user'] }} */
         get() { return this.user?.guilds; },
+
+        /**
+         * @this {import('express-session')['Session'] & { user?: import('.').session['user'] }}
+         * @param {import('passport-discord-auth').ProfileGuild[]} val */
         set(val) {
           this.user ??= {};
           this.user.guilds = val;
@@ -215,8 +219,9 @@ module.exports.WebServerSetupper = class WebServerSetupper {
         compression(),
         rateLimit({
           windowMs: RATELIMIT_MS,
-          max: RATELIMIT_MAX_REQUESTS,
-          message: '<body style="background-color:#111;color:#ff0000"><p style="text-align:center;top:50%;position:relative;font-size:40;">Sorry, you have been ratelimited!</p></body>'
+          limit: RATELIMIT_MAX_REQUESTS,
+          message: '<body style="background-color:#111;color:#ff0000">'
+            + '<p style="text-align:center;top:50%;position:relative;font-size:40;">Sorry, you have been ratelimited!</p></body>'
         }),
         xss(),
         session({
@@ -273,8 +278,10 @@ module.exports.WebServerSetupper = class WebServerSetupper {
 
     /* eslint-disable-next-line @typescript-eslint/no-shadow */
     return WebServerSetupper.runParsed(req, res, next, data, async (req, res, data) => {
-      if (data.method != undefined && (Array.isArray(data.method) && !data.method.some(e => e.toUpperCase() == req.method) || data.method.toUpperCase() !== req.method))
-        return res.setHeader('Allow', data.method.join?.(',') ?? data.method).sendStatus(HTTP_STATUS_METHOD_NOT_ALLOWED);
+      if (
+        data.method != undefined
+        && (Array.isArray(data.method) && !data.method.some(e => e.toUpperCase() == req.method) || data.method.toUpperCase() !== req.method)
+      ) return res.setHeader('Allow', data.method.join?.(',') ?? data.method).sendStatus(HTTP_STATUS_METHOD_NOT_ALLOWED);
       if (data.permissionCheck && !await data.permissionCheck.call(req)) return res.redirect(HTTP_STATUS_FORBIDDEN, `/error/${HTTP_STATUS_FORBIDDEN}`);
       if (data.title) res.set('title', data.title);
       if (data.static) {
@@ -296,7 +303,8 @@ module.exports.WebServerSetupper = class WebServerSetupper {
     return dir.reduce((acc, file) => {
       const name = file.isFile() ? file.name.split('.').slice(0, -1).join('.') : file.name;
 
-      let title;
+      let /** @type {string | undefined} */ title;
+      /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access -- cannot be typed */
       try { title = require(path.join(dirPath, file.name))?.title; }
       catch { /** handled by `title ??=` */ }
 

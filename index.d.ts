@@ -82,6 +82,8 @@ type VoteSystemSettings = Required<VoteSystemSettingsInit>;
 declare type HTTP_STATUS_BAD_REQUEST = 400;
 
 declare class WebServer {
+  'constructor': typeof WebServer;
+
   constructor(
     client: Discord.Client, db: DB, keys: Keys,
     config?: WebServerConfig,
@@ -131,6 +133,8 @@ declare class WebServer {
 
 type VoteSystemConfig = { domain: string; port?: number; votingPath: string; webhookUrl?: string; ownerIds?: string[] };
 declare class VoteSystem {
+  'constructor': typeof VoteSystem;
+
   /**
    * @default settings=
    * ```js
