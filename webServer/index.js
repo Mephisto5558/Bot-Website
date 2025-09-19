@@ -194,8 +194,8 @@ module.exports.WebServerSetupper = class WebServerSetupper {
             return void (html ? res.send(html) : next());
           }
 
-          if (!subDir.name.endsWith('.js')) return res.sendFile(path.join(subDir.path, subDir.name));
-          data = await require(path.join(subDir.path, subDir.name));
+          if (!subDir.name.endsWith('.js')) return res.sendFile(path.join(subDir.parentPath, subDir.name));
+          data = await require(path.join(subDir.parentPath, subDir.name));
         }
 
         return this.#handleCustomSite.call(webServer, req, res, next, data);
