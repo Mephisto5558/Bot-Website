@@ -43,8 +43,13 @@ type dashboardSetting = {
   type: formTypes_ | keyof formTypes_ | ((this: WebServer) => formTypes_ | Promise<formTypes_>);
   position: number;
 
-  get?(this: WebServer, option: category['categoryOptionsList'][0], setting: Omit<optionOptions, 'newData'>): unknown;
-  set?(this: WebServer, option: category['categoryOptionsList'][0], setting: Omit<optionOptions, 'newData'> & { data: unknown }): unknown;
+  get?(this: WebServer, option: option, setting: Omit<optionOptions, 'newData'>): unknown;
+  set?(this: WebServer, option: option, setting: Omit<optionOptions, 'newData'> & { data: unknown }): unknown;
+
+  /** if returns `undefined`, will interpret as `{ allowed: true }` */
+  auth?: false | ((
+    this: WebServer, guild: allowedCheckOption['guild'], user: allowedCheckOption['user']
+  ) => { allowed: true } | { allowed: false; errorMessage?: string }) | undefined;
 };
 type methods = 'get' | 'post' | 'put' | 'delete' | 'patch';
 type customPage = {
@@ -189,21 +194,29 @@ declare module 'discord-api-types/v10' {
 /* eslint-enable @typescript-eslint/ban-ts-comment */
 
 declare module 'discord-dashboard' {
-  type optionOptions = {
+  /* eslint-disable @typescript-eslint/consistent-type-definitions -- required for type merging */
+  interface optionOptions {
     guild: { id: Discord.Guild['id'] };
     user: { id: Discord.User['id'] };
-    newData: unknown;
-  };
+    newData?: unknown;
+  }
 
-  type allowedCheckOption = {
+  interface allowedCheckOption {
     guild: { id: Discord.Guild['id'] };
     user: { id: Discord.User['id'] };
-  };
+  }
+}
+
+declare module 'passport-discord-auth' {
+  interface Profile {
+    id: Discord.User['id'];
+  }
 }
 
 declare global {
   namespace Express {
-    /* eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-empty-object-type -- needs to be an interface */
+    /* eslint-disable-next-line @typescript-eslint/no-empty-object-type */
     interface User extends Passport.Profile {}
   }
+  /* eslint-enable @typescript-eslint/consistent-type-definitions */
 }

@@ -1,4 +1,5 @@
 const
+  { Team } = require('discord.js'),
   { readdir } = require('node:fs/promises'),
   { HTTP_STATUS_MOVED_PERMANENTLY, HTTP_STATUS_FORBIDDEN, HTTP_STATUS_NOT_FOUND, HTTP_STATUS_METHOD_NOT_ALLOWED } = require('node:http2').constants,
   path = require('node:path'),
@@ -22,7 +23,7 @@ const
 module.exports.MongoStore = require('./sessionStore');
 
 module.exports.WebServerSetupper = class WebServerSetupper {
-  client; db;
+  /** @type {import('.').WebServerSetupper['dashboard']} */ dashboard;
 
   /**
    * @param {ConstructorParameters<typeof import('.').WebServerSetupper>[0]} client
@@ -49,6 +50,7 @@ module.exports.WebServerSetupper = class WebServerSetupper {
     );
 
     this.authenticator.serializeUser((user, done) => done(undefined, user));
+    /* eslint-disable-next-line @typescript-eslint/no-unsafe-argument */
     this.authenticator.deserializeUser((user, done) => done(undefined, user));
 
     return this.authenticator;
@@ -69,8 +71,8 @@ module.exports.WebServerSetupper = class WebServerSetupper {
       },
       preloader: {},
       meta: {
-        author: (this.client.application.owner.owner ?? this.client.application.owner).username,
-        owner: (this.client.application.owner.owner ?? this.client.application.owner).username
+        author: (this.client.application.owner instanceof Team ? this.client.application.owner.owner.user : this.client.application.owner)?.username,
+        owner: (this.client.application.owner instanceof Team ? this.client.application.owner.owner.user : this.client.application.owner)?.username
       },
       ...config
     });
@@ -85,10 +87,11 @@ module.exports.WebServerSetupper = class WebServerSetupper {
     /* eslint-disable-next-line new-cap -- UpdatedClass is none of mine (and, returns a class) */
     const DBDUpdated = DBD.UpdatedClass();
 
+    /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment */
     this.dashboard = new DBDUpdated({
       acceptPrivacyPolicy: true,
       minimizedConsoleLogs: true,
-      redirectUri: '/discord/callback', // it's always this, but is still required to be configured
+      redirectUri: `${this.baseConfig.baseUrl}/discord/callback`,
       noCreateServer: true,
       useUnderMaintenance: false,
       useCategorySet: true,

@@ -37,13 +37,15 @@
     "passport-discord-auth": "^1.2.0"
   },
   "devDependencies": {
-    "@mephisto5558/eslint-config": "latest",
-    "@mephisto5558/mongoose-db": "latest",
+    "@mephisto5558/eslint-config": "github:Mephisto5558/ESLint-Config",
+    "@mephisto5558/mongoose-db": "github:Mephisto5558/Mongoose-DB",
     "@types/compression": "^1.8.1",
     "@types/escape-html": "^1.0.4",
+    "@types/express-serve-static-core": "^5.0.7",
     "@types/express-session": "^1.18.2",
     "@types/express-xss-sanitizer": "^2.0.0",
     "@types/node": "20.x",
+    "@types/passport-oauth2": "^1.8.0",
     "better-typescript-lib": "latest"
   },
   "repository": {
