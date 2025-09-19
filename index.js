@@ -222,7 +222,7 @@ class WebServer {
       })
     };
 
-    this.passport = this.#setupper.setupAuth(this.config.callbackURL);
+    this.passport = this.#setupper.setupAuth(this.config.authUrl, this.config.callbackURL);
     this.sessionStore = new MongoStore(this.db);
     this.dashboard = await this.#setupper.setupDashboard(this.keys.dbdLicense, {
       ...dashboardConfig,

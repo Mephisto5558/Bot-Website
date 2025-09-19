@@ -39,14 +39,17 @@ module.exports.WebServerSetupper = class WebServerSetupper {
   }
 
   /** @type {import('.').WebServerSetupper['setupAuth']} */
-  setupAuth(callbackUrl = '/auth/discord/callback') {
+  setupAuth(authUrl = '/auth/discord', callbackUrl = '/auth/discord/callback') {
+    this.authUrl = authUrl;
+    this.callbackUrl = callbackUrl;
+
     this.authenticator = new Authenticator().use(
       new Strategy(
         {
           clientId: this.client.user.id,
           clientSecret: this.baseConfig.clientSecret,
-          scope: [Scope.Identify, Scope.Guilds],
-          callbackUrl
+          callbackUrl: this.callbackUrl,
+          scope: [Scope.Identify, Scope.Guilds]
         },
         (_accessToken, _refreshToken, user, done) => done(undefined, user)
       )
@@ -137,6 +140,7 @@ module.exports.WebServerSetupper = class WebServerSetupper {
 
   /** @type {import('.').WebServerSetupper['setupRouter']} */
   setupRouter(customPagesPath, webServer) {
+
     /* eslint-disable-next-line new-cap -- Router is a function that returns a class instance */
     const router = express.Router()
 
