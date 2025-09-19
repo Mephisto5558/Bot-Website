@@ -198,10 +198,10 @@ class WebServer {
 
   /** @type {import('.').WebServer['init']} */
   async init(dashboardConfig = {}, themeConfig = {}, voteSystemConfig = {}, voteSystemSettings = {}) {
+    if (this.initiated) throw new Error('Already initiated');
+
     while (this.client.ws.status != Status.Ready) await new Promise(res => setTimeout(res, 10));
     await this.client.application.fetch();
-
-    if (this.initiated) throw new Error('Already initiated');
 
     this.formTypes = {
       ...DBDSoftUI.formTypes, ...DBD.formTypes, _embedBuilder: DBD.formTypes.embedBuilder, embedBuilder: DBD.formTypes.embedBuilder({
@@ -211,7 +211,7 @@ class WebServer {
       })
     };
 
-    this.passport = this.#setupper.setupAuth(this.config.callbackURL);
+    this.passport = this.#setupper.setupAuth(this.config.authUrl, this.config.callbackURL);
     this.sessionStore = new MongoStore(this.db);
     this.dashboard = await this.#setupper.setupDashboard(this.keys.dbdLicense, {
       ...dashboardConfig,

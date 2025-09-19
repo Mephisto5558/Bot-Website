@@ -52,6 +52,8 @@ export declare class WebServerSetupper {
   client: Client<true>;
   db: DB<Database>;
   authenticator: Awaited<ReturnType<WebServerSetupper['setupAuth']>>;
+  authUrl?: string;
+  callbackUrl: string;
   dashboardTheme: Awaited<ReturnType<WebServerSetupper['setupDashboardTheme']>>;
   dashboard: Awaited<ReturnType<WebServerSetupper['setupDashboard']>>;
   router: Awaited<ReturnType<WebServerSetupper['setupRouter']>>;
@@ -61,13 +63,13 @@ export declare class WebServerSetupper {
     db: DB<Database>,
     baseConfig: {
       clientSecret: string;
-      baseURL: string;
+      baseUrl: string;
       defaultAPIVersion: number;
     }
   );
 
-  /** @param callbackUrl default `/auth/discord/callback` */
-  setupAuth(callbackUrl?: string): Authenticator;
+  /** @default authUrl = '/auth/discord', callbackUrl = '/auth/discord/callback' */
+  setupAuth(authUrl?: string, callbackUrl?: string): Authenticator;
 
   setupDashboardTheme(config: DashboardThemeOptions): ReturnType<typeof SoftUITheme>;
 
