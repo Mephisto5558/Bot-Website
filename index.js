@@ -236,9 +236,7 @@ class WebServer {
 
     this.voteSystem = new VoteSystem(this.client, this.db, { ...this.config, ...voteSystemConfig }, voteSystemSettings);
 
-    this.app.listen(this.config.port, () => {
-      console.log(`Website is online on ${this.config.baseUrl}.`);
-    });
+    this.app.listen(this.config.port, () => console.log(`Website is online on ${this.config.baseUrl}.`));
 
     this.initiated = true;
     return this;
