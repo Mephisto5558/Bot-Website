@@ -79,15 +79,20 @@ type VoteSystemSettingsInit = {
   userChangeNotificationEmbed?: Record<'approved' | 'denied' | 'deleted' | 'updated', {
     title?: string;
     description?: string;
-    color?: number | Discord.ColorResolvable;
+    color?: number | Pick<Discord.ColorResolvable, string>;
   }>;
 };
-type VoteSystemSettings = Required<VoteSystemSettingsInit>;
+
+type VoteSystemSettings = Required<Omit<VoteSystemSettingsInit, 'userChangeNotificationEmbed'>> & {
+  userChangeNotificationEmbed: Record<keyof NonNullable<VoteSystemSettingsInit['userChangeNotificationEmbed']>, Required<
+    NonNullable<VoteSystemSettingsInit['userChangeNotificationEmbed']>[keyof NonNullable<VoteSystemSettingsInit['userChangeNotificationEmbed']>]
+  >>;
+};
 
 declare type HTTP_STATUS_BAD_REQUEST = 400;
 
 declare class WebServer {
-  'constructor': typeof WebServer;
+  ['constructor']: typeof WebServer;
 
   constructor(
     client: Discord.Client, db: DB, keys: Keys,
@@ -138,7 +143,7 @@ declare class WebServer {
 
 type VoteSystemConfig = { domain: string; port?: number; votingPath: string; webhookUrl?: string; ownerIds?: string[] };
 declare class VoteSystem {
-  'constructor': typeof VoteSystem;
+  ['constructor']: typeof VoteSystem;
 
   /**
    * @default settings=
@@ -152,6 +157,7 @@ declare class VoteSystem {
   constructor(client: Discord.Client<true>, db: DB, config: VoteSystemConfig, settings: VoteSystemSettingsInit);
 
   client: Discord.Client<true>;
+  db: DB;
   config: VoteSystemConfig;
   settings: VoteSystemSettings;
 

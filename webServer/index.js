@@ -140,7 +140,6 @@ module.exports.WebServerSetupper = class WebServerSetupper {
 
   /** @type {import('.').WebServerSetupper['setupRouter']} */
   setupRouter(customPagesPath, webServer) {
-
     /* eslint-disable-next-line new-cap -- Router is a function that returns a class instance */
     const router = express.Router()
 
@@ -163,46 +162,49 @@ module.exports.WebServerSetupper = class WebServerSetupper {
           }
         });
 
-      if (req.path == '/dashboard') return res.status(HTTP_STATUS_MOVED_PERMANENTLY).redirect('/manage');
-      if (!customPagesPath) return next();
+        if (req.path == '/dashboard') return res.status(HTTP_STATUS_MOVED_PERMANENTLY).redirect('/manage');
+        if (!customPagesPath) return next();
 
-      const
-        absoluteCustomPagesPath = path.resolve(process.cwd(), customPagesPath),
-        parsedPath = path.parse(path.resolve(absoluteCustomPagesPath, path.normalize('.' + (req.path == '/' ? '/index' : req.path))));
+        const
+          absoluteCustomPagesPath = path.resolve(process.cwd(), customPagesPath),
+          parsedPath = path.parse(path.resolve(absoluteCustomPagesPath, path.normalize('.' + (req.path == '/' ? '/index' : req.path))));
 
-      if (parsedPath.dir != absoluteCustomPagesPath && !parsedPath.dir.startsWith(absoluteCustomPagesPath + path.sep))
-        return res.sendStatus(HTTP_STATUS_FORBIDDEN);
+        if (parsedPath.dir != absoluteCustomPagesPath && !parsedPath.dir.startsWith(absoluteCustomPagesPath + path.sep))
+          return res.sendStatus(HTTP_STATUS_FORBIDDEN);
 
-      let
-        /** @type {import('..').customPage | undefined} */ data,
-        /** @type {import('fs').Dirent[] | undefined} */ subDirs;
+        let
+          /** @type {import('..').customPage | undefined} */ data,
+          /** @type {import('fs').Dirent[] | undefined} */ subDirs;
+
         try { subDirs = await readdir(parsedPath.dir, { withFileTypes: true }); }
         catch { /* empty */ }
 
-      if (subDirs?.length) {
-        const subDir = subDirs.find(e => e.isFile() && e.name == parsedPath.base)
-          ?? subDirs
-            .filter(e => e.isFile() && path.parse(e.name).name.startsWith(parsedPath.name))
-            .toSorted((a, b) => {
-              a = path.parse(a);
-              b = path.parse(b);
+        if (subDirs?.length) {
+          const subDir = subDirs.find(e => e.isFile() && e.name == parsedPath.base)
+            ?? subDirs
+              .filter(e => e.isFile() && path.parse(e.name).name.startsWith(parsedPath.name))
+              .toSorted((a, b) => {
+                a = path.parse(a);
+                b = path.parse(b);
 
-              return Number(b.name == parsedPath.name) - Number(a.name == parsedPath.name)
-                || Number(b.ext == '.html') - Number(a.ext == '.html')
-                || a.name.localeCompare(b.name);
-            })[0];
+                return Number(b.name == parsedPath.name) - Number(a.name == parsedPath.name)
+                  || Number(b.ext == '.html') - Number(a.ext == '.html')
+                  || a.name.localeCompare(b.name);
+              })[0];
 
-        if (!subDir) {
-          const html = await WebServerSetupper.createNavigationButtons(path.join(parsedPath.dir, parsedPath.name), req.path);
-          return void (html ? res.send(html) : next());
+          if (!subDir) {
+            const html = await WebServerSetupper.createNavigationButtons(path.join(parsedPath.dir, parsedPath.name), req.path);
+            return void (html ? res.send(html) : next());
+          }
+
+          if (!subDir.name.endsWith('.js')) return res.sendFile(path.join(subDir.parentPath, subDir.name));
+
+          /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- not fixable */
+          data = await require(path.join(subDir.parentPath, subDir.name));
         }
 
-        if (!subDir.name.endsWith('.js')) return res.sendFile(path.join(subDir.parentPath, subDir.name));
-        data = await require(path.join(subDir.parentPath, subDir.name));
-      }
-
-      return this.#handleCustomSite.call(webServer, req, res, next, data);
-    });
+        return this.#handleCustomSite.call(webServer, req, res, next, data);
+      });
 
     this.router = router;
     return this.router;
@@ -244,7 +246,7 @@ module.exports.WebServerSetupper = class WebServerSetupper {
         failureRedirect: this.authUrl,
         successRedirect: 'redirectUrl' in req.query ? req.query.redirectUrl : '/'
       })(req, res, next))
-      .use('/auth/logout', (req, res, next) => req.logOut(err => err ? next(err) : res.sendStatus(HTTP_STATUS_OK)))
+      .use('/auth/logout', (req, res, next) => req.logOut(err => (err ? next(err) : res.sendStatus(HTTP_STATUS_OK))))
       .use(
         (req, _, next) => {
           // only track normal GET requests
