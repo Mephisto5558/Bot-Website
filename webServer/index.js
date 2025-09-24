@@ -144,7 +144,6 @@ module.exports.WebServerSetupper = class WebServerSetupper {
         }
       });
 
-      if (req.path === '/') return res.redirect('/home');
       if (req.path.startsWith('/api/')) {
         const pathParts = req.path.split(/\/+/);
         if (!/^v\d+$/.test(pathParts[2]))
@@ -166,7 +165,7 @@ module.exports.WebServerSetupper = class WebServerSetupper {
 
       const
         absoluteCustomPagesPath = path.resolve(process.cwd(), customPagesPath),
-        parsedPath = path.parse(path.resolve(absoluteCustomPagesPath, path.normalize('.' + req.path)));
+        parsedPath = path.parse(path.resolve(absoluteCustomPagesPath, path.normalize('.' + (req.path == '/' ? '/index' : req.path))));
 
       if (parsedPath.dir != absoluteCustomPagesPath && !parsedPath.dir.startsWith(absoluteCustomPagesPath + path.sep))
         return res.sendStatus(HTTP_STATUS_FORBIDDEN);
