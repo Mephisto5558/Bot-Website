@@ -215,7 +215,7 @@ declare module 'passport-discord-auth' {
 
 declare global {
   namespace Express {
-    /* eslint-disable-next-line @typescript-eslint/no-empty-object-type */
+    /* eslint-disable-next-line @typescript-eslint/no-empty-object-type -- needs to be an interface */
     interface User extends Passport.Profile {}
   }
   /* eslint-enable @typescript-eslint/consistent-type-definitions */
