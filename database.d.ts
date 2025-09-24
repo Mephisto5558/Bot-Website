@@ -1,4 +1,3 @@
-import type { APIUser } from 'discord.js';
 import type { Cookie } from 'express-session';
 import type { Profile } from 'passport-discord-auth';
 import type { FeatureRequest } from '.';
