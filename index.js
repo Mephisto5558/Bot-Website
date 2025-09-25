@@ -1,20 +1,21 @@
-/* eslint sonarjs/no-nested-functions: ["error", { threshold: 4 }] */
+/* eslint sonarjs/no-nested-functions: [warn, { threshold: 4 }] */
 
 const
-  path = require('node:path'),
-  { readdir, readFile } = require('node:fs/promises'),
-  { HTTP_STATUS_INTERNAL_SERVER_ERROR } = require('node:http2').constants,
   { GatewayIntentBits, Status } = require('discord.js'),
-  DBD = require('discord-dashboard'),
+  { readdir } = require('node:fs/promises'),
+  { HTTP_STATUS_INTERNAL_SERVER_ERROR } = require('node:http2').constants,
+  path = require('node:path'),
   DBDSoftUI = require('dbd-soft-ui'),
+  DBD = require('discord-dashboard'),
+
   VoteSystem = require('./voteSystem'),
-  { WebServerSetupper, MongoStore } = require('./webServer'),
+  { MongoStore, WebServerSetupper } = require('./webServer'),
 
   DEFAULT_PORT = 8000;
 
 class WebServer {
   #setupper;
-  passport; sessionStore; formTypes; dashboard; router; app; voteSystem;
+  /** @type {import('.').WebServer['config']} */ config;
   dashboardOptionCount = []; initiated = false;
 
   /**
@@ -24,7 +25,7 @@ class WebServer {
    * @param {import('.').WebServerConfig?} config
    * @param {import('.').WebServer['logError']} errorLoggingFunction */
   constructor(client, db, keys, config, errorLoggingFunction = console.error) {
-    config = {
+    this.config = {
       support: {},
       ownerIds: [],
       domain: process.env.SERVER_IP ?? process.env.IP ?? 'http://localhost',
@@ -32,18 +33,20 @@ class WebServer {
       defaultAPIVersion: 1,
       ...config
     };
-    if (!config.domain.startsWith('http')) config.domain = `http://${config.domain}`;
-    config.baseUrl = config.port == undefined ? config.domain : config.domain + ':' + config.port;
+    if (!this.config.domain.startsWith('http')) this.config.domain = `http://${this.config.domain}`;
+    this.config.baseUrl = config.port == undefined ? this.config.domain : `${this.config.domain}:${this.config.port}`;
 
     this.#validateConstructorParams(client, db, keys, config, errorLoggingFunction);
 
     this.client = client;
     this.db = db;
-    this.config = config;
     this.keys = keys;
     this.logError = errorLoggingFunction;
 
-    this.#setupper = new WebServerSetupper(this.client, this.db, { clientSecret: this.keys.secret, baseURL: this.config.domain, defaultAPIVersion: this.config.defaultAPIVersion });
+    this.#setupper = new WebServerSetupper(this.client, this.db, {
+      clientSecret: this.keys.secret, baseUrl: this.config.baseUrl,
+      defaultAPIVersion: this.config.defaultAPIVersion
+    });
   }
 
   /**
@@ -63,23 +66,25 @@ class WebServer {
   }
 
   async #getSettings() {
-    /** @typedef {ConstructorParameters<ReturnType<import('discord-dashboard')['UpdatedClass']>>[0]['settings'][number]} category */
+    /** @typedef {globalThis.category & Pick<globalThis.option, 'getActualSet' | 'setNew'>} category */
     /** @type {category[]} */
     const categoryOptionList = [];
 
     for (const subFolder of await readdir(this.config.settingsPath, { withFileTypes: true })) {
       if (!subFolder.isDirectory()) continue;
 
-      const index = JSON.parse(await readFile(path.join(this.config.settingsPath, subFolder.name, '_index.json'), 'utf8'));
+      const
 
-      /** @type {category['categoryOptionsList']} */
-      const optionList = [{
-        optionId: `${index.id}.spacer`,
-        title: 'Important!',
-        description: 'You need to press the submit button on the bottom of the page to save settings!',
-        optionType: DBDSoftUI.formTypes.spacer(),
-        position: -1
-      }];
+        /** @type {import('.').dashboardSetting} */
+        /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- can't do anything about it */
+        index = require(path.join(process.cwd(), this.config.settingsPath, subFolder.name, '_index.json')),
+        /** @type {category['categoryOptionsList']} */ optionList = [{
+          optionId: `${index.id}.spacer`,
+          title: 'Important!',
+          description: 'You need to press the submit button on the bottom of the page to save settings!',
+          optionType: DBDSoftUI.formTypes.spacer(),
+          position: -1
+        }];
 
       if (!index.disableToggle) {
         optionList.push({
@@ -95,6 +100,7 @@ class WebServer {
         if (!file.endsWith('.js')) continue;
 
         /** @type {import('.').dashboardSetting} */
+        /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- can't do anything about it */
         const setting = require(path.join(process.cwd(), this.config.settingsPath, subFolder.name, file));
 
         if (setting.type == 'spacer') {
@@ -107,8 +113,9 @@ class WebServer {
           });
         }
         else {
-          if (this.formTypes[setting.type]) setting.type = this.formTypes[setting.type];
+          if (typeof setting.type == 'string') setting.type = this.formTypes[setting.type];
 
+          /** @type {option} */
           const option = {
             optionId: `${index.id}.${setting.id}`,
             optionName: setting.name,
@@ -116,7 +123,8 @@ class WebServer {
             optionType: typeof setting.type == 'function' ? await setting.type.call(this) : setting.type,
             position: setting.position,
             allowedCheck: ({ guild, user }) => {
-              if (this.db.get('botSettings', 'blacklist')?.includes(user.id)) return { allowed: false, errorMessage: 'You have been blacklisted from using the bot.' };
+              if (this.db.get('botSettings', 'blacklist')?.includes(user.id))
+                return { allowed: false, errorMessage: 'You have been blacklisted from using the bot.' };
               if (setting.auth === false) return { allowed: false, errorMessage: 'This feature has been disabled.' };
               return setting.auth?.(guild, user) ?? { allowed: true };
             }
@@ -149,7 +157,11 @@ class WebServer {
           const data = this.db.get('guildSettings', `${option.guild.id}.${dataPath}`) ?? this.db.get('botSettings', `defaultGuild.${dataPath}`);
           return { optionId: e.optionId, data };
         }),
-        setNew: async ({ guild, data: dataArray }) => {
+        setNew: async (
+
+          /** @type {Parameters<category['setNew']>[0] & { data: { optionId: string; data: JSONValue }[] }} */
+          { guild, data: dataArray }
+        ) => {
           for (const { optionId, data } of dataArray) {
             const option = optionList.find(e => e.optionId == optionId);
             if (option?.setNew) {
@@ -160,7 +172,7 @@ class WebServer {
             const dataPath = optionId.replaceAll(/[A-Z]/g, e => `.${e.toLowerCase()}`);
 
             if (this.db.get('guildSettings', `${guild.id}.${dataPath}`) === data) continue;
-            if (data.embed) data.embed.description ??= ' ';
+            if (typeof data == 'object' && 'embed' in data) data.embed.description ??= ' ';
 
             await this.db.update('guildSettings', `${guild.id}.${dataPath}`, data);
           }
@@ -169,28 +181,27 @@ class WebServer {
       });
     }
 
-    return categoryOptionList.sort((a, b) => a.position - b.position);
+    return categoryOptionList.toSorted((a, b) => a.position - b.position);
   }
 
   /**
    * @param {Error | import('http-errors').HttpError} err
    * @param {import('express').Request} req
    * @param {import('express').Response} res
-   * @param {import('express').NextFunction} next */
+   * @param {import('express').NextFunction} next
+   * @returns {void} */
   #reqErrorHandler(err, req, res, next) {
     if (err.code != 'ENOENT') this.logError(err);
 
+    const status = 'statusCode' in err ? err.statusCode : HTTP_STATUS_INTERNAL_SERVER_ERROR;
+
     // send html only to browser
     if (!this.config.errorPagesDir || !req.headers['user-agent']?.includes('Mozilla'))
-      return res.sendStatus(err.statusCode ?? HTTP_STATUS_INTERNAL_SERVER_ERROR);
+      return void res.sendStatus(status);
 
-    const filePath = path.join(this.config.errorPagesDir, `${err.statusCode ?? HTTP_STATUS_INTERNAL_SERVER_ERROR}.html`);
+    const filePath = path.join(this.config.errorPagesDir, `${status}.html`);
 
-    try {
-      return res
-        .status(err.statusCode ?? HTTP_STATUS_INTERNAL_SERVER_ERROR)
-        .sendFile(filePath, { root: process.cwd() });
-    }
+    try { return res.status(status).sendFile(filePath, { root: process.cwd() }); }
     catch (err) {
       if (err.code != 'ENOENT') return this.#reqErrorHandler(err, req, res, next);
     }
@@ -200,7 +211,7 @@ class WebServer {
   async init(dashboardConfig = {}, themeConfig = {}, voteSystemConfig = {}, voteSystemSettings = {}) {
     if (this.initiated) throw new Error('Already initiated');
 
-    while (this.client.ws.status != Status.Ready) await new Promise(res => setTimeout(res, 10));
+    while (this.client.ws.status != Status.Ready) await new Promise(res => void setTimeout(res, 10));
     await this.client.application.fetch();
 
     this.formTypes = {
@@ -225,7 +236,7 @@ class WebServer {
 
     this.voteSystem = new VoteSystem(this.client, this.db, { ...this.config, ...voteSystemConfig }, voteSystemSettings);
 
-    this.app.listen(this.config.port, () => { console.log(`Website is online on ${this.config.baseUrl}.`); });
+    this.app.listen(this.config.port, () => console.log(`Website is online on ${this.config.baseUrl}.`));
 
     this.initiated = true;
     return this;

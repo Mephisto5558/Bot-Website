@@ -1,18 +1,21 @@
 import type Discord from 'discord.js';
+import type { DB as DBClass } from '@mephisto5558/mongoose-db';
+import type { FormTypes } from 'dbd-soft-ui';
+import type { formTypes, optionOptions } from 'discord-dashboard';
 import type express from 'express';
-import type { PathLike } from 'node:fs';
 import type { MemoryStore } from 'express-session';
 import type { PassportStatic } from 'passport';
 import type Passport from 'passport-discord-auth';
-import type { formTypes, optionOptions } from 'discord-dashboard';
-import type { FormTypes } from 'dbd-soft-ui';
-import type { DB as DBClass } from '@mephisto5558/mongoose-db';
 import type { Database } from './database';
 import type { DashboardOptions, DashboardThemeOptions } from './webServer';
 
 export { WebServer };
 export type { VoteSystem, VoteSystemConfig, VoteSystemSettings, FeatureRequest, dashboardSetting, customPage, commands, WebServerConfig };
 export default WebServer;
+
+// Source: https://github.com/microsoft/TypeScript/issues/54451#issue-1732749888
+type Omit<T, K extends keyof T> = { [P in keyof T as P extends K ? never : P]: T[P] };
+
 
 type DB = DBClass<Database>;
 
@@ -28,7 +31,9 @@ type FeatureRequest = {
   { votes: number; pending: undefined }
   | { votes?: number; pending: true }
 );
-type formTypes_ = Omit<formTypes & FormTypes, 'embedBuilder'> & { embedBuilder: ReturnType<(typeof formTypes)['embedBuilder']>; _embedBuilder: formTypes['embedBuilder'] };
+type formTypes_ = Omit<formTypes & FormTypes, 'embedBuilder'> & {
+  embedBuilder: ReturnType<(typeof formTypes)['embedBuilder']>; _embedBuilder: formTypes['embedBuilder'];
+};
 
 type dashboardSetting = {
   id: string;
@@ -37,8 +42,13 @@ type dashboardSetting = {
   type: formTypes_ | keyof formTypes_ | ((this: WebServer) => formTypes_ | Promise<formTypes_>);
   position: number;
 
-  get?(this: WebServer, option: category['categoryOptionsList'][0], setting: Omit<optionOptions, 'newData'>): unknown;
-  set?(this: WebServer, option: category['categoryOptionsList'][0], setting: Omit<optionOptions, 'newData'> & { data: unknown }): unknown;
+  get?(this: WebServer, option: option, setting: Omit<optionOptions, 'newData'>): unknown;
+  set?(this: WebServer, option: option, setting: Omit<optionOptions, 'newData'> & { data: unknown }): unknown;
+
+  /** if returns `undefined`, will interpret as `{ allowed: true }` */
+  auth?: false | ((
+    this: WebServer, guild: allowedCheckOption['guild'], user: allowedCheckOption['user']
+  ) => { allowed: true } | { allowed: false; errorMessage?: string }) | undefined;
 };
 type methods = 'get' | 'post' | 'put' | 'delete' | 'patch';
 type customPage = {
@@ -68,14 +78,21 @@ type VoteSystemSettingsInit = {
   userChangeNotificationEmbed?: Record<'approved' | 'denied' | 'deleted' | 'updated', {
     title?: string;
     description?: string;
-    color?: number | Discord.ColorResolvable;
+    color?: number | Pick<Discord.ColorResolvable, string>;
   }>;
 };
-type VoteSystemSettings = Required<VoteSystemSettingsInit>;
+
+type VoteSystemSettings = Required<Omit<VoteSystemSettingsInit, 'userChangeNotificationEmbed'>> & {
+  userChangeNotificationEmbed: Record<keyof NonNullable<VoteSystemSettingsInit['userChangeNotificationEmbed']>, Required<
+    NonNullable<VoteSystemSettingsInit['userChangeNotificationEmbed']>[keyof NonNullable<VoteSystemSettingsInit['userChangeNotificationEmbed']>]
+  >>;
+};
 
 declare type HTTP_STATUS_BAD_REQUEST = 400;
 
 declare class WebServer {
+  ['constructor']: typeof WebServer;
+
   constructor(
     client: Discord.Client, db: DB, keys: Keys,
     config?: WebServerConfig,
@@ -96,29 +113,29 @@ declare class WebServer {
   dashboardOptionCount: unknown[] | null;
 
   /** modified default settings of embedBuilder */
-  formTypes: Omit<formTypes, 'embedBuilder'> & { embedBuilder: ReturnType<(typeof formTypes)['embedBuilder']>; _embedBuilder: formTypes['embedBuilder'] } | null;
+  formTypes: Omit<formTypes, 'embedBuilder'> & {
+    embedBuilder: ReturnType<(typeof formTypes)['embedBuilder']>; _embedBuilder: formTypes['embedBuilder'];
+  } | null;
+
   dashboard: Dashboard | null;
   router: express.Router | null;
   app: express.Express | null;
   voteSystem: VoteSystem | null;
 
-  init(dashboardConfig: DashboardOptions, themeConfig?: DashboardThemeOptions, voteSystemConfig?: VoteSystemConfig, voteSystemSettings?: VoteSystemSettingsInit): Promise<this>;
+  init(
+    dashboardConfig: DashboardOptions, themeConfig?: DashboardThemeOptions,
+    voteSystemConfig?: VoteSystemConfig, voteSystemSettings?: VoteSystemSettingsInit
+  ): Promise<this>;
 
   logError(err: Error, req: express.Request, res: express.Response): unknown;
 
   valueOf(): string;
-
-  static createNavigationButtons(dirPath: PathLike, reqPath: string): Promise<string | undefined>;
-
-  static runParsed(
-    req: express.Request, res: express.Response, next: express.NextFunction,
-    /* eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents */
-    data: customPage | unknown, fn: (req: express.Request, res: express.Response, data: customPage | unknown) => void
-  ): void;
 }
 
 type VoteSystemConfig = { domain: string; port?: number; votingPath: string; webhookUrl?: string; ownerIds?: string[] };
 declare class VoteSystem {
+  ['constructor']: typeof VoteSystem;
+
   /**
    * @default settings=
    * ```js
@@ -131,12 +148,15 @@ declare class VoteSystem {
   constructor(client: Discord.Client<true>, db: DB, config: VoteSystemConfig, settings: VoteSystemSettingsInit);
 
   client: Discord.Client<true>;
+  db: DB;
   config: VoteSystemConfig;
   settings: VoteSystemSettings;
 
   fetchAll(): FeatureRequest[];
   get(id: FeatureRequest['id']): FeatureRequest | undefined;
-  getMany(amount: number, offset?: number, filter?: string, includePendig?: boolean, userId?: Discord.Snowflake): { cards: FeatureRequest[]; moreAvailable: boolean };
+  getMany(
+    amount: number, offset?: number, filter?: string, includePendig?: boolean, userId?: Discord.Snowflake
+  ): { cards: FeatureRequest[]; moreAvailable: boolean };
   add(title: string, body: string, userId: Discord.Snowflake): Promise<FeatureRequest | RequestError>;
   approve(featureId: FeatureRequest['id'], userId: Discord.Snowflake): Promise<FeatureRequest | RequestError>;
   update(features: FeatureRequest | FeatureRequest[], userId: Discord.Snowflake): Promise<
@@ -171,10 +191,11 @@ declare module 'discord-api-types/v10' {
 /* eslint-enable @typescript-eslint/ban-ts-comment */
 
 declare module 'discord-dashboard' {
+  /* eslint-disable @typescript-eslint/consistent-type-definitions -- required for type merging */
   interface optionOptions {
     guild: { id: Discord.Guild['id'] };
     user: { id: Discord.User['id'] };
-    newData: unknown;
+    newData?: unknown;
   }
 
   interface allowedCheckOption {
@@ -183,9 +204,16 @@ declare module 'discord-dashboard' {
   }
 }
 
+declare module 'passport-discord-auth' {
+  interface Profile {
+    id: Discord.User['id'];
+  }
+}
+
 declare global {
   namespace Express {
     /* eslint-disable-next-line @typescript-eslint/no-empty-object-type -- needs to be an interface */
     interface User extends Passport.Profile {}
   }
+  /* eslint-enable @typescript-eslint/consistent-type-definitions */
 }

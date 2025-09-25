@@ -1,10 +1,10 @@
 const
-  { Colors } = require('discord.js'),
-  { sanitize } = require('express-xss-sanitizer'),
+  { Colors, DiscordAPIError } = require('discord.js'),
   {
     HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_UNAUTHORIZED, HTTP_STATUS_FORBIDDEN, HTTP_STATUS_CONFLICT,
     HTTP_STATUS_SERVICE_UNAVAILABLE
   } = require('node:http2').constants,
+  { sanitize } = require('express-xss-sanitizer'),
   DAYS_IN_WEEK = 7;
 
 module.exports = class VoteSystem {
@@ -76,10 +76,15 @@ module.exports = class VoteSystem {
     const cards = this.fetchAll().filter(e => ((includePending && this.config.ownerIds?.includes(userId)) || !e.pending)
       && (e.title.includes(filter) || e.body.includes(filter) || e.id.includes(filter)));
 
-    return { cards: amount ? cards.slice(offset, offset + amount) : cards.slice(offset), moreAvailable: !!(amount && cards.length > offset + amount) };
+    return {
+      cards: amount ? cards.slice(offset, offset + amount) : cards.slice(offset),
+      moreAvailable: !!(amount && cards.length > offset + amount)
+    };
   };
 
-  /** @type {import('..').VoteSystem['add']} */
+  /**
+   * @type {import('..').VoteSystem['add']}
+   * @this {import('..').VoteSystem} */
   async add(title, body, userId) {
     const error = this.validate(userId);
     if (error) return error;
@@ -91,11 +96,19 @@ module.exports = class VoteSystem {
     if (err) return err;
 
     const featureRequestAutoApprove = this.db.get('userSettings', `${userId}.featureRequestAutoApprove`);
-    if (!featureRequestAutoApprove && Object.keys(this.db.cache.filter((_, k) => this.constructor.getRequestAuthor(k) == userId)).length >= this.settings.maxPendingFeatureRequests)
-      return { errorCode: HTTP_STATUS_FORBIDDEN, error: `You may only have up to ${this.settings.maxPendingFeatureRequests} pending feature requests` };
+    if (
+      !featureRequestAutoApprove
+      && Object.keys(this.db.cache.filter((_, k) => this.constructor.getRequestAuthor(k) == userId)).length >= this.settings.maxPendingFeatureRequests
+    ) {
+      return {
+        errorCode: HTTP_STATUS_FORBIDDEN,
+        error: `You may only have up to ${this.settings.maxPendingFeatureRequests} pending feature requests`
+      };
+    }
 
     const id = `${userId}_${Date.now()}`;
 
+    /* eslint-disable-next-line @typescript-eslint/no-unsafe-call -- false positive */
     await this.#update(id, { id, title, body, ...featureRequestAutoApprove ? {} : { pending: true } });
 
     if (featureRequestAutoApprove) {
@@ -109,7 +122,9 @@ module.exports = class VoteSystem {
     return { title, body, id, approved: featureRequestAutoApprove };
   }
 
-  /** @type {import('..').VoteSystem['approve']} */
+  /**
+   * @type {import('..').VoteSystem['approve']}
+   * @this {import('..').VoteSystem} */
   async approve(featureId, userId) {
     const error = this.validate(userId, true);
     if (error) return error;
@@ -121,6 +136,7 @@ module.exports = class VoteSystem {
     featureReq.votes ??= 0;
     delete featureReq.pending;
 
+    /* eslint-disable-next-line @typescript-eslint/no-unsafe-call -- false positive */
     await this.#update(featureId, featureReq);
 
     void this.sendToWebhook(
@@ -134,7 +150,9 @@ module.exports = class VoteSystem {
     return featureReq;
   }
 
-  /** @type {import('..').VoteSystem['update']} */
+  /**
+   * @type {import('..').VoteSystem['update']}
+   * @this {import('..').VoteSystem} */
   async update(features, userId) {
     const error = this.validate(userId, true);
     if (error) return error;
@@ -143,7 +161,7 @@ module.exports = class VoteSystem {
 
     const
       promiseList = [],
-      errorList = [];
+      /** @type {{ id: FeatureRequest['id'], error: string }[]} */ errorList = [];
 
     for (const { id, title: oTitle, body, pending } of features) {
       if (!this.get(id)) {
@@ -151,8 +169,10 @@ module.exports = class VoteSystem {
         break;
       }
 
-      const title = sanitize(oTitle.trim());
-      const err = this.constructor.validateContent(this.settings, title, body.trim());
+      const
+        title = sanitize(oTitle.trim()),
+        err = this.constructor.validateContent(this.settings, title, body.trim());
+
       if (err) {
         errorList.push({ id, error: err.error });
         break;
@@ -178,11 +198,14 @@ module.exports = class VoteSystem {
     return errorList.length ? { errorCode: HTTP_STATUS_BAD_REQUEST, errors: errorList } : { success: true };
   }
 
-  /** @type {import('..').VoteSystem['delete']} */
+  /**
+   * @type {import('..').VoteSystem['delete']}
+   * @this {import('..').VoteSystem} */
   async delete(featureId, userId) {
-    const requestAuthor = this.constructor.getRequestAuthor(featureId);
+    const
+      requestAuthor = this.constructor.getRequestAuthor(featureId),
+      error = this.validate(userId, requestAuthor, featureId);
 
-    const error = this.validate(userId, requestAuthor, featureId);
     if (error) return error;
 
     /** @type {FeatureRequest} */
@@ -190,7 +213,8 @@ module.exports = class VoteSystem {
 
     await this.db.delete('website', `requests.${featureId}`);
     void this.sendToWebhook(
-      `${this.settings.userChangeNotificationEmbed[featureReq.pending ? 'denied' : 'deleted'].title} by ${requestAuthor == userId ? 'the author' : 'a dev'}`,
+      this.settings.userChangeNotificationEmbed[featureReq.pending ? 'denied' : 'deleted'].title
+      + ` by ${requestAuthor == userId ? 'the author' : 'a dev'}`,
       this.constructor.formatDesc(featureReq, this.settings.webhookMaxVisibleBodyLength),
       this.settings.userChangeNotificationEmbed[featureReq.pending ? 'denied' : 'deleted'].color
     );
@@ -199,7 +223,9 @@ module.exports = class VoteSystem {
     return { success: true };
   }
 
-  /** @type {import('..').VoteSystem['addVote']} */
+  /**
+   * @type {import('..').VoteSystem['addVote']}
+   * @this {import('..').VoteSystem} */
   async addVote(featureId, userId, type = 'up') {
     const error = this.validate(userId, featureId);
     if (error) return error;
@@ -215,7 +241,10 @@ module.exports = class VoteSystem {
     await this.db.update('website', `requests.${featureId}.votes`, featureReq.votes);
     await this.db.update('userSettings', `${userId}.lastVoted`, new Date());
 
-    await this.sendToWebhook(`Feature Request has been ${type} voted`, featureReq.title + `\n\nVotes: ${featureReq.votes} `, Colors.Blurple, `?q=${featureId}`);
+    await this.sendToWebhook(
+      `Feature Request has been ${type} voted`, featureReq.title + `\n\nVotes: ${featureReq.votes} `, Colors.Blurple, `?q=${featureId}`
+    );
+
     return featureReq;
   }
 
@@ -223,27 +252,31 @@ module.exports = class VoteSystem {
   async sendToWebhook(title, description, color = Colors.White, url = '') {
     if (!this.config.webhookUrl) return { errorCode: HTTP_STATUS_SERVICE_UNAVAILABLE, error: 'The backend has no webhook url configured' };
 
-    const websiteUrl = this.config.domain + (this.config.port ?? 0 ? `:${this.config.port}` : '');
-    const res = await fetch(this.config.webhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: 'Teufelsbot Feature Requests',
-        /* eslint-disable-next-line camelcase */
-        avatar_url: `${websiteUrl}/favicon.ico`,
-        embeds: [{ url: `${websiteUrl}/${this.config.votingPath}${url}`, title, description, color }]
-      })
-    });
+    const
+      websiteUrl = this.config.domain + (this.config.port ?? 0 ? `:${this.config.port}` : ''),
+      res = await fetch(this.config.webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'Teufelsbot Feature Requests',
+          /* eslint-disable-next-line camelcase */
+          avatar_url: `${websiteUrl}/favicon.ico`,
+          embeds: [{ url: `${websiteUrl}/${this.config.votingPath}${url}`, title, description, color }]
+        })
+      });
 
     return { success: res.ok };
   }
 
-  /** @type {import('..').VoteSystem['notifyAuthor']} */
+  /**
+   * @type {import('..').VoteSystem['notifyAuthor']}
+   * @this {import('..').VoteSystem} */
   async notifyAuthor(request, mode) {
-    const embedData = this.settings.userChangeNotificationEmbed;
-    const websiteUrl = this.config.domain + (this.config.port ?? 0 ? `:${this.config.port}` : '') + '/' + this.config.votingPath;
+    const
+      embedData = this.settings.userChangeNotificationEmbed,
+      websiteUrl = this.config.domain + (this.config.port ?? 0 ? `:${this.config.port}` : '') + '/' + this.config.votingPath,
+      userId = this.constructor.getRequestAuthor(request);
 
-    const userId = this.constructor.getRequestAuthor(request);
     if (!userId) return;
 
     try {
@@ -254,19 +287,21 @@ module.exports = class VoteSystem {
         }]
       });
     }
-    catch (err) {
+    catch (rawErr) {
       const
+        err = rawErr instanceof Error ? rawErr : new Error(rawErr),
         UNKNOWN_USER = 10_013,
         CANNOT_SEND = 50_007;
 
-      if (![UNKNOWN_USER, CANNOT_SEND].includes(err.code)) throw err;
+      if (!(err instanceof DiscordAPIError) || ![UNKNOWN_USER, CANNOT_SEND].includes(err.code)) throw err;
     }
   }
 
   /** @type {import('..').VoteSystem['validate']} */
   validate(userId, requireBeingOwner, featureId) {
     if (!userId) return { errorCode: HTTP_STATUS_UNAUTHORIZED, error: 'User ID is missing.' };
-    if (this.db.get('botSettings', 'blacklist')?.includes(userId)) return { errorCode: HTTP_STATUS_FORBIDDEN, error: 'You have been blacklisted from using the bot.' };
+    if (this.db.get('botSettings', 'blacklist')?.includes(userId))
+      return { errorCode: HTTP_STATUS_FORBIDDEN, error: 'You have been blacklisted from using the bot.' };
     if (!(requireBeingOwner === userId || this.config.ownerIds.includes(userId)))
       return { errorCode: HTTP_STATUS_FORBIDDEN, error: 'You do not have permission to perform this action.' };
 
@@ -291,7 +326,9 @@ module.exports = class VoteSystem {
   }
 
   /** @type {typeof import('..').VoteSystem['formatDesc']} */
-  static formatDesc({ title = '', body = '' }, maxVisibleBodyLength) { return `**${title}**\n\n${body.length > maxVisibleBodyLength ? body.slice(maxVisibleBodyLength ?? 0) + '...' : body}`; }
+  static formatDesc({ title = '', body = '' }, maxVisibleBodyLength) {
+    return `**${title}**\n\n${body.length > maxVisibleBodyLength ? body.slice(maxVisibleBodyLength ?? 0) + '...' : body}`;
+  }
 
   /** @type {typeof import('..').VoteSystem['isInCurrentWeek']} */
   static isInCurrentWeek(date) {
@@ -311,7 +348,7 @@ module.exports = class VoteSystem {
 
   /** @type {typeof import('..').VoteSystem['getRequestAuthor']} */
   static getRequestAuthor(request) {
-    const userId = (request.id ?? request).split('_')[0];
+    const userId = ('id' in request ? request.id : request).split('_')[0];
     return Number.isNaN(Number(userId)) ? '' : userId;
   }
 };

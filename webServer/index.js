@@ -1,26 +1,32 @@
 const
+  { Team } = require('discord.js'),
   { readdir } = require('node:fs/promises'),
+  {
+    HTTP_STATUS_OK, HTTP_STATUS_MOVED_PERMANENTLY,
+    HTTP_STATUS_FORBIDDEN, HTTP_STATUS_NOT_FOUND, HTTP_STATUS_METHOD_NOT_ALLOWED
+  } = require('node:http2').constants,
   path = require('node:path'),
-  { HTTP_STATUS_OK, HTTP_STATUS_MOVED_PERMANENTLY, HTTP_STATUS_FORBIDDEN, HTTP_STATUS_NOT_FOUND, HTTP_STATUS_METHOD_NOT_ALLOWED } = require('node:http2').constants,
-  { Authenticator } = require('passport'),
-  { Strategy, Scope } = require('passport-discord-auth'),
-  DBD = require('discord-dashboard'),
-  /** @type {(config: import('dbd-soft-ui').themeConfig) => unknown} */ SoftUITheme = require('dbd-soft-ui'),
-  express = require('express'),
-  escapeHTML = require('escape-html'),
-  { xss } = require('express-xss-sanitizer'),
   compression = require('compression'),
   cors = require('cors'),
-  rateLimit = require('express-rate-limit'),
+  /** @type {import('dbd-soft-ui').default} */ SoftUITheme = require('dbd-soft-ui'),
+  DBD = require('discord-dashboard'),
+  escapeHTML = require('escape-html'),
+  express = require('express'),
+  rateLimit = require('express-rate-limit').default,
   session = require('express-session'),
+  { xss } = require('express-xss-sanitizer'),
+  { Authenticator } = require('passport'),
+  { Scope, Strategy } = require('passport-discord-auth'),
 
   RATELIMIT_MAX_REQUESTS = 100,
   RATELIMIT_MS = 6e4, // 1min in ms
   MAX_COOKIE_AGE = 3.154e10, // 1y in ms
   VIEW_COOLDOWN_MS = 3e5; // 5min in ms
 
+module.exports.MongoStore = require('./sessionStore');
+
 module.exports.WebServerSetupper = class WebServerSetupper {
-  client; db; dashboardTheme; dashboard; router;
+  /** @type {import('.').WebServerSetupper['dashboard']} */ dashboard;
 
   /**
    * @param {ConstructorParameters<typeof import('.').WebServerSetupper>[0]} client
@@ -37,6 +43,7 @@ module.exports.WebServerSetupper = class WebServerSetupper {
     this.authUrl = authUrl;
     this.callbackUrl = callbackUrl;
 
+    /** @type {import('.').WebServerSetupper['authenticator']} */
     this.authenticator = new Authenticator().use(
       new Strategy(
         {
@@ -50,6 +57,7 @@ module.exports.WebServerSetupper = class WebServerSetupper {
     );
 
     this.authenticator.serializeUser((user, done) => done(undefined, user));
+    /* eslint-disable-next-line @typescript-eslint/no-unsafe-argument */
     this.authenticator.deserializeUser((user, done) => done(undefined, user));
 
     return this.authenticator;
@@ -70,8 +78,8 @@ module.exports.WebServerSetupper = class WebServerSetupper {
       },
       preloader: {},
       meta: {
-        author: (this.client.application.owner.owner ?? this.client.application.owner).username,
-        owner: (this.client.application.owner.owner ?? this.client.application.owner).username
+        author: (this.client.application.owner instanceof Team ? this.client.application.owner.owner.user : this.client.application.owner)?.username,
+        owner: (this.client.application.owner instanceof Team ? this.client.application.owner.owner.user : this.client.application.owner)?.username
       },
       ...config
     });
@@ -86,10 +94,11 @@ module.exports.WebServerSetupper = class WebServerSetupper {
     /* eslint-disable-next-line new-cap -- UpdatedClass is none of mine (and, returns a class) */
     const DBDUpdated = DBD.UpdatedClass();
 
+    /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment */
     this.dashboard = new DBDUpdated({
       acceptPrivacyPolicy: true,
       minimizedConsoleLogs: true,
-      redirectUri: '/discord/callback', // it's always this, but is still required to be configured
+      redirectUri: `${this.baseConfig.baseUrl}/discord/callback`,
       noCreateServer: true,
       useUnderMaintenance: false,
       useCategorySet: true,
@@ -132,74 +141,71 @@ module.exports.WebServerSetupper = class WebServerSetupper {
 
   /** @type {import('.').WebServerSetupper['setupRouter']} */
   setupRouter(customPagesPath, webServer) {
-    /* eslint-disable-next-line new-cap -- Router is a function that returns a class */
-    const router = express.Router();
-    router.use(async (req, res, next) => {
-      Object.defineProperty(req.session, 'guilds', { // Dashboard
+    /* eslint-disable-next-line new-cap -- Router is a function that returns a class instance */
+    const router = express.Router()
+
+      // `@types/express-serve-static-core` has a to-do to add typing for regex paths
+      .use('/api{/*path}', (/** @type {import('express').Request<{path: string[]}>} */ req, res, next) => {
+        if (/^v\d+$/.test(req.params.path[0])) return next();
+        return res.redirect(HTTP_STATUS_MOVED_PERMANENTLY, `/api/v${this.baseConfig.defaultAPIVersion}/${req.params.path.join('/')}`);
+      })
+      .use(async (req, res, next) => {
+        Object.defineProperty(req.session, 'guilds', { // Dashboard
         /** @this {import('express-session')['Session'] & { user?: import('.').session['user'] }} */
-        get() { return this.user?.guilds; },
-        set(val) {
-          this.user ??= {};
-          this.user.guilds = val;
+          get() { return this.user?.guilds; },
+
+          /**
+           * @this {import('express-session')['Session'] & { user?: import('.').session['user'] }}
+           * @param {import('passport-discord-auth').ProfileGuild[]} val */
+          set(val) {
+            this.user ??= {};
+            this.user.guilds = val;
+          }
+        });
+
+        if (req.path == '/dashboard') return res.status(HTTP_STATUS_MOVED_PERMANENTLY).redirect('/manage');
+        if (!customPagesPath) return next();
+
+        const
+          absoluteCustomPagesPath = path.resolve(process.cwd(), customPagesPath),
+          parsedPath = path.parse(path.resolve(absoluteCustomPagesPath, path.normalize('.' + (req.path == '/' ? '/index' : req.path))));
+
+        if (parsedPath.dir != absoluteCustomPagesPath && !parsedPath.dir.startsWith(absoluteCustomPagesPath + path.sep))
+          return res.redirect(HTTP_STATUS_FORBIDDEN, `/error/${HTTP_STATUS_FORBIDDEN}`);
+
+        let
+          /** @type {import('..').customPage | undefined} */ data,
+          /** @type {import('fs').Dirent[] | undefined} */ subDirs;
+
+        try { subDirs = await readdir(parsedPath.dir, { withFileTypes: true }); }
+        catch { /* empty */ }
+
+        if (subDirs?.length) {
+          const subDir = subDirs.find(e => e.isFile() && e.name == parsedPath.base)
+            ?? subDirs
+              .filter(e => e.isFile() && path.parse(e.name).name.startsWith(parsedPath.name))
+              .toSorted((a, b) => {
+                a = path.parse(a);
+                b = path.parse(b);
+
+                return Number(b.name == parsedPath.name) - Number(a.name == parsedPath.name)
+                  || Number(b.ext == '.html') - Number(a.ext == '.html')
+                  || a.name.localeCompare(b.name);
+              })[0];
+
+          if (!subDir) {
+            const html = await WebServerSetupper.createNavigationButtons(path.join(parsedPath.dir, parsedPath.name), req.path);
+            return void (html ? res.send(html) : next());
+          }
+
+          if (!subDir.name.endsWith('.js')) return res.sendFile(path.join(subDir.parentPath, subDir.name));
+
+          /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- not fixable */
+          data = await require(path.join(subDir.parentPath, subDir.name));
         }
+
+        return this.#handleCustomSite.call(webServer, req, res, next, data);
       });
-
-      if (req.path.startsWith('/api/')) {
-        const pathParts = req.path.split(/\/+/);
-        if (!/^v\d+$/.test(pathParts[2]))
-          return res.redirect(HTTP_STATUS_MOVED_PERMANENTLY, `/api/v${this.baseConfig.defaultAPIVersion}/${pathParts.slice(2).join('/')}`);
-      }
-      if (req.path == '/dashboard') return res.status(HTTP_STATUS_MOVED_PERMANENTLY).redirect('/manage');
-      if (req.path == '/callback') { // Dashboard
-        if (req.query.code != undefined) req.session.user.accessToken = req.query.code;
-        return next();
-      }
-      if (req.path == '/guilds/reload') { // Dashboard
-        /* eslint-disable new-cap */
-        if (req.session.user?.accessToken && !req.AssistantsSecureStorage.GetUser(req.session.user.id))
-          req.AssistantsSecureStorage.SaveUser(req.session.user.id, req.session.user.accessToken);
-        /* eslint-enable new-cap */
-        return next();
-      }
-      if (!customPagesPath) return next();
-
-      const
-        absoluteCustomPagesPath = path.resolve(process.cwd(), customPagesPath),
-        parsedPath = path.parse(path.resolve(absoluteCustomPagesPath, path.normalize('.' + (req.path == '/' ? '/index' : req.path))));
-
-      if (parsedPath.dir != absoluteCustomPagesPath && !parsedPath.dir.startsWith(absoluteCustomPagesPath + path.sep))
-        return res.sendStatus(HTTP_STATUS_FORBIDDEN);
-
-      let
-        /** @type {import('..').customPage | undefined} */ data,
-        /** @type {import('fs').Dirent[] | undefined} */ subDirs;
-      try { subDirs = await readdir(parsedPath.dir, { withFileTypes: true }); }
-      catch { /* empty */ }
-
-      if (subDirs?.length) {
-        const subDir = subDirs.find(e => e.isFile() && e.name == parsedPath.base)
-          ?? subDirs
-            .filter(e => e.isFile() && path.parse(e.name).name.startsWith(parsedPath.name))
-            .toSorted((a, b) => {
-              a = path.parse(a);
-              b = path.parse(b);
-
-              return Number(b.name == parsedPath.name) - Number(a.name == parsedPath.name)
-                || Number(b.ext == '.html') - Number(a.ext == '.html')
-                || a.name.localeCompare(b.name);
-            })[0];
-
-        if (!subDir) {
-          const html = await WebServerSetupper.createNavigationButtons(path.join(parsedPath.dir, parsedPath.name), req.path);
-          return void (html ? res.send(html) : next());
-        }
-
-        if (!subDir.name.endsWith('.js')) return res.sendFile(path.join(subDir.path, subDir.name));
-        data = await require(path.join(subDir.path, subDir.name));
-      }
-
-      return this.#handleCustomSite.call(webServer, req, res, next, data);
-    });
 
     this.router = router;
     return this.router;
@@ -215,8 +221,9 @@ module.exports.WebServerSetupper = class WebServerSetupper {
         compression(),
         rateLimit({
           windowMs: RATELIMIT_MS,
-          max: RATELIMIT_MAX_REQUESTS,
-          message: '<body style="background-color:#111;color:#ff0000"><p style="text-align:center;top:50%;position:relative;font-size:40;">Sorry, you have been ratelimited!</p></body>'
+          limit: RATELIMIT_MAX_REQUESTS,
+          message: '<body style="background-color:#111;color:#ff0000">'
+            + '<p style="text-align:center;top:50%;position:relative;font-size:40;">Sorry, you have been ratelimited!</p></body>'
         }),
         xss(),
         session({
@@ -240,15 +247,16 @@ module.exports.WebServerSetupper = class WebServerSetupper {
         failureRedirect: this.authUrl,
         successRedirect: 'redirectUrl' in req.query ? req.query.redirectUrl : '/'
       })(req, res, next))
-      .use('/auth/logout', (req, res, next) => req.logOut(err => err ? next(err) : res.sendStatus(HTTP_STATUS_OK)))
+      .use('/auth/logout', (req, res, next) => req.logOut(err => (err ? next(err) : res.sendStatus(HTTP_STATUS_OK))))
       .use(
         (req, _, next) => {
           // only track normal GET requests
           if (!req.user?.id || req.method != 'GET' || req.xhr || req.accepts('html') === false) return next();
 
-          const pagePath = req.path.split('/').filter(Boolean).join('.') || 'root';
-          const viewData = this.db.get('userSettings', `${req.user.id}.pageViews.${pagePath}`);
-          const now = new Date();
+          const
+            pagePath = req.path.split('/').filter(Boolean).join('.') || 'root',
+            viewData = this.db.get('userSettings', `${req.user.id}.pageViews.${pagePath}`),
+            now = new Date();
 
           if (!viewData?.lastVisited || now.getTime() - viewData.lastVisited.getTime() > VIEW_COOLDOWN_MS)
             void this.db.update('userSettings', `${req.user.id}.pageViews.${pagePath}`, { count: (viewData?.count ?? 0) + 1, lastVisited: now });
@@ -257,8 +265,11 @@ module.exports.WebServerSetupper = class WebServerSetupper {
         },
         ...handlers,
         (req, res) => {
-          if (config.errorPagesDir && req.headers['user-agent']?.includes('Mozilla'))
-            return res.status(HTTP_STATUS_NOT_FOUND).sendFile(path.join(config.errorPagesDir, `${HTTP_STATUS_NOT_FOUND}.html`), { root: process.cwd() });
+          if (config.errorPagesDir && req.headers['user-agent']?.includes('Mozilla')) {
+            return res.status(HTTP_STATUS_NOT_FOUND)
+              .sendFile(path.join(config.errorPagesDir, `${HTTP_STATUS_NOT_FOUND}.html`), { root: process.cwd() });
+          }
+
           res.sendStatus(HTTP_STATUS_NOT_FOUND);
         }
       );
@@ -276,9 +287,15 @@ module.exports.WebServerSetupper = class WebServerSetupper {
 
     /* eslint-disable-next-line @typescript-eslint/no-shadow */
     return WebServerSetupper.runParsed(req, res, next, data, async (req, res, data) => {
-      if (data.method != undefined && (Array.isArray(data.method) && !data.method.some(e => e.toUpperCase() == req.method) || data.method.toUpperCase() !== req.method))
-        return res.setHeader('Allow', data.method.join?.(',') ?? data.method).sendStatus(HTTP_STATUS_METHOD_NOT_ALLOWED);
-      if (data.permissionCheck && !await data.permissionCheck.call(req)) return res.redirect(HTTP_STATUS_FORBIDDEN, `/error/${HTTP_STATUS_FORBIDDEN}`);
+      if (data.method && !(typeof data.method == 'string' ? [data.method] : data.method).some(e => e.toUpperCase() == req.method)) {
+        return res
+          .setHeader('Allow', typeof data.method == 'string' ? data.method : data.method.join(','))
+          .sendStatus(HTTP_STATUS_METHOD_NOT_ALLOWED);
+      }
+
+      if (data.permissionCheck && !await data.permissionCheck.call(req))
+        return res.redirect(HTTP_STATUS_FORBIDDEN, `/error/${HTTP_STATUS_FORBIDDEN}`);
+
       if (data.title) res.set('title', data.title);
       if (data.static) {
         const code = String(data.run);
@@ -291,7 +308,7 @@ module.exports.WebServerSetupper = class WebServerSetupper {
     });
   }
 
-  /** @type {typeof import('..').WebServer['createNavigationButtons']} */
+  /** @type {typeof import('.').WebServerSetupper['createNavigationButtons']} */
   static async createNavigationButtons(dirPath, reqPath) {
     const dir = await readdir(dirPath, { withFileTypes: true }).catch(() => { /* emtpy */ });
     if (!dir) return;
@@ -299,7 +316,8 @@ module.exports.WebServerSetupper = class WebServerSetupper {
     return dir.reduce((acc, file) => {
       const name = file.isFile() ? file.name.split('.').slice(0, -1).join('.') : file.name;
 
-      let title;
+      let /** @type {string | undefined} */ title;
+      /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access -- cannot be typed */
       try { title = require(path.join(dirPath, file.name))?.title; }
       catch { /** handled by `title ??=` */ }
 
@@ -310,7 +328,7 @@ module.exports.WebServerSetupper = class WebServerSetupper {
     }, '<link rel="stylesheet" href="https://mephisto5558.github.io/Website-Assets/min/css/navButtons.css" crossorigin="anonymous" /><div class="navButton">') + '</div>';
   }
 
-  /** @type {typeof import('..').WebServer['runParsed']} */
+  /** @type {typeof import('.').WebServerSetupper['runParsed']} */
   static runParsed(req, res, next, data, fn) {
     return express.json({ limit: '100kb' })(req, res, err => {
       if (err) return next(err);
@@ -322,4 +340,3 @@ module.exports.WebServerSetupper = class WebServerSetupper {
     });
   }
 };
-module.exports.MongoStore = require('./sessionStore.js');

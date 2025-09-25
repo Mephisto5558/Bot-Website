@@ -1,11 +1,17 @@
-import type { MemoryStore } from 'express-session';
+import type { Client } from 'discord.js';
+import type { PathLike } from 'node:fs';
 import type { DB, NoCacheDB } from '@mephisto5558/mongoose-db';
 import type SoftUITheme from 'dbd-soft-ui';
-import type { Profile } from 'passport-discord-auth';
-import type { Client } from 'discord.js';
+import type { Express, Handler, NextFunction, Request, RequestHandler, Response, Router } from 'express';
+import type { MemoryStore } from 'express-session';
 import type { Authenticator } from 'passport';
+import type { Profile } from 'passport-discord-auth';
+import type { customPage } from '..';
 import type { Database } from '../database';
-import type { Handler, Router, Express } from 'express';
+
+// Source: https://github.com/microsoft/TypeScript/issues/54451#issue-1732749888
+type Omit<T, K extends keyof T> = { [P in keyof T as P extends K ? never : P]: T[P] };
+
 
 /* eslint-disable-next-line sonarjs/redundant-type-aliases -- documentation */
 type sessionId = string;
@@ -14,7 +20,7 @@ export type session = NonNullable<Database['website']['sessions'][sessionId]>;
 type originalDashboardOptions = ConstructorParameters<Dashboard>[0];
 type DashboardThemeOptions = Parameters<typeof SoftUITheme>[0];
 
-interface DashboardOptions extends Omit<originalDashboardOptions, 'client' | 'invite' | 'theme'> {
+type DashboardOptions = {
   errorPagesDir?: string;
 
   /** HTML code for the 404 page */
@@ -23,7 +29,7 @@ interface DashboardOptions extends Omit<originalDashboardOptions, 'client' | 'in
   client?: originalDashboardOptions['client'];
   invite?: originalDashboardOptions['invite'];
   theme?: originalDashboardOptions['theme'];
-}
+} & Omit<originalDashboardOptions, 'client' | 'invite' | 'theme'>;
 
 
 export declare class MongoStore extends MemoryStore {
@@ -69,7 +75,7 @@ export declare class WebServerSetupper {
   );
 
   /** @default authUrl = '/auth/discord', callbackUrl = '/auth/discord/callback' */
-  setupAuth(authUrl?: string, callbackUrl?: string): Authenticator;
+  setupAuth(authUrl?: string, callbackUrl?: string): Authenticator<Handler, RequestHandler>;
 
   setupDashboardTheme(config: DashboardThemeOptions): ReturnType<typeof SoftUITheme>;
 
@@ -81,4 +87,11 @@ export declare class WebServerSetupper {
     secret: string, handlers?: Handler[], sessionStore?: Express.SessionStore,
     config?: { domain?: string; baseUrl?: string; errorPagesDir?: string }
   ): Express;
+
+  static createNavigationButtons(dirPath: PathLike, reqPath: string): Promise<string | undefined>;
+
+  static runParsed<REQ extends Request, RES extends Response, PAGE extends customPage>(
+    req: REQ, res: RES, next: NextFunction, data: PAGE,
+    fn: (req: REQ, res: RES, data: PAGE) => void
+  ): void;
 }
