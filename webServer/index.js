@@ -43,6 +43,7 @@ module.exports.WebServerSetupper = class WebServerSetupper {
     this.authUrl = authUrl;
     this.callbackUrl = callbackUrl;
 
+    /** @type {import('.').WebServerSetupper['authenticator']} */
     this.authenticator = new Authenticator().use(
       new Strategy(
         {
@@ -170,7 +171,7 @@ module.exports.WebServerSetupper = class WebServerSetupper {
           parsedPath = path.parse(path.resolve(absoluteCustomPagesPath, path.normalize('.' + (req.path == '/' ? '/index' : req.path))));
 
         if (parsedPath.dir != absoluteCustomPagesPath && !parsedPath.dir.startsWith(absoluteCustomPagesPath + path.sep))
-          return res.sendStatus(HTTP_STATUS_FORBIDDEN);
+          return res.redirect(HTTP_STATUS_FORBIDDEN, `/error/${HTTP_STATUS_FORBIDDEN}`);
 
         let
           /** @type {import('..').customPage | undefined} */ data,
@@ -286,12 +287,15 @@ module.exports.WebServerSetupper = class WebServerSetupper {
 
     /* eslint-disable-next-line @typescript-eslint/no-shadow */
     return WebServerSetupper.runParsed(req, res, next, data, async (req, res, data) => {
-      if (
-        data.method != undefined
-        && (Array.isArray(data.method) && !data.method.some(e => e.toUpperCase() == req.method) || data.method.toUpperCase() !== req.method)
-      ) return res.setHeader('Allow', data.method.join?.(',') ?? data.method).sendStatus(HTTP_STATUS_METHOD_NOT_ALLOWED);
+      if (data.method && !(typeof data.method == 'string' ? [data.method] : data.method).some(e => e.toUpperCase() == req.method)) {
+        return res
+          .setHeader('Allow', typeof data.method == 'string' ? data.method : data.method.join(','))
+          .sendStatus(HTTP_STATUS_METHOD_NOT_ALLOWED);
+      }
+
       if (data.permissionCheck && !await data.permissionCheck.call(req))
         return res.redirect(HTTP_STATUS_FORBIDDEN, `/error/${HTTP_STATUS_FORBIDDEN}`);
+
       if (data.title) res.set('title', data.title);
       if (data.static) {
         const code = String(data.run);
@@ -304,7 +308,7 @@ module.exports.WebServerSetupper = class WebServerSetupper {
     });
   }
 
-  /** @type {typeof import('..').WebServer['createNavigationButtons']} */
+  /** @type {typeof import('.').WebServerSetupper['createNavigationButtons']} */
   static async createNavigationButtons(dirPath, reqPath) {
     const dir = await readdir(dirPath, { withFileTypes: true }).catch(() => { /* emtpy */ });
     if (!dir) return;
@@ -324,7 +328,7 @@ module.exports.WebServerSetupper = class WebServerSetupper {
     }, '<link rel="stylesheet" href="https://mephisto5558.github.io/Website-Assets/min/css/navButtons.css" crossorigin="anonymous" /><div class="navButton">') + '</div>';
   }
 
-  /** @type {typeof import('..').WebServer['runParsed']} */
+  /** @type {typeof import('.').WebServerSetupper['runParsed']} */
   static runParsed(req, res, next, data, fn) {
     return express.json({ limit: '100kb' })(req, res, err => {
       if (err) return next(err);

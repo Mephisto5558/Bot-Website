@@ -1,5 +1,4 @@
 import type Discord from 'discord.js';
-import type { PathLike } from 'node:fs';
 import type { DB as DBClass } from '@mephisto5558/mongoose-db';
 import type { FormTypes } from 'dbd-soft-ui';
 import type { formTypes, optionOptions } from 'discord-dashboard';
@@ -131,14 +130,6 @@ declare class WebServer {
   logError(err: Error, req: express.Request, res: express.Response): unknown;
 
   valueOf(): string;
-
-  static createNavigationButtons(dirPath: PathLike, reqPath: string): Promise<string | undefined>;
-
-  static runParsed(
-    req: express.Request, res: express.Response, next: express.NextFunction,
-    /* eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents */
-    data: customPage | unknown, fn: (req: express.Request, res: express.Response, data: customPage | unknown) => void
-  ): void;
 }
 
 type VoteSystemConfig = { domain: string; port?: number; votingPath: string; webhookUrl?: string; ownerIds?: string[] };
