@@ -22,7 +22,7 @@
 A website & dashboard for my discord bot with an easy way of adding new dashboard settings & pages.
 
 ## Requirements
-- Node.js 16.9.0 or newer
+- Node.js 20.11.0 or newer
 - A [free license key from Assistants Center](https://assistantscenter.com/discord-dashboard/v2)
 
 ## Installation
@@ -52,7 +52,7 @@ const keys = {
  dbdLicense: /* Your discord-dashboard license */,
 };
 const config = {
-  // for all properties see Intellisense or https://github.com/Mephisto5558/Bot-Website/blob/c2943a770c694c7723ec4f089fc4995c3ce2f275/index.d.ts#L50C1-L60C3
+  // for all properties see Intellisense or https://github.com/search?q=repo%3AMephisto5558%2FBot-Website+path%3Aindex.d.ts+WebServerConfig+&type=code
 }
 
 const webServer = new WebServer(client, db, keys);
