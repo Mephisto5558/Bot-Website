@@ -30,23 +30,22 @@
     "express": "^5.1.0",
     "express-rate-limit": "^8.1.0",
     "express-session": "^1.18.2",
-    "express-xss-sanitizer": "^2.0.0",
+    "express-xss-sanitizer": "^2.0.1",
     "passport": "^0.7.0",
     "passport-discord-auth": "^1.2.0"
   },
   "devDependencies": {
-    "@types/express": "^5.x",
     "@mephisto5558/eslint-config": "github:Mephisto5558/ESLint-Config",
     "@mephisto5558/mongoose-db": "github:Mephisto5558/Mongoose-DB",
-    "@types/compression": "^1.8.1",
-    "@types/escape-html": "^1.0.4",
-    "@types/express-serve-static-core": "^5.0.7",
-    "@types/express-session": "^1.18.2",
-    "@types/express-xss-sanitizer": "^2.0.0",
+    "@types/compression": "1.x",
+    "@types/escape-html": "1.x",
+    "@types/express": "5.x",
+    "@types/express-serve-static-core": "5.x",
+    "@types/express-session": "1.x",
+    "@types/express-xss-sanitizer": "2.x",
     "@types/node": "20.x",
-    "@types/passport": "^1.0.17",
-    "@types/passport-oauth2": "^1.8.0",
-    "better-typescript-lib": "latest"
+    "@types/passport": "1.x",
+    "@types/passport-oauth2": "1.x"
   },
   "repository": {
     "type": "git",
