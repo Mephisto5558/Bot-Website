@@ -61,14 +61,14 @@ type customPage = {
 type commands = { category: string; subTitle: string; aliasesDisabled: boolean; list: Record<string, unknown>[] }[];
 
 type WebServerConfig = {
-  support?: Support; port?: number; domain?: string; ownerIds?: string[];
+  support: Support; port: number; domain: string; ownerIds: string[];
 
   /**
    * ```js
    * if (port) `${WebServer['config']['domain']}:${WebServer['config']['port']}`
    * else WebServer['config']['domain']
    * ``` */
-  webhookUrl?: string; callbackURL?: string; authUrl?: string; defaultAPIVersion?: number;
+  baseUrl: string; webhookUrl?: string; callbackURL?: string; authUrl?: string; defaultAPIVersion: number;
   errorPagesDir?: string; settingsPath?: string; customPagesPath?: string;
 };
 type VoteSystemSettingsInit = {
@@ -95,13 +95,13 @@ declare class WebServer {
 
   constructor(
     client: Discord.Client, db: DB, keys: Keys,
-    config?: WebServerConfig,
+    config?: Partial<WebServerConfig>,
     errorLoggingFunction?: (err: Error, req: express.Request, res: express.Response) => unknown
   );
 
   client: Discord.Client<true>;
   db: DB;
-  config: Required<WebServerConfig> & { baseUrl: string };
+  config: WebServerConfig;
 
   keys: Keys;
 

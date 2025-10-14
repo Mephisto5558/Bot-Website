@@ -1,3 +1,12 @@
+/**
+ * @import { WebServerSetupper as WebServerSetupperT, session as DBSession } from '.'
+ * @import { customPage } from '..'
+ * @import { Request } from 'express'
+ * @import { Session } from 'express-session'
+ * @import { ProfileGuild } from 'passport-discord-auth'
+ * @import { Dirent } from 'node:fs'
+ * @import { default as SoftUIThemeT } from 'dbd-soft-ui' */
+
 const
   { Team } = require('discord.js'),
   { readdir } = require('node:fs/promises'),
@@ -8,7 +17,7 @@ const
   path = require('node:path'),
   compression = require('compression'),
   cors = require('cors'),
-  /** @type {import('dbd-soft-ui').default} */ SoftUITheme = require('dbd-soft-ui'),
+  /** @type {SoftUIThemeT} */ SoftUITheme = require('dbd-soft-ui'),
   DBD = require('discord-dashboard'),
   escapeHTML = require('escape-html'),
   express = require('express'),
@@ -26,24 +35,24 @@ const
 module.exports.MongoStore = require('./sessionStore');
 
 module.exports.WebServerSetupper = class WebServerSetupper {
-  /** @type {import('.').WebServerSetupper['dashboard']} */ dashboard;
+  /** @type {WebServerSetupperT['dashboard']} */ dashboard;
 
   /**
-   * @param {ConstructorParameters<typeof import('.').WebServerSetupper>[0]} client
-   * @param {ConstructorParameters<typeof import('.').WebServerSetupper>[1]} db
-   * @param {ConstructorParameters<typeof import('.').WebServerSetupper>[2]} baseConfig */
+   * @param {ConstructorParameters<typeof WebServerSetupperT>[0]} client
+   * @param {ConstructorParameters<typeof WebServerSetupperT>[1]} db
+   * @param {ConstructorParameters<typeof WebServerSetupperT>[2]} baseConfig */
   constructor(client, db, baseConfig) {
     this.client = client;
     this.db = db;
     this.baseConfig = baseConfig;
   }
 
-  /** @type {import('.').WebServerSetupper['setupAuth']} */
+  /** @type {WebServerSetupperT['setupAuth']} */
   setupAuth(authUrl = '/auth/discord', callbackUrl = '/auth/discord/callback') {
     this.authUrl = authUrl;
     this.callbackUrl = callbackUrl;
 
-    /** @type {import('.').WebServerSetupper['authenticator']} */
+    /** @type {WebServerSetupperT['authenticator']} */
     this.authenticator = new Authenticator().use(
       new Strategy(
         {
@@ -63,7 +72,7 @@ module.exports.WebServerSetupper = class WebServerSetupper {
     return this.authenticator;
   }
 
-  /** @type {import('.').WebServerSetupper['setupDashboardTheme']} */
+  /** @type {WebServerSetupperT['setupDashboardTheme']} */
   setupDashboardTheme(config) {
     /* eslint-disable-next-line new-cap */
     this.dashboardTheme = SoftUITheme({
@@ -87,7 +96,7 @@ module.exports.WebServerSetupper = class WebServerSetupper {
     return this.dashboardTheme;
   }
 
-  /** @type {import('.').WebServerSetupper['setupDashboard']} */
+  /** @type {WebServerSetupperT['setupDashboard']} */
   async setupDashboard(licenseId, config) {
     await DBD.useLicense(licenseId);
 
@@ -139,24 +148,24 @@ module.exports.WebServerSetupper = class WebServerSetupper {
     return this.dashboard;
   }
 
-  /** @type {import('.').WebServerSetupper['setupRouter']} */
+  /** @type {WebServerSetupperT['setupRouter']} */
   setupRouter(customPagesPath, webServer) {
     /* eslint-disable-next-line new-cap -- Router is a function that returns a class instance */
     const router = express.Router()
 
       // `@types/express-serve-static-core` has a to-do to add typing for regex paths
-      .use('/api{/*path}', (/** @type {import('express').Request<{path: string[]}>} */ req, res, next) => {
+      .use('/api{/*path}', (/** @type {Request<{path: string[]}>} */ req, res, next) => {
         if (/^v\d+$/.test(req.params.path[0])) return next();
         return res.redirect(HTTP_STATUS_MOVED_PERMANENTLY, `/api/v${this.baseConfig.defaultAPIVersion}/${req.params.path.join('/')}`);
       })
       .use(async (req, res, next) => {
         Object.defineProperty(req.session, 'guilds', { // Dashboard
-        /** @this {import('express-session')['Session'] & { user?: import('.').session['user'] }} */
+        /** @this {Session & { user?: DBSession['user'] }} */
           get() { return this.user?.guilds; },
 
           /**
-           * @this {import('express-session')['Session'] & { user?: import('.').session['user'] }}
-           * @param {import('passport-discord-auth').ProfileGuild[]} val */
+           * @this {Session & { user?: DBSession['user'] }}
+           * @param {ProfileGuild[]} val */
           set(val) {
             this.user ??= {};
             this.user.guilds = val;
@@ -174,8 +183,8 @@ module.exports.WebServerSetupper = class WebServerSetupper {
           return res.redirect(HTTP_STATUS_FORBIDDEN, `/error/${HTTP_STATUS_FORBIDDEN}`);
 
         let
-          /** @type {import('..').customPage | undefined} */ data,
-          /** @type {import('fs').Dirent[] | undefined} */ subDirs;
+          /** @type {customPage | undefined} */ data,
+          /** @type {Dirent[] | undefined} */ subDirs;
 
         try { subDirs = await readdir(parsedPath.dir, { withFileTypes: true }); }
         catch { /* empty */ }
@@ -211,7 +220,7 @@ module.exports.WebServerSetupper = class WebServerSetupper {
     return this.router;
   }
 
-  /** @type {import('.').WebServerSetupper['setupApp']} */
+  /** @type {WebServerSetupperT['setupApp']} */
   setupApp(secret, sessionStore, handlers = [], config = {}) {
     this.app = express()
       .disable('x-powered-by')
@@ -281,7 +290,7 @@ module.exports.WebServerSetupper = class WebServerSetupper {
    * @param {express.Request} req
    * @param {express.Response} res
    * @param {express.NextFunction} next
-   * @param {import('..').customPage | undefined} data */
+   * @param {customPage | undefined} data */
   #handleCustomSite(req, res, next, data) {
     if (!data) return next();
 
@@ -308,7 +317,7 @@ module.exports.WebServerSetupper = class WebServerSetupper {
     });
   }
 
-  /** @type {typeof import('.').WebServerSetupper['createNavigationButtons']} */
+  /** @type {typeof WebServerSetupperT['createNavigationButtons']} */
   static async createNavigationButtons(dirPath, reqPath) {
     const dir = await readdir(dirPath, { withFileTypes: true }).catch(() => { /* emtpy */ });
     if (!dir) return;
@@ -328,7 +337,7 @@ module.exports.WebServerSetupper = class WebServerSetupper {
     }, '<link rel="stylesheet" href="https://mephisto5558.github.io/Website-Assets/min/css/navButtons.css" crossorigin="anonymous" /><div class="navButton">') + '</div>';
   }
 
-  /** @type {typeof import('.').WebServerSetupper['runParsed']} */
+  /** @type {typeof WebServerSetupperT['runParsed']} */
   static runParsed(req, res, next, data, fn) {
     return express.json({ limit: '100kb' })(req, res, err => {
       if (err) return next(err);

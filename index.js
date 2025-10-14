@@ -1,5 +1,10 @@
 /* eslint sonarjs/no-nested-functions: [warn, { threshold: 4 }] */
 
+/**
+ * @import { HttpError } from 'http-errors'
+ * @import { Request, Response, NextFunction } from 'express'
+ * @import { WebServerConfig, WebServer as WebServerT, dashboardSetting, customPage } from '.' */
+
 const
   { GatewayIntentBits, Status } = require('discord.js'),
   { readdir } = require('node:fs/promises'),
@@ -15,16 +20,16 @@ const
 
 class WebServer {
   #setupper;
-  /** @type {import('.').WebServer['config']} */ config;
   dashboardOptionCount = []; initiated = false;
 
   /**
-   * @param {import('.').WebServer['client']} client
-   * @param {import('.').WebServer['db']} db
-   * @param {import('.').WebServer['keys']} keys
-   * @param {import('.').WebServerConfig?} config
-   * @param {import('.').WebServer['logError']} errorLoggingFunction */
+   * @param {WebServerT['client']} client
+   * @param {WebServerT['db']} db
+   * @param {WebServerT['keys']} keys
+   * @param {Partial<WebServerConfig> | undefined} config
+   * @param {WebServerT['logError']} errorLoggingFunction */
   constructor(client, db, keys, config, errorLoggingFunction = console.error) {
+    /** @type {WebServerConfig} */
     this.config = {
       support: {},
       ownerIds: [],
@@ -50,11 +55,11 @@ class WebServer {
   }
 
   /**
-   * @param {import('.').WebServer['client']?} client
-   * @param {import('.').WebServer['db']?} db
-   * @param {import('.').WebServer['keys']?} keys
-   * @param {import('.').WebServerConfig?} config
-   * @param {import('.').WebServer['logError']?} errorLoggingFunction
+   * @param {WebServerT['client'] | undefined} client
+   * @param {WebServerT['db'] | undefined} db
+   * @param {WebServerT['keys'] | undefined} keys
+   * @param {Partial<WebServerConfig> | undefined} config
+   * @param {WebServerT['logError'] | undefined} errorLoggingFunction
    * @throws {Error} on invalid data */
   #validateConstructorParams(client, db, keys, config, errorLoggingFunction) {
     if (!client?.options.intents.has(GatewayIntentBits.Guilds)) throw new Error('Client must have the "Guilds" gateway intent.');
@@ -74,10 +79,8 @@ class WebServer {
       if (!subFolder.isDirectory()) continue;
 
       const
-
-        /** @type {import('.').dashboardSetting} */
         /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- can't do anything about it */
-        index = require(path.join(process.cwd(), this.config.settingsPath, subFolder.name, '_index.json')),
+        /** @type {dashboardSetting} */ index = require(path.join(process.cwd(), this.config.settingsPath, subFolder.name, '_index.json')),
         /** @type {category['categoryOptionsList']} */ optionList = [{
           optionId: `${index.id}.spacer`,
           title: 'Important!',
@@ -99,7 +102,7 @@ class WebServer {
       for (const file of await readdir(path.join(this.config.settingsPath, subFolder.name))) {
         if (!file.endsWith('.js')) continue;
 
-        /** @type {import('.').dashboardSetting} */
+        /** @type {dashboardSetting} */
         /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- can't do anything about it */
         const setting = require(path.join(process.cwd(), this.config.settingsPath, subFolder.name, file));
 
@@ -185,10 +188,10 @@ class WebServer {
   }
 
   /**
-   * @param {Error | import('http-errors').HttpError} err
-   * @param {import('express').Request} req
-   * @param {import('express').Response} res
-   * @param {import('express').NextFunction} next
+   * @param {Error | HttpError} err
+   * @param {Request} req
+   * @param {Response} res
+   * @param {NextFunction} next
    * @returns {void} */
   #reqErrorHandler(err, req, res, next) {
     if (err.code != 'ENOENT') this.logError(err);
@@ -207,7 +210,7 @@ class WebServer {
     }
   }
 
-  /** @type {import('.').WebServer['init']} */
+  /** @type {WebServerT['init']} */
   async init(dashboardConfig = {}, themeConfig = {}, voteSystemConfig = {}, voteSystemSettings = {}) {
     if (this.initiated) throw new Error('Already initiated');
 

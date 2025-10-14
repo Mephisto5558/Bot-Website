@@ -1,3 +1,9 @@
+/**
+ * @import { Client } from 'discord.js'
+ * @import { DB } from '@mephisto5558/mongoose-db'
+ * @import { VoteSystem as VoteSystemT, VoteSystemConfig, VoteSystemSettings, FeatureRequest } from '..'
+ * @import { Database } from '../database' */
+
 const
   { Colors, DiscordAPIError } = require('discord.js'),
   {
@@ -9,10 +15,10 @@ const
 
 module.exports = class VoteSystem {
   /**
-   * @param {import('discord.js').Client<true>} client
-   * @param {import('@mephisto5558/mongoose-db').DB<import('../database').Database>} db
-   * @param {import('..').VoteSystemConfig} config
-   * @param {import('..').VoteSystemSettings} settings */
+   * @param {Client<true>} client
+   * @param {DB<Database>} db
+   * @param {VoteSystemConfig} config
+   * @param {VoteSystemSettings} settings */
   constructor(client, db, config = {}, settings = {}) {
     this.client = client;
     this.db = db;
@@ -57,20 +63,19 @@ module.exports = class VoteSystem {
     if (!client.isReady()) throw new Error('Client must be ready!');
   }
 
-  /** @type {import('..').VoteSystem['fetchAll']} */
+  /** @type {VoteSystemT['fetchAll']} */
   fetchAll = () => Object.values(this.db.get('website', 'requests') ?? {});
 
-  /** @type {import('..').VoteSystem['get']} */
+  /** @type {VoteSystemT['get']} */
   get = id => this.db.get('website', `requests.${id}`);
 
   /**
-   * @typedef {import('..').FeatureRequest} FeatureRequest
    * @param {FeatureRequest['id']} id
    * @param {FeatureRequest} data
    * @returns {Promise<FeatureRequest | void>} */
   #update = async (id, data) => this.db.update('website', `requests.${id}`, data);
 
-  /** @type {import('..').VoteSystem['getMany']} */
+  /** @type {VoteSystemT['getMany']} */
   getMany = (amount, offset = 0, filter = '', includePending = false, userId = '') => {
     /* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- left side is a boolean check */
     const cards = this.fetchAll().filter(e => ((includePending && this.config.ownerIds?.includes(userId)) || !e.pending)
@@ -83,8 +88,8 @@ module.exports = class VoteSystem {
   };
 
   /**
-   * @type {import('..').VoteSystem['add']}
-   * @this {import('..').VoteSystem} */
+   * @type {VoteSystemT['add']}
+   * @this {VoteSystemT & this} */
   async add(title, body, userId) {
     const error = this.validate(userId);
     if (error) return error;
@@ -107,8 +112,6 @@ module.exports = class VoteSystem {
     }
 
     const id = `${userId}_${Date.now()}`;
-
-    /* eslint-disable-next-line @typescript-eslint/no-unsafe-call -- false positive */
     await this.#update(id, { id, title, body, ...featureRequestAutoApprove ? {} : { pending: true } });
 
     if (featureRequestAutoApprove) {
@@ -123,8 +126,8 @@ module.exports = class VoteSystem {
   }
 
   /**
-   * @type {import('..').VoteSystem['approve']}
-   * @this {import('..').VoteSystem} */
+   * @type {VoteSystemT['approve']}
+   * @this {VoteSystemT & this} */
   async approve(featureId, userId) {
     const error = this.validate(userId, true);
     if (error) return error;
@@ -136,7 +139,6 @@ module.exports = class VoteSystem {
     featureReq.votes ??= 0;
     delete featureReq.pending;
 
-    /* eslint-disable-next-line @typescript-eslint/no-unsafe-call -- false positive */
     await this.#update(featureId, featureReq);
 
     void this.sendToWebhook(
@@ -151,8 +153,8 @@ module.exports = class VoteSystem {
   }
 
   /**
-   * @type {import('..').VoteSystem['update']}
-   * @this {import('..').VoteSystem} */
+   * @type {VoteSystemT['update']}
+   * @this {VoteSystemT & this} */
   async update(features, userId) {
     const error = this.validate(userId, true);
     if (error) return error;
@@ -199,8 +201,8 @@ module.exports = class VoteSystem {
   }
 
   /**
-   * @type {import('..').VoteSystem['delete']}
-   * @this {import('..').VoteSystem} */
+   * @type {VoteSystemT['delete']}
+   * @this {VoteSystemT & this} */
   async delete(featureId, userId) {
     const
       requestAuthor = this.constructor.getRequestAuthor(featureId),
@@ -208,7 +210,7 @@ module.exports = class VoteSystem {
 
     if (error) return error;
 
-    /** @type {FeatureRequest} */
+    /** @type {FeatureRequest} -- gets checked for validity in `this.validate()` */
     const featureReq = this.get(featureId);
 
     await this.db.delete('website', `requests.${featureId}`);
@@ -224,8 +226,8 @@ module.exports = class VoteSystem {
   }
 
   /**
-   * @type {import('..').VoteSystem['addVote']}
-   * @this {import('..').VoteSystem} */
+   * @type {VoteSystemT['addVote']}
+   * @this {VoteSystemT & this} */
   async addVote(featureId, userId, type = 'up') {
     const error = this.validate(userId, featureId);
     if (error) return error;
@@ -234,7 +236,7 @@ module.exports = class VoteSystem {
     const { lastVoted } = this.db.get('userSettings', userId) ?? {};
     if (this.constructor.isInCurrentWeek(lastVoted)) return { errorCode: HTTP_STATUS_FORBIDDEN, error: 'You can only vote once per week.' };
 
-    /** @type {FeatureRequest} */
+    /** @type {FeatureRequest} -- gets checked for validity in `this.validate()` */
     const featureReq = this.get(featureId);
     featureReq.votes = (featureReq.votes ?? 0) + (type == 'up' ? 1 : -1);
 
@@ -248,7 +250,7 @@ module.exports = class VoteSystem {
     return featureReq;
   }
 
-  /** @type {import('..').VoteSystem['sendToWebhook']} */
+  /** @type {VoteSystemT['sendToWebhook']} */
   async sendToWebhook(title, description, color = Colors.White, url = '') {
     if (!this.config.webhookUrl) return { errorCode: HTTP_STATUS_SERVICE_UNAVAILABLE, error: 'The backend has no webhook url configured' };
 
@@ -269,8 +271,8 @@ module.exports = class VoteSystem {
   }
 
   /**
-   * @type {import('..').VoteSystem['notifyAuthor']}
-   * @this {import('..').VoteSystem} */
+   * @type {VoteSystemT['notifyAuthor']}
+   * @this {VoteSystemT & this} */
   async notifyAuthor(request, mode) {
     const
       embedData = this.settings.userChangeNotificationEmbed,
@@ -297,7 +299,7 @@ module.exports = class VoteSystem {
     }
   }
 
-  /** @type {import('..').VoteSystem['validate']} */
+  /** @type {VoteSystemT['validate']} */
   validate(userId, requireBeingOwner, featureId) {
     if (!userId) return { errorCode: HTTP_STATUS_UNAUTHORIZED, error: 'User ID is missing.' };
     if (this.db.get('botSettings', 'blacklist')?.includes(userId))
@@ -312,7 +314,7 @@ module.exports = class VoteSystem {
     }
   }
 
-  /** @type {typeof import('..').VoteSystem['validateContent']} */
+  /** @type {typeof VoteSystemT['validateContent']} */
   static validateContent(settings, title, body) {
     let err;
     if (settings.requireTitle && !title) err = '"title" is required.';
@@ -325,12 +327,12 @@ module.exports = class VoteSystem {
     if (err) return { errorCode: HTTP_STATUS_BAD_REQUEST, error: err };
   }
 
-  /** @type {typeof import('..').VoteSystem['formatDesc']} */
+  /** @type {typeof VoteSystemT['formatDesc']} */
   static formatDesc({ title = '', body = '' }, maxVisibleBodyLength) {
     return `**${title}**\n\n${body.length > maxVisibleBodyLength ? body.slice(maxVisibleBodyLength ?? 0) + '...' : body}`;
   }
 
-  /** @type {typeof import('..').VoteSystem['isInCurrentWeek']} */
+  /** @type {typeof VoteSystemT['isInCurrentWeek']} */
   static isInCurrentWeek(date) {
     if (date == 0) return false;
     if (typeof date == 'number') date = new Date(date);
@@ -346,7 +348,7 @@ module.exports = class VoteSystem {
     return date >= firstDayOfWeek && date < nextWeek;
   }
 
-  /** @type {typeof import('..').VoteSystem['getRequestAuthor']} */
+  /** @type {typeof VoteSystemT['getRequestAuthor']} */
   static getRequestAuthor(request) {
     const userId = ('id' in request ? request.id : request).split('_')[0];
     return Number.isNaN(Number(userId)) ? '' : userId;

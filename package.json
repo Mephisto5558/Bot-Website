@@ -1,24 +1,31 @@
 {
   "name": "@mephisto5558/bot-website",
   "version": "2.1.0",
-  "scripts": {
-    "test": "echo \"Error: no test specified\""
-  },
   "description": "The website for my Discord Bot.",
+  "keywords": [
+    "bot-website"
+  ],
+  "homepage": "https://github.com/Mephisto5558/Bot-Website#readme",
+  "bugs": {
+    "url": "https://github.com/Mephisto5558/Bot-Website/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Mephisto5558/Bot-Website.git"
+  },
+  "license": "MIT",
+  "author": "Mephisto5558",
+  "type": "commonjs",
   "main": "index.js",
   "types": "index.d.ts",
   "files": [
-    "index.js",
     "index.d.ts",
     "database.d.ts",
     "voteSystem",
     "webServer"
   ],
-  "keywords": [],
-  "author": "Mephisto5558",
-  "license": "MIT",
-  "engines": {
-    "node": ">=20.11.0"
+  "scripts": {
+    "test": "echo \"Error: no test specified\""
   },
   "dependencies": {
     "compression": "^1.8.1",
@@ -47,12 +54,7 @@
     "@types/passport": "1.x",
     "@types/passport-oauth2": "1.x"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Mephisto5558/Bot-Website.git"
-  },
-  "bugs": {
-    "url": "https://github.com/Mephisto5558/Bot-Website/issues"
-  },
-  "homepage": "https://github.com/Mephisto5558/Bot-Website#readme"
+  "engines": {
+    "node": ">=20.11.0"
+  }
 }
