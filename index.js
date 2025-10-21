@@ -163,12 +163,12 @@ class WebServer {
         setNew: async (
 
           /** @type {Parameters<category['setNew']>[0] & { data: { optionId: string; data: JSONValue }[] }} */
-          { guild, data: dataArray }
+          { guild, user, data: dataArray }
         ) => {
           for (const { optionId, data } of dataArray) {
             const option = optionList.find(e => e.optionId == optionId);
             if (option?.setNew) {
-              await option.setNew.call(this, { guild, optionId, data });
+              await option.setNew.call(this, { guild, user, optionId, data });
               continue;
             }
 

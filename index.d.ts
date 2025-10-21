@@ -193,7 +193,7 @@ declare module 'discord-api-types/v10' {
 declare module 'discord-dashboard' {
   /* eslint-disable @typescript-eslint/consistent-type-definitions -- required for type merging */
   interface optionOptions {
-    guild: { id: Discord.Guild['id'] };
+    guild: { id: Discord.Guild['id']; object: Discord.Guild };
     user: { id: Discord.User['id'] };
     newData?: unknown;
   }
