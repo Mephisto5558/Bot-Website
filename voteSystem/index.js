@@ -350,7 +350,7 @@ module.exports = class VoteSystem {
 
   /** @type {typeof VoteSystemT['getRequestAuthor']} */
   static getRequestAuthor(request) {
-    const userId = ('id' in request ? request.id : request).split('_')[0];
+    const userId = (typeof request == 'string' ? request : request.id).split('_')[0];
     return Number.isNaN(Number(userId)) ? '' : userId;
   }
 };
