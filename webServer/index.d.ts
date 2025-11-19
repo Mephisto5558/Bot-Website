@@ -7,14 +7,12 @@ import type { MemoryStore } from 'express-session';
 import type { Authenticator } from 'passport';
 import type { Profile } from 'passport-discord-auth';
 import type { customPage } from '..';
-import type { Database } from '../database';
+import type { Database, sessionId } from '../database.ts';
 
 // Source: https://github.com/microsoft/TypeScript/issues/54451#issue-1732749888
 type Omit<T, K extends keyof T> = { [P in keyof T as P extends K ? never : P]: T[P] };
 
 
-/* eslint-disable-next-line sonarjs/redundant-type-aliases -- documentation */
-type sessionId = string;
 export type session = NonNullable<Database['website']['sessions'][sessionId]>;
 
 type originalDashboardOptions = ConstructorParameters<Dashboard>[0];
@@ -84,7 +82,7 @@ export declare class WebServerSetupper {
   setupRouter(customPagesPath?: string): Router;
 
   setupApp(
-    secret: string, handlers?: Handler[], sessionStore?: Express.SessionStore,
+    secret: string, sessionStore?: Express.SessionStore, handlers?: Handler[],
     config?: { domain?: string; baseUrl?: string; errorPagesDir?: string }
   ): Express;
 
