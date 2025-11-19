@@ -1,19 +1,17 @@
+/* eslint-disable import-x/extensions */
 import type { Cookie } from 'express-session';
 import type { Profile } from 'passport-discord-auth';
-import type { sessionId } from './webServer';
-import type { FeatureRequest } from '.';
-
-export type { Database };
-export type { sessionId } from './webServer';
+import type { FeatureRequest } from './index.ts';
 
 type Snowflake = `${bigint}`;
 
 /* eslint-disable sonarjs/redundant-type-aliases -- documentation */
+export type sessionId = string;
 type guildId = Snowflake;
 type userId = Snowflake;
 /* eslint-enable sonarjs/redundant-type-aliases */
 
-type Database = {
+export type Database = {
   website: {
     sessions: Record<sessionId, {
       cookie: Cookie;
