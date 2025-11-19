@@ -149,7 +149,7 @@ module.exports.WebServerSetupper = class WebServerSetupper {
   }
 
   /** @type {WebServerSetupperT['setupRouter']} */
-  setupRouter(customPagesPath, webServer) {
+  setupRouter(customPagesPath) {
     /* eslint-disable-next-line new-cap -- Router is a function that returns a class instance */
     const router = express.Router()
 
@@ -213,7 +213,7 @@ module.exports.WebServerSetupper = class WebServerSetupper {
           data = await require(path.join(subDir.parentPath, subDir.name));
         }
 
-        return this.#handleCustomSite.call(webServer, req, res, next, data);
+        return this.#handleCustomSite.call(req, res, next, data);
       });
 
     this.router = router;
