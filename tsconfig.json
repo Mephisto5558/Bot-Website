@@ -1,22 +1,23 @@
 {
   "exclude": [
+    "dist",
     "node_modules"
   ],
   "compilerOptions": {
     "module": "nodenext",
     "moduleResolution": "nodenext",
-    "target": "ESNext",
+    "target": "esnext",
     "lib": [
       "ESNext"
     ],
-    "allowJs": true,
+    "allowJs": false,
+    "declaration": true,
     "exactOptionalPropertyTypes": true,
     "libReplacement": true,
-    "noEmit": true,
     "noImplicitOverride": true,
     "noUncheckedIndexedAccess": true,
     "noUncheckedSideEffectImports": true,
-    "resolveJsonModule": true,
+    "outDir": "dist",
     "skipLibCheck": true,
     "strict": true,
   }
