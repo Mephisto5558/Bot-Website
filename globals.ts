@@ -1,34 +1,39 @@
-import type { Guild, User } from 'discord.js';
+import type { Guild } from 'discord.js';
 import type { Profile as PProfile } from 'passport-discord-auth';
 
-/* eslint-disable @typescript-eslint/ban-ts-comment -- depending on the module resolution, one of these might not error out. */// @ts-expect-error
-declare module '../node_modules/discord.js/node_modules/discord-api-types/v10.d.ts' {
+type SnowflakeType = `${bigint}`;
+
+/* eslint-disable @typescript-eslint/ban-ts-comment, sonarjs/redundant-type-aliases
+  -- depending on the module resolution, one of these might not error out.
+  Using `../../` because the content lands in `dist/`
+  */// @ts-expect-error
+declare module '../../node_modules/discord.js/node_modules/discord-api-types/v10.d.ts' {
   // @ts-ignore 2300 // overwriting Snowflake
-  export type Snowflake = `${bigint}`;
+  export type Snowflake = SnowflakeType;
 }
 declare module 'discord-api-types/v10' {
   // @ts-ignore 2300 // overwriting Snowflake
-  export type Snowflake = `${bigint}`;
+  export type Snowflake = SnowflakeType;
 }
-/* eslint-enable @typescript-eslint/ban-ts-comment */
+/* eslint-enable @typescript-eslint/ban-ts-comment, sonarjs/redundant-type-aliases */
 
 declare module 'discord-dashboard' {
   /* eslint-disable @typescript-eslint/consistent-type-definitions -- required for type merging */
   interface optionOptions {
-    guild: { id: Guild['id']; object: Guild };
-    user: { id: User['id'] };
+    guild: { id: SnowflakeType; object: Guild };
+    user: { id: SnowflakeType };
     newData?: unknown;
   }
 
   interface allowedCheckOption {
-    guild: { id: Guild['id'] };
-    user: { id: User['id'] };
+    guild: { id: SnowflakeType };
+    user: { id: SnowflakeType };
   }
 }
 
 declare module 'passport-discord-auth' {
   interface Profile {
-    id: User['id'];
+    id: SnowflakeType;
   }
 }
 

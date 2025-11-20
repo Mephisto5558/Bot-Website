@@ -6,11 +6,11 @@ import { readdir } from 'node:fs/promises';
 import { constants } from 'node:http2';
 import path from 'node:path';
 import DB, { NoCacheDB } from '@mephisto5558/mongoose-db';
-import * as DBDSoftUI from 'dbd-soft-ui';
+import { formTypes as softUIFormTypes } from 'dbd-soft-ui';
 import DBD from 'discord-dashboard';
 
-import VoteSystem from './voteSystem/index.ts';
-import { MongoStore, WebServerSetupper } from './webServer/index.ts';
+import { VoteSystem } from './voteSystem.js';
+import { MongoStore, WebServerSetupper } from './webServer/index.js';
 
 /* eslint-disable-next-line import-x/no-namespace */
 import type * as Discord from 'discord.js';
@@ -22,6 +22,7 @@ import type { MemoryStore } from 'express-session';
 import type { HttpError } from 'http-errors';
 import type { Authenticator } from 'passport';
 import type { Database } from './database.ts';
+import type { VoteSystemConfig, VoteSystemSettings } from './voteSystem.ts';
 import type { DashboardOptions, DashboardThemeOptions } from './webServer/index.ts';
 
 const DEFAULT_PORT = 8000;
@@ -32,7 +33,7 @@ export type Omit<T, K extends keyof T> = { [P in keyof T as P extends K ? never 
 type Support = { mail?: string; discord?: string };
 type Keys = { secret: string; dbdLicense: string };
 
-type formTypes = Omit<globalThis.formTypes & DBDSoftUI.FormTypes, 'embedBuilder'> & {
+type formTypes = Omit<globalThis.formTypes & typeof softUIFormTypes, 'embedBuilder'> & {
   embedBuilder: ReturnType<globalThis.formTypes['embedBuilder']>;
   _embedBuilder: globalThis.formTypes['embedBuilder'];
 };
@@ -54,7 +55,7 @@ export type dashboardSetting = {
   ) => { allowed: true } | { allowed: false; errorMessage?: string }) | undefined;
 };
 
-export type option = { position: number } & globalThis.option;
+export type option = globalThis.option & { position: number } & { optionId: NonNullable<globalThis.option['optionId']> };
 
 type methods = 'get' | 'post' | 'put' | 'delete' | 'patch';
 export type customPage = {
@@ -82,7 +83,7 @@ export class WebServer<Ready extends boolean = boolean> {
   constructor(
     client: Discord.Client<Ready>, db: WebServer['db'], keys: Keys,
     config: Partial<WebServerConfig> = {},
-    errorLoggingFunction?: (err: Error, req: express.Request, res: express.Response) => unknown
+    errorLoggingFunction?: (err: Error, req?: express.Request, res?: express.Response) => unknown
   ) {
     this.config = { ...this.config, ...config };
     if (!this.config.domain.startsWith('http')) this.config.domain = `http://${this.config.domain}`;
@@ -94,11 +95,6 @@ export class WebServer<Ready extends boolean = boolean> {
     this.db = db;
     this.keys = keys;
     if (errorLoggingFunction) this.logError = errorLoggingFunction;
-
-    this.#setupper = new WebServerSetupper(this.client, this.db, {
-      clientSecret: this.keys.secret, baseUrl: this.config.baseUrl,
-      defaultAPIVersion: this.config.defaultAPIVersion
-    });
   }
 
   config: WebServerConfig = {
@@ -124,7 +120,7 @@ export class WebServer<Ready extends boolean = boolean> {
 
   /** modified default settings of embedBuilder */
   formTypes: formTypes = {
-    ...DBD.formTypes, ...DBDSoftUI.formTypes,
+    ...DBD.formTypes, ...softUIFormTypes,
     embedBuilder: DBD.formTypes.embedBuilder({}),
     _embedBuilder: DBD.formTypes.embedBuilder
   };
@@ -134,21 +130,25 @@ export class WebServer<Ready extends boolean = boolean> {
   app!: express.Express;
   voteSystem!: VoteSystem;
 
-  readonly #setupper: WebServerSetupper;
+  #setupper!: WebServerSetupper;
 
-  logError: (err: Error, req: express.Request, res: express.Response) => unknown = console.error;
+  logError: (err: Error, req?: express.Request, res?: express.Response) => unknown = console.error;
 
   async init(
     dashboardConfig: DashboardOptions, themeConfig: DashboardThemeOptions,
-    voteSystemConfig: VoteSystemConfig = {}, voteSystemSettings: VoteSystemSettingsInit = {}
+    voteSystemConfig: VoteSystemConfig, voteSystemSettings: VoteSystemSettings = {}
   ): Promise<WebServer<true>> {
     if (this.initiated) throw new Error('Already initiated');
-
 
     while (this.client.ws.status != Status.Ready) await new Promise(res => void setTimeout(res, 10));
 
     const client = this.client as Discord.Client<true>;
     await client.application.fetch();
+
+    this.#setupper = new WebServerSetupper(client, this.db, {
+      clientSecret: this.keys.secret, baseUrl: this.config.baseUrl,
+      defaultAPIVersion: this.config.defaultAPIVersion
+    });
 
     this.formTypes = {
       ...this.formTypes,
@@ -169,10 +169,13 @@ export class WebServer<Ready extends boolean = boolean> {
       port: this.config.port, domain: this.config.domain,
       settings: await this.#getSettings()
     });
-    this.router = this.#setupper.setupRouter(this.config.customPagesPath);
-    this.app = this.#setupper.setupApp(this.keys.secret, this.sessionStore, [this.router, this.dashboard.getApp(), this.#reqErrorHandler.bind(this)]);
+    this.router = this.#setupper.setupRouter(this as WebServer<true>, this.config.customPagesPath);
+    this.app = this.#setupper.setupApp(
+      this.keys.secret, this.sessionStore,
+      [this.router, this.dashboard.getApp() as express.Handler, this.#reqErrorHandler.bind(this)]
+    );
 
-    this.voteSystem = new VoteSystem(this.client, this.db, { ...this.config, ...voteSystemConfig }, voteSystemSettings);
+    this.voteSystem = new VoteSystem(client, this.db, { ...this.config, ...voteSystemConfig }, voteSystemSettings);
 
     this.app.listen(this.config.port, () => console.log(`Website is online on ${this.config.baseUrl}.`));
 
@@ -229,6 +232,7 @@ export class WebServer<Ready extends boolean = boolean> {
         const setting = (await import(
           path.join(process.cwd(), this.config.settingsPath, subFolder.name, file)
         ) as { default: dashboardSetting }).default;
+
         if (setting.type == 'spacer') {
           optionList.push({
             optionId: `${index.id}.spacer`,
@@ -259,14 +263,16 @@ export class WebServer<Ready extends boolean = boolean> {
 
 
           optionList.push(option);
-          if (setting.get) {
-            option.getActualSet = function getWrapper(...args) {
-              return setting.get.call(this, option, ...args);
+          if ('get' in setting) {
+            /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+            option.getActualSet = function getWrapper(this: WebServer, ...args): any {
+              return setting.get?.call(this, option, ...args);
             };
           }
-          if (setting.set) {
-            option.setNew = function setWrapper(...args) {
-              return setting.set.call(this, option, ...args);
+          if ('set' in setting) {
+            /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+            option.setNew = function setWrapper(this: WebServer, ...args): any {
+              return setting.set?.call(this, option, ...args);
             };
           }
         }
@@ -277,14 +283,16 @@ export class WebServer<Ready extends boolean = boolean> {
         categoryName: index.name,
         categoryDescription: index.description,
         position: index.position,
-        getActualSet: async option => optionList.map(e => {
+        getActualSet: async option => Promise.all(optionList.map(async e => {
           if (e.getActualSet) return { optionId: e.optionId, data: e.getActualSet.call(this, option) };
           const dataPath = e.optionId.replaceAll(/[A-Z]/g, e => `.${e.toLowerCase()}`);
           if (dataPath.split('.').at(-1) == 'spacer') return { optionId: e.optionId, data: e.description };
 
-          const data = this.db.get('guildSettings', `${option.guild.id}.${dataPath}`) ?? this.db.get('botSettings', `defaultGuild.${dataPath}`);
+          const data = await this.db.get('guildSettings', `${option.guild.id}.${dataPath}`)
+            ?? await this.db.get('botSettings', `defaultGuild.${dataPath}`);
+
           return { optionId: e.optionId, data };
-        }),
+        })),
         setNew: async (
 
           { guild, user, data: dataArray }: Parameters<category['setNew']>[0] & { data: { optionId: string; data: JSONValue }[] }
@@ -299,7 +307,8 @@ export class WebServer<Ready extends boolean = boolean> {
             const dataPath = optionId.replaceAll(/[A-Z]/g, e => `.${e.toLowerCase()}`);
 
             if (this.db.get('guildSettings', `${guild.id}.${dataPath}`) === data) continue;
-            if (data && typeof data == 'object' && 'embed' in data && typeof data.embed == 'object' && data.embed) data.embed.description ??= ' ';
+            if (data && typeof data == 'object' && 'embed' in data && typeof data.embed == 'object' && data.embed && 'description' in data.embed)
+              data.embed.description ??= ' ';
 
             await this.db.update('guildSettings', `${guild.id}.${dataPath}`, data);
           }
@@ -334,7 +343,7 @@ export class WebServer<Ready extends boolean = boolean> {
     }
   }
 
-  valueOf() {
+  valueOf(): string {
     return `WebServer on ${this.config.baseUrl}`; // Prevents recursion with discord.js Client#toJSON()
   }
 }
