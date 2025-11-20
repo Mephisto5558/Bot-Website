@@ -1,7 +1,6 @@
-/* eslint-disable import-x/extensions */
 import type { Cookie } from 'express-session';
 import type { Profile } from 'passport-discord-auth';
-import type { FeatureRequest } from './index.ts';
+import type { FeatureRequest } from './voteSystem.js';
 
 type Snowflake = `${bigint}`;
 

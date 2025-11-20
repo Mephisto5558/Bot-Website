@@ -1,7 +1,11 @@
+/* eslint-disable max-lines */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 /* eslint-disable import-x/extensions */
 /* eslint-disable import-x/max-dependencies */
 
+/* eslint-disable-next-line import-x/no-namespace */
+import * as Discord from 'discord.js';
 import { readdir } from 'node:fs/promises';
 import { constants } from 'node:http2';
 import path from 'node:path';
@@ -17,18 +21,16 @@ import { xss } from 'express-xss-sanitizer';
 import { Authenticator } from 'passport';
 import { Scope, Strategy } from 'passport-discord-auth';
 
-/* eslint-disable-next-line import-x/no-namespace */
-import * as Discord from 'discord.js';
 import type { Dirent, PathLike } from 'node:fs';
 import type { AnyDB } from '@mephisto5558/mongoose-db';
 import type { Express, Handler, NextFunction, Request, RequestHandler, Response, Router } from 'express';
 import type { Session } from 'express-session';
-import type { ProfileGuild } from 'passport-discord-auth';
+import type { Profile, ProfileGuild } from 'passport-discord-auth';
 import type { Database, sessionId } from '../database.ts';
 import type { Omit, WebServer, customPage } from '../index.ts';
 
 
-export type { default as MongoStore } from './sessionStore.ts';
+export { default as MongoStore } from './mongoStore.js';
 export type DBSession = NonNullable<Database['website']['sessions'][sessionId]>;
 
 const
@@ -44,19 +46,19 @@ const
 
 type MarkOptional<T, K extends keyof T> = Partial<Pick<T, K>> & Omit<T, K>;
 
-type DashboardThemeOptions = MarkOptional<Parameters<typeof SoftUITheme>[0], 'websiteName' | 'colorScheme' | 'icons' | 'meta'>;
+export type DashboardThemeOptions = MarkOptional<Parameters<typeof SoftUITheme>[0], 'websiteName' | 'colorScheme' | 'icons' | 'meta'>;
 
-type DashboardOptions = {
-  errorPagesDir?: string;
+export type DashboardOptions = {
+  errorPagesDir?: string | undefined;
 
   /** HTML code for the 404 page */
-  html404?: string;
+  html404?: string | undefined;
 } & MarkOptional<
   ConstructorParameters<Dashboard>[0],
 
   /* eslint-disable-next-line sonarjs/max-union-size */// @ts-expect-error -- Not all options are documented
-  'acceptPrivacyPolicy' | 'minimizedConsoleLogs' | 'redirectUri' | 'noCreateServer'
-  | 'useUnderMaintenance' | 'useCategorySet' | 'useTheme404' | 'bot' | 'client' | 'invite' | 'theme' | 'underMaintenance'
+  'acceptPrivacyPolicy' | 'minimizedConsoleLogs' | 'redirectUri' | 'noCreateServer' | 'useUnderMaintenance'
+  | 'useCategorySet' | 'useTheme404' | 'bot' | 'client' | 'invite' | 'theme' | 'underMaintenance'
 >;
 
 
@@ -111,12 +113,34 @@ export class WebServerSetupper {
         favicon: this.client.user.displayAvatarURL(),
         sidebar: {
           darkUrl: this.client.user.displayAvatarURL(),
-          lightUrl: this.client.user.displayAvatarURL()
-        }
+          lightUrl: this.client.user.displayAvatarURL(),
+          hideName: false,
+          borderRadius: false,
+          alignCenter: false
+        },
+        noGuildIcon: ''
       },
       meta: {
         author: owner?.username ?? '',
-        owner: owner?.username ?? ''
+        owner: owner?.username ?? '',
+        description: '',
+        ogLocale: '',
+        ogTitle: '',
+        ogImage: '',
+        ogType: '',
+        ogUrl: '',
+        ogSiteName: '',
+        ogDescription: '',
+        twitterTitle: '',
+        twitterDescription: '',
+        twitterDomain: '',
+        twitterUrl: '',
+        twitterCard: '',
+        twitterSite: '',
+        twitterSiteId: '',
+        twitterCreator: '',
+        twitterCreatorId: '',
+        twitterImage: ''
       },
       ...config
     });
@@ -128,10 +152,7 @@ export class WebServerSetupper {
     await DBD.useLicense(licenseId);
 
     /* eslint-disable-next-line new-cap -- UpdatedClass is none of mine (and, returns a class) */
-    const DBDUpdated = DBD.UpdatedClass();
-
-    /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment */
-    this.dashboard = new DBDUpdated({
+    this.dashboard = new (DBD.UpdatedClass())({
       acceptPrivacyPolicy: true,
       minimizedConsoleLogs: true,
       redirectUri: `${this.baseConfig.baseUrl}/discord/callback`,
@@ -146,7 +167,10 @@ export class WebServerSetupper {
       },
       invite: {
         scopes: this.client.application.installParams?.scopes ?? [],
-        permissions: this.client.application.installParams?.permissions
+        permissions: (this.client.application.installParams?.permissions.bitfield ?? new Discord.PermissionsBitField().bitfield).toString(),
+        clientId: this.client.user.id,
+        redirectUri: '',
+        otherParams: ''
       },
       theme: this.dashboardTheme,
       underMaintenance: {
@@ -169,32 +193,32 @@ export class WebServerSetupper {
         craneStandColors: ['#6a6a6a', undefined, '#f29b8b']
       },
       ...config
-    });
+    }) as Dashboard;
 
     await this.dashboard.init();
     return this.dashboard;
   }
 
-  setupRouter(customPagesPath?: string): Router {
+  setupRouter(webServer?: WebServer<true>, customPagesPath?: string): Router {
     /* eslint-disable-next-line new-cap -- Router is a function that returns a class instance */
     const router = express.Router()
 
       // `@types/express-serve-static-core` has a to-do to add typing for regex paths
       .use('/api{/*path}', (req: Request<{ path: string[] }>, res, next) => {
-        if (/^v\d+$/.test(req.params.path[0] as string)) return next();
+        if (/^v\d+$/.test(req.params.path[0]!)) return next();
         return res.redirect(HTTP_STATUS_MOVED_PERMANENTLY, `/api/v${this.baseConfig.defaultAPIVersion}/${req.params.path.join('/')}`);
       })
       .use(async (req, res, next) => {
         Object.defineProperty(req.session, 'guilds', { // Dashboard
           get(this: Session & { user?: DBSession['user'] }) { return this.user?.guilds; },
           set(this: Session & { user?: DBSession['user'] }, val: ProfileGuild[]) {
-            this.user ??= {};
-            this.user!.guilds = val;
+            this.user ??= {} as Profile;
+            this.user.guilds = val;
           }
         });
 
         if (req.path == '/dashboard') return res.status(HTTP_STATUS_MOVED_PERMANENTLY).redirect('/manage');
-        if (!customPagesPath) return next();
+        if (!customPagesPath || !webServer) return next();
 
         const
           absoluteCustomPagesPath = path.resolve(process.cwd(), customPagesPath),
@@ -334,22 +358,22 @@ export class WebServerSetupper {
   }
 
   static async createNavigationButtons(dirPath: PathLike, reqPath: string): Promise<string | undefined> {
-    const dir = await readdir(dirPath, { withFileTypes: true }).catch(() => { /* emtpy */ });
+    const dir = await readdir(dirPath, { withFileTypes: true }).catch(() => { /* empty */ });
     if (!dir) return;
 
-    return dir.reduce((acc, file) => {
-      const name = file.isFile() ? file.name.split('.').slice(0, -1).join('.') : file.name;
+    return '<link rel="stylesheet" href="https://mephisto5558.github.io/Website-Assets/min/css/navButtons.css" crossorigin="anonymous" /><div class="navButton">'
+      + (await Promise.all(dir.map(async file => {
+        const name = file.isFile() ? path.basename(file.name, path.extname(file.name)) : file.name;
 
-      let title: string | undefined;
-      /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access -- cannot be typed */
-      try { title = require(path.join(dirPath, file.name))?.title; }
-      catch { /** handled by `title ??=` */ }
+        let title: string | undefined;
+        try { ({ title } = await import(file.parentPath) as customPage); }
+        catch { /** handled by `title ??=` */ }
 
-      title ??= name[0].toUpperCase() + name.slice(1).replaceAll(/[-_]/g, ' ');
+        title ??= name[0]!.toUpperCase() + name.slice(1).replaceAll(/[-_]/g, ' ');
 
-      // '//' can be on dirs and on the `reqPath`'s start
-      return `${acc}<a href="${path.posix.join(reqPath, encodeURIComponent(name))}">${escapeHTML(title)}</a>`;
-    }, '<link rel="stylesheet" href="https://mephisto5558.github.io/Website-Assets/min/css/navButtons.css" crossorigin="anonymous" /><div class="navButton">') + '</div>';
+        // '//' can be on dirs and on the `reqPath`'s start
+        return `<a href="${path.posix.join(reqPath, encodeURIComponent(name))}">${escapeHTML(title)}</a>`;
+      }))).join('') + '</div>';
   }
 
   static runParsed<REQ extends Request, RES extends Response, PAGE extends customPage>(

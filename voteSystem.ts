@@ -1,52 +1,48 @@
 /* eslint-disable max-lines */
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
-/* eslint-disable import-x/extensions */
-import { Colors, DiscordAPIError } from 'discord.js';
+
+import { Colors, DiscordAPIError, resolveColor } from 'discord.js';
 import { constants } from 'node:http2';
 import { sanitize } from 'express-xss-sanitizer';
 
 /* eslint-disable-next-line import-x/no-namespace */
 import type * as Discord from 'discord.js';
 import type { AnyDB } from '@mephisto5558/mongoose-db';
-import type { Database } from '../database.js';
-import type { Omit } from '../index.ts';
+import type { Database } from './database.js';
+import type { Omit } from './index.js';
 
 
-const {
+const
+  {
     HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_UNAUTHORIZED, HTTP_STATUS_FORBIDDEN, HTTP_STATUS_CONFLICT, HTTP_STATUS_SERVICE_UNAVAILABLE
   } = constants,
-
   DAYS_IN_WEEK = 7;
 
 type Include<T, R> = T extends R ? T : never;
 type RequestError = { errorCode: number; error: string };
 
-type FeatureRequest = {
+export type FeatureRequest = {
   id: `PVTI_${string}` | `${Discord.Snowflake}_${number}`;
   title: string;
   body: string;
-} & (
-  { votes: number; pending: undefined }
-  | { votes?: number; pending: true }
-);
+  votes: number;
+  pending?: true;
+};
 
-type VoteSystemSettingsInit = {
+type UserChangeNotificationEmbed = Record<'approved' | 'denied' | 'deleted' | 'updated', {
+  title?: string;
+  description?: string;
+  color?: Include<Discord.ColorResolvable, string | number>;
+}>;
+
+export type VoteSystemSettings = {
   requireTitle?: boolean; minTitleLength?: number; maxTitleLength?: number;
   requireBody?: boolean; minBodyLength?: number; maxBodyLength?: number;
   maxPendingFeatureRequests?: number; webhookMaxVisibleBodyLength?: number;
-  userChangeNotificationEmbed?: Record<'approved' | 'denied' | 'deleted' | 'updated', {
-    title?: string;
-    description?: string;
-    color?: number | (Include<Discord.ColorResolvable, string>);
-  }>;
+  userChangeNotificationEmbed?: UserChangeNotificationEmbed;
 };
 
-export type VoteSystemSettings = Required<Omit<VoteSystemSettingsInit, 'userChangeNotificationEmbed'>> & {
-  userChangeNotificationEmbed: Record<keyof NonNullable<VoteSystemSettingsInit['userChangeNotificationEmbed']>, Required<
-    NonNullable<VoteSystemSettingsInit['userChangeNotificationEmbed']>[keyof NonNullable<VoteSystemSettingsInit['userChangeNotificationEmbed']>]
-  >>;
-};
-type VoteSystemConfig = { domain: string; port?: number; votingPath: string; webhookUrl?: string; ownerIds?: string[] };
+export type VoteSystemConfig = { domain: string; port?: number; votingPath: string; webhookUrl?: string; ownerIds?: string[] };
 
 export class VoteSystem {
   /**
@@ -70,19 +66,19 @@ export class VoteSystem {
         ...settings.userChangeNotificationEmbed,
         approved: {
           ...this.settings.userChangeNotificationEmbed.approved,
-          ...settings.userChangeNotificationEmbed.approved
+          ...settings.userChangeNotificationEmbed?.approved
         },
         denied: {
           ...this.settings.userChangeNotificationEmbed.denied,
-          ...settings.userChangeNotificationEmbed.denied
+          ...settings.userChangeNotificationEmbed?.denied
         },
         deleted: {
           ...this.settings.userChangeNotificationEmbed.deleted,
-          ...settings.userChangeNotificationEmbed.deleted
+          ...settings.userChangeNotificationEmbed?.deleted
         },
         updated: {
           ...this.settings.userChangeNotificationEmbed.updated,
-          ...settings.userChangeNotificationEmbed.updated
+          ...settings.userChangeNotificationEmbed?.updated
         }
       }
     };
@@ -93,7 +89,9 @@ export class VoteSystem {
   client: Discord.Client<true>;
   db: AnyDB<Database>;
   config: VoteSystemConfig;
-  settings: VoteSystemSettings = {
+  settings: Required<Omit<VoteSystemSettings, 'userChangeNotificationEmbed'>> & {
+    userChangeNotificationEmbed: Record<keyof UserChangeNotificationEmbed, Required<UserChangeNotificationEmbed[keyof UserChangeNotificationEmbed]>>;
+  } = {
     /* eslint-disable @typescript-eslint/no-magic-numbers -- default values */
     requireTitle: true,
     minTitleLength: 0,
@@ -155,19 +153,20 @@ export class VoteSystem {
   }
 
   async add(title: string, body: string, userId: Discord.Snowflake): Promise<FeatureRequest | RequestError> {
-    const error = this.validate(userId);
+    const error = await this.validate(userId);
     if (error) return error;
 
     title = sanitize(title.trim());
     body = sanitize(body.trim());
 
-    const err = this.constructor.validateContent(this.settings, title, body);
+    const err = VoteSystem.validateContent(this.settings, title, body);
     if (err) return err;
 
-    const featureRequestAutoApprove = this.db.get('userSettings', `${userId}.featureRequestAutoApprove`);
+    const featureRequestAutoApprove = await this.db.get('userSettings', `${userId}.featureRequestAutoApprove`);
     if (
       !featureRequestAutoApprove
-      && Object.keys(this.db.cache.filter((_, k) => this.constructor.getRequestAuthor(k) == userId)).length >= this.settings.maxPendingFeatureRequests
+      && (Object.keys(await this.db.get('website', 'requests') ?? {}) as FeatureRequest['id'][])
+        .filter(k => VoteSystem.getRequestAuthor(k) == userId).length >= this.settings.maxPendingFeatureRequests
     ) {
       return {
         errorCode: HTTP_STATUS_FORBIDDEN,
@@ -175,36 +174,35 @@ export class VoteSystem {
       };
     }
 
-    const id = `${userId}_${Date.now()}`;
-    await this.#update(id, { id, title, body, ...featureRequestAutoApprove ? {} : { pending: true } });
+    const request: FeatureRequest = { id: `${userId}_${Date.now()}`, title, body, votes: 0, ...featureRequestAutoApprove ? {} : { pending: true } };
+    await this.#update(request.id, request);
 
     if (featureRequestAutoApprove) {
       await this.sendToWebhook(
         'New Approved Feature Request',
-        this.constructor.formatDesc({ title, body }, this.settings.webhookMaxVisibleBodyLength), Colors.Blue, `?q=${id}`
+        VoteSystem.formatDesc({ title, body }, this.settings.webhookMaxVisibleBodyLength), Colors.Blue, `?q=${request.id}`
       );
     }
-    else await this.sendToWebhook('New Pending Feature Request', undefined, Colors.Blue, `?q=${id}`);
+    else await this.sendToWebhook('New Pending Feature Request', undefined, Colors.Blue, `?q=${request.id}`);
 
-    return { title, body, id, approved: featureRequestAutoApprove };
+    return request;
   }
 
   async approve(featureId: FeatureRequest['id'], userId: Discord.Snowflake): Promise<FeatureRequest | RequestError> {
-    const error = this.validate(userId, true);
+    const error = await this.validate(userId, true);
     if (error) return error;
 
-    const featureReq: FeatureRequest = this.get(featureId);
-    if (!featureReq.pending) return { errorCode: HTTP_STATUS_CONFLICT, error: 'This feature request is already approved.' };
+    const featureReq = await this.get(featureId);
+    if (!featureReq?.pending) return { errorCode: HTTP_STATUS_CONFLICT, error: 'This feature request is already approved.' };
 
-    featureReq.votes ??= 0;
     delete featureReq.pending;
 
     await this.#update(featureId, featureReq);
 
     void this.sendToWebhook(
       this.settings.userChangeNotificationEmbed.approved.title,
-      this.constructor.formatDesc(featureReq, this.settings.webhookMaxVisibleBodyLength),
-      this.settings.userChangeNotificationEmbed.approved.color,
+      VoteSystem.formatDesc(featureReq, this.settings.webhookMaxVisibleBodyLength),
+      resolveColor(this.settings.userChangeNotificationEmbed.approved.color),
       `?q=${featureId}`
     );
     void this.notifyAuthor(featureReq, 'approved');
@@ -215,7 +213,7 @@ export class VoteSystem {
   async update(features: FeatureRequest | FeatureRequest[], userId: Discord.Snowflake): Promise<
     { success: true } | RequestError | { errorCode: typeof HTTP_STATUS_BAD_REQUEST; errors: { id: FeatureRequest['id']; error: string }[] }
   > {
-    const error = this.validate(userId, true);
+    const error = await this.validate(userId, true);
     if (error) return error;
 
     if (!Array.isArray(features)) features = [features];
@@ -224,24 +222,25 @@ export class VoteSystem {
       promiseList = [], errorList: { id: FeatureRequest['id']; error: string }[] = [];
 
     for (const { id, title: oTitle, body, pending } of features) {
-      if (!this.get(id)) {
+      const dbFeature = await this.get(id);
+      if (!dbFeature) {
         errorList.push({ id, error: 'Unknown feature request ID.' });
         break;
       }
 
       const
         title = sanitize(oTitle.trim()),
-        err = this.constructor.validateContent(this.settings, title, body.trim());
+        err = VoteSystem.validateContent(this.settings, title, body.trim());
 
       if (err) {
         errorList.push({ id, error: err.error });
         break;
       }
 
-      const data = { ...this.get(id), title, body: sanitize(body.trim()) };
-      if (pending !== undefined) data.pending = pending;
+      const data = { ...dbFeature, title, body: sanitize(body.trim()) };
+      if (pending) data.pending = pending;
 
-      if (userId != this.constructor.getRequestAuthor(id)) void this.notifyAuthor(data, 'updated');
+      if (userId != VoteSystem.getRequestAuthor(id)) void this.notifyAuthor(data, 'updated');
       promiseList.push(this.db.update('website', `requests.${id}`, data));
     }
 
@@ -252,7 +251,7 @@ export class VoteSystem {
       this.settings.userChangeNotificationEmbed.updated.title,
       this.settings.userChangeNotificationEmbed.updated.description
       + features.reduce((acc, { id }) => errorList.some(e => e.id == id) ? acc : `${acc}\n- [${id}](${url}?q=${id})`, '\n'),
-      this.settings.userChangeNotificationEmbed.updated.color
+      resolveColor(this.settings.userChangeNotificationEmbed.updated.color)
     );
 
     return errorList.length ? { errorCode: HTTP_STATUS_BAD_REQUEST, errors: errorList } : { success: true };
@@ -260,20 +259,20 @@ export class VoteSystem {
 
   async delete(featureId: FeatureRequest['id'], userId: Discord.Snowflake): Promise<{ success: true } | RequestError> {
     const
-      requestAuthor = this.constructor.getRequestAuthor(featureId),
-      error = this.validate(userId, requestAuthor, featureId);
+      requestAuthor = VoteSystem.getRequestAuthor(featureId),
+      error = await this.validate(userId, requestAuthor || false, featureId);
 
     if (error) return error;
 
-    /** -- gets checked for validity in `this.validate()` */
-    const featureReq: FeatureRequest = this.get(featureId);
+    /* eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- gets checked for validity in `this.validate()` */
+    const featureReq: FeatureRequest = (await this.get(featureId))!;
 
     await this.db.delete('website', `requests.${featureId}`);
     void this.sendToWebhook(
       this.settings.userChangeNotificationEmbed[featureReq.pending ? 'denied' : 'deleted'].title
       + ` by ${requestAuthor == userId ? 'the author' : 'a dev'}`,
-      this.constructor.formatDesc(featureReq, this.settings.webhookMaxVisibleBodyLength),
-      this.settings.userChangeNotificationEmbed[featureReq.pending ? 'denied' : 'deleted'].color
+      VoteSystem.formatDesc(featureReq, this.settings.webhookMaxVisibleBodyLength),
+      resolveColor(this.settings.userChangeNotificationEmbed[featureReq.pending ? 'denied' : 'deleted'].color)
     );
     if (requestAuthor != userId) void this.notifyAuthor(featureReq, featureReq.pending ? 'denied' : 'deleted');
 
@@ -281,16 +280,17 @@ export class VoteSystem {
   }
 
   async addVote(featureId: FeatureRequest['id'], userId: Discord.Snowflake, type: 'up' | 'down' = 'up'): Promise<FeatureRequest | RequestError> {
-    const error = this.validate(userId, featureId);
+    const error = await this.validate(userId, false, featureId);
     if (error) return error;
     if (!['up', 'down'].includes(type)) return { errorCode: HTTP_STATUS_BAD_REQUEST, error: 'Invalid vote type. Use "up" or "down"' };
 
-    const { lastVoted } = this.db.get('userSettings', userId) ?? {};
-    if (this.constructor.isInCurrentWeek(lastVoted)) return { errorCode: HTTP_STATUS_FORBIDDEN, error: 'You can only vote once per week.' };
+    const { lastVoted } = await this.db.get('userSettings', userId) ?? {};
+    if (VoteSystem.isInCurrentWeek(lastVoted)) return { errorCode: HTTP_STATUS_FORBIDDEN, error: 'You can only vote once per week.' };
 
-    /** -- gets checked for validity in `this.validate()` */
-    const featureReq: FeatureRequest = this.get(featureId);
-    featureReq.votes = (featureReq.votes ?? 0) + (type == 'up' ? 1 : -1);
+    /* eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- gets checked for validity in `this.validate()` */
+    const featureReq = (await this.get(featureId))!;
+    if (type == 'up') featureReq.votes++;
+    else featureReq.votes--;
 
     await this.db.update('website', `requests.${featureId}.votes`, featureReq.votes);
     await this.db.update('userSettings', `${userId}.lastVoted`, new Date());
@@ -303,12 +303,14 @@ export class VoteSystem {
   }
 
   async sendToWebhook(
-    title: string, description: string, color: number = Colors.White, url = ''
+    title: string, description?: string, color: number = Colors.White, url = ''
   ): Promise<{ success: boolean } | RequestError> {
     if (!this.config.webhookUrl) return { errorCode: HTTP_STATUS_SERVICE_UNAVAILABLE, error: 'The backend has no webhook url configured' };
 
     const
       websiteUrl = this.config.domain + (this.config.port ?? 0 ? `:${this.config.port}` : ''),
+
+      // TODO: client.fetchWebhook()
       res = await fetch(this.config.webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -323,7 +325,7 @@ export class VoteSystem {
     return { success: res.ok };
   }
 
-  async notifyAuthor(feature: FeatureRequest, mode: keyof VoteSystemSettings['userChangeNotificationEmbed']): Promise<void> {
+  async notifyAuthor(feature: FeatureRequest, mode: keyof UserChangeNotificationEmbed): Promise<void> {
     const
       embedData = this.settings.userChangeNotificationEmbed,
       websiteUrl = this.config.domain + (this.config.port ?? 0 ? `:${this.config.port}` : '') + '/' + this.config.votingPath,
@@ -335,7 +337,8 @@ export class VoteSystem {
       await this.client.users.send(userId, {
         embeds: [{
           ...embedData[mode],
-          description: `${embedData[mode].description ?? ''}\n\n"${feature.title}"\n${websiteUrl}?q=${feature.id}`
+          color: resolveColor(embedData[mode].color),
+          description: `${embedData[mode].description}\n\n"${feature.title}"\n${websiteUrl}?q=${feature.id}`
         }]
       });
     }
@@ -369,10 +372,10 @@ export class VoteSystem {
     let err;
     if (settings.requireTitle && !title) err = '"title" is required.';
     else if (settings.requireBody && !body) err = '"body" is required.';
-    else if (title && title.length > settings.maxTitleLength) err = `"title" may not be longer than ${settings.maxTitleLength} characters.`;
-    else if (title && title.length < settings.minTitleLength) err = `"title" may not be shorter than ${settings.minTitleLength} characters.`;
-    else if (body && body.length > settings.maxBodyLength) err = `"body" may not be longer than ${settings.maxBodyLength} characters.`;
-    else if (body && body.length < settings.minBodyLength) err = `"body" may not be shorter than ${settings.minBodyLength} characters.`;
+    else if ((title?.length ?? 0) > (settings.maxTitleLength ?? 0)) err = `"title" may not be longer than ${settings.maxTitleLength} characters.`;
+    else if ((title?.length ?? 0) < (settings.minTitleLength ?? 0)) err = `"title" may not be shorter than ${settings.minTitleLength} characters.`;
+    else if ((body?.length ?? 0) > (settings.maxBodyLength ?? 0)) err = `"body" may not be longer than ${settings.maxBodyLength} characters.`;
+    else if ((body?.length ?? 0) < (settings.minBodyLength ?? 0)) err = `"body" may not be shorter than ${settings.minBodyLength} characters.`;
 
     if (err) return { errorCode: HTTP_STATUS_BAD_REQUEST, error: err };
   }
@@ -381,8 +384,8 @@ export class VoteSystem {
     return `**${title}**\n\n${body.length > maxVisibleBodyLength ? body.slice(maxVisibleBodyLength) + '...' : body}`;
   }
 
-  static isInCurrentWeek(date: Discord.DateResolvable): boolean {
-    if (date == 0) return false;
+  static isInCurrentWeek(date?: Discord.DateResolvable): boolean {
+    if (!date) return false;
 
     const
       targetDate = new Date(date),
