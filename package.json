@@ -3,7 +3,9 @@
   "version": "2.1.0",
   "description": "The website for my Discord Bot.",
   "keywords": [
-    "bot-website"
+    "expressjs",
+    "bot-website",
+    "dashboard"
   ],
   "homepage": "https://github.com/Mephisto5558/Bot-Website#readme",
   "bugs": {
@@ -15,17 +17,16 @@
   },
   "license": "MIT",
   "author": "Mephisto5558",
-  "type": "commonjs",
-  "main": "index.js",
-  "types": "index.d.ts",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/globals.d.ts",
   "files": [
-    "index.d.ts",
-    "database.d.ts",
-    "voteSystem",
-    "webServer"
+    "dist"
   ],
   "scripts": {
-    "test": "echo \"Error: no test specified\""
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\"",
+    "watch": "tsc --watch"
   },
   "dependencies": {
     "compression": "^1.8.1",
@@ -50,9 +51,11 @@
     "@types/express-serve-static-core": "5.x",
     "@types/express-session": "1.x",
     "@types/express-xss-sanitizer": "2.x",
+    "@types/http-errors": "^2.0.5",
     "@types/node": "20.x",
     "@types/passport": "1.x",
-    "@types/passport-oauth2": "1.x"
+    "@types/passport-oauth2": "1.x",
+    "typescript": "latest"
   },
   "engines": {
     "node": ">=20.11.0"
