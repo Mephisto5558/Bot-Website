@@ -1,5 +1,4 @@
-/* eslint-disable max-lines */
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
+/* eslint-disable max-lines, @typescript-eslint/no-unsafe-type-assertion */
 
 import { Colors, DiscordAPIError, resolveColor } from 'discord.js';
 import { constants } from 'node:http2';

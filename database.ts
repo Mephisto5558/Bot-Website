@@ -1,14 +1,10 @@
+import type { Guild, User } from 'discord.js';
 import type { Cookie } from 'express-session';
 import type { Profile } from 'passport-discord-auth';
 import type { FeatureRequest } from './voteSystem.js';
 
-type Snowflake = `${bigint}`;
-
-/* eslint-disable sonarjs/redundant-type-aliases -- documentation */
+/* eslint-disable-next-line sonarjs/redundant-type-aliases -- documentation */
 export type sessionId = string;
-type guildId = Snowflake;
-type userId = Snowflake;
-/* eslint-enable sonarjs/redundant-type-aliases */
 
 export type Database = {
   website: {
@@ -31,14 +27,13 @@ export type Database = {
   };
 
   botSettings?: {
-    blacklist?: Snowflake[];
-
-    defaultGuild: Record<string, unknown>;
+    blacklist?: User['id'][];
+    defaultGuild: Database['guildSettings'][Guild['id']];
   };
 
-  guildSettings: Record<guildId, Record<string, unknown>>;
+  guildSettings: Record<Guild['id'], Record<string, unknown>>;
 
-  userSettings: Record<userId, {
+  userSettings: Record<User['id'], {
     lastVoted?: Date;
     featureRequestAutoApprove?: boolean;
     pageViews?: Record<string, {
