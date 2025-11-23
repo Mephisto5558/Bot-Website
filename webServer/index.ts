@@ -1,8 +1,5 @@
-/* eslint-disable max-lines */
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
-/* eslint-disable import-x/extensions */
-/* eslint-disable import-x/max-dependencies */
+/* eslint-disable @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-unsafe-type-assertion */
+/* eslint-disable import-x/max-dependencies, max-lines */
 
 /* eslint-disable-next-line import-x/no-namespace */
 import * as Discord from 'discord.js';
@@ -26,8 +23,8 @@ import type { AnyDB } from '@mephisto5558/mongoose-db';
 import type { Express, Handler, NextFunction, Request, RequestHandler, Response, Router } from 'express';
 import type { Session } from 'express-session';
 import type { Profile, ProfileGuild } from 'passport-discord-auth';
-import type { Database, sessionId } from '../database.ts';
-import type { Omit, WebServer, customPage } from '../index.ts';
+import type { Database, sessionId } from '../database.js';
+import type { Omit, WebServer, customPage } from '../index.js';
 
 
 export { default as MongoStore } from './mongoStore.js';

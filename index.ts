@@ -15,7 +15,6 @@ import { MongoStore, WebServerSetupper } from './webServer/index.js';
 /* eslint-disable-next-line import-x/no-namespace */
 import type * as Discord from 'discord.js';
 import type { AnyDB } from '@mephisto5558/mongoose-db';
-import type { optionOptions } from 'discord-dashboard';
 import type { NextFunction, Request, Response } from 'express';
 import type express from 'express';
 import type { MemoryStore } from 'express-session';
@@ -55,7 +54,22 @@ export type dashboardSetting = {
   ) => { allowed: true } | { allowed: false; errorMessage?: string }) | undefined;
 };
 
-export type option = globalThis.option & { position: number } & { optionId: NonNullable<globalThis.option['optionId']> };
+export type allowedCheckOption = {
+  guild: { id: Discord.Snowflake };
+  user: { id: Discord.Snowflake };
+};
+
+export type optionOptions = {
+  guild: { id: Discord.Snowflake; object?: Discord.Guild };
+  user: { id: Discord.Snowflake };
+  newData?: unknown;
+};
+
+export type option = Omit<globalThis.option, 'optionId' | 'allowedCheck'> & {
+  position: number;
+  optionId: NonNullable<globalThis.option['optionId']>;
+  allowedCheck?(options: allowedCheckOption): Promise<unknown>;
+};
 
 type methods = 'get' | 'post' | 'put' | 'delete' | 'patch';
 export type customPage = {
@@ -295,7 +309,7 @@ export class WebServer<Ready extends boolean = boolean> {
         })),
         setNew: async (
 
-          { guild, user, data: dataArray }: Parameters<category['setNew']>[0] & { data: { optionId: string; data: JSONValue }[] }
+          { guild, user, data: dataArray }: Parameters<NonNullable<category['setNew']>>[0] & { data: { optionId: string; data: JSONValue }[] }
         ) => {
           for (const { optionId, data } of dataArray) {
             const option = optionList.find(e => e.optionId == optionId);
