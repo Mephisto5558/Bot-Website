@@ -44,7 +44,7 @@
   },
   "devDependencies": {
     "@mephisto5558/eslint-config": "github:Mephisto5558/ESLint-Config",
-    "@mephisto5558/mongoose-db": "github:Mephisto5558/Mongoose-DB",
+    "@mephisto5558/mongoose-db": "latest",
     "@types/compression": "1.x",
     "@types/escape-html": "1.x",
     "@types/express": "5.x",

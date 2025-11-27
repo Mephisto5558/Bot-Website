@@ -127,7 +127,7 @@ export class VoteSystem {
   };
 
   async fetchAll(): Promise<FeatureRequest[]> {
-    return Object.values(await this.db.get('website', 'requests') ?? {}) as FeatureRequest[];
+    return Object.values(await this.db.get('website', 'requests'));
   }
 
   async get(id: FeatureRequest['id']): Promise<FeatureRequest | undefined> {
@@ -164,7 +164,7 @@ export class VoteSystem {
     const featureRequestAutoApprove = await this.db.get('userSettings', `${userId}.featureRequestAutoApprove`);
     if (
       !featureRequestAutoApprove
-      && (Object.keys(await this.db.get('website', 'requests') ?? {}) as FeatureRequest['id'][])
+      && Object.keys(await this.db.get('website', 'requests'))
         .filter(k => VoteSystem.getRequestAuthor(k) == userId).length >= this.settings.maxPendingFeatureRequests
     ) {
       return {
@@ -283,7 +283,7 @@ export class VoteSystem {
     if (error) return error;
     if (!['up', 'down'].includes(type)) return { errorCode: HTTP_STATUS_BAD_REQUEST, error: 'Invalid vote type. Use "up" or "down"' };
 
-    const { lastVoted } = await this.db.get('userSettings', userId) ?? {};
+    const lastVoted = await this.db.get('userSettings', `${userId}.lastVoted`);
     if (VoteSystem.isInCurrentWeek(lastVoted)) return { errorCode: HTTP_STATUS_FORBIDDEN, error: 'You can only vote once per week.' };
 
     /* eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- gets checked for validity in `this.validate()` */
