@@ -6,6 +6,7 @@ import * as Discord from 'discord.js';
 import { readdir } from 'node:fs/promises';
 import { constants } from 'node:http2';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import compression from 'compression';
 import cors from 'cors';
 import SoftUITheme from 'dbd-soft-ui';
@@ -43,7 +44,7 @@ const
 
 type MarkOptional<T, K extends keyof T> = Partial<Pick<T, K>> & Omit<T, K>;
 
-export type DashboardThemeOptions = MarkOptional<Parameters<typeof SoftUITheme>[0], 'websiteName' | 'colorScheme' | 'icons' | 'meta'>;
+export type DashboardThemeOptions = MarkOptional<Parameters<typeof SoftUITheme>[0], 'websiteName' | 'colorScheme' | 'icons' | 'preloader' | 'meta'>;
 
 export type DashboardOptions = {
   errorPagesDir?: string | undefined;
@@ -116,6 +117,11 @@ export class WebServerSetupper {
           alignCenter: false
         },
         noGuildIcon: ''
+      },
+      preloader: {
+        image: '',
+        spinner: true,
+        text: 'Loading...'
       },
       meta: {
         author: owner?.username ?? '',
@@ -246,8 +252,9 @@ export class WebServerSetupper {
 
           if (!subDir.name.endsWith('.js')) return res.sendFile(path.join(subDir.parentPath, subDir.name));
 
-          /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- not fixable */
-          data = await require(path.join(subDir.parentPath, subDir.name));
+          data = (await import(
+            pathToFileURL(path.join(subDir.parentPath, subDir.name)).href
+          ) as { default: customPage }).default;
         }
 
         return WebServerSetupper.handleCustomSite(webServer, req, res, next, data);
