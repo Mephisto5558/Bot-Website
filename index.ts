@@ -41,16 +41,16 @@ export type dashboardSetting = {
   id: string;
   name: string;
   description: string;
-  type: formTypes | keyof formTypes | ((this: WebServer) => formTypes | Promise<formTypes>);
+  type: formTypes | keyof formTypes | ((this: WebServer<true>) => formTypes | Promise<formTypes>);
   position: number;
   disableToggle?: boolean;
 
-  get?(this: WebServer, option: option, setting: optionOptions): unknown;
-  set?(this: WebServer, option: option, setting: optionOptions): unknown;
+  get?(this: WebServer<true>, option: option, setting: optionOptions): unknown;
+  set?(this: WebServer<true>, option: option, setting: optionOptions): unknown;
 
   /** if returns `undefined`, will interpret as `{ allowed: true }` */
   auth?: false | ((
-    this: WebServer, guild: allowedCheckOption['guild'], user: allowedCheckOption['user']
+    this: WebServer<true>, guild: allowedCheckOption['guild'], user: allowedCheckOption['user']
   ) => { allowed: true } | { allowed: false; errorMessage?: string }) | undefined;
 };
 
@@ -84,7 +84,7 @@ export type customPage = {
   permissionCheck?(this: express.Request): boolean | Promise<boolean>;
   title: string;
   static?: boolean;
-  run?: URL | string | number | boolean | ((this: WebServer, arg1: express.Response, arg2: express.Request, arg3: express.NextFunction) => unknown);
+  run?: URL | string | number | boolean | ((this: WebServer<true>, arg1: express.Response, arg2: express.Request, arg3: express.NextFunction) => unknown);
 };
 export type commands = { category: string; subTitle: string; aliasesDisabled: boolean; list: Record<string, unknown>[] }[];
 
@@ -102,7 +102,7 @@ export type WebServerConfig = {
 
 export class WebServer<Ready extends boolean = boolean> {
   constructor(
-    client: Discord.Client<Ready>, db: WebServer['db'], keys: Keys,
+    client: Discord.Client<Ready>, db: WebServer<Ready>['db'], keys: Keys,
     config: Partial<WebServerConfig> = {},
     errorLoggingFunction?: (err: Error, req?: express.Request, res?: express.Response) => unknown
   ) {
@@ -278,7 +278,7 @@ export class WebServer<Ready extends boolean = boolean> {
               if ((await this.db.get('botSettings', 'blacklist'))?.includes(user.id))
                 return { allowed: false, errorMessage: 'You have been blacklisted from using the bot.' };
               if (setting.auth === false) return { allowed: false, errorMessage: 'This feature has been disabled.' };
-              return setting.auth?.call(this, guild, user) ?? { allowed: true };
+              return setting.auth?.call(this as WebServer<true>, guild, user) ?? { allowed: true };
             }
           };
 
@@ -286,13 +286,13 @@ export class WebServer<Ready extends boolean = boolean> {
           optionList.push(option);
           if ('get' in setting) {
             /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-            option.getActualSet = function getWrapper(this: WebServer, ...args): any {
+            option.getActualSet = function getWrapper(this: WebServer<true>, ...args): any {
               return setting.get?.call(this, option, ...args);
             };
           }
           if ('set' in setting) {
             /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-            option.setNew = function setWrapper(this: WebServer, ...args): any {
+            option.setNew = function setWrapper(this: WebServer<true>, ...args): any {
               return setting.set?.call(this, option, ...args);
             };
           }
