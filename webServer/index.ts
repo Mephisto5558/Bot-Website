@@ -207,8 +207,8 @@ export class WebServerSetupper {
     const router = express.Router()
 
       // `@types/express-serve-static-core` has a to-do to add typing for regex paths
-      .use('/api{/*path}', (req: Request<{ path: string[] }>, res, next) => {
-        if (/^v\d+$/.test(req.params.path[0]!)) return next();
+      .use('/api{/*path}', (req: Request<{ path?: string[] }>, res, next) => {
+        if (!req.params.path || /^v\d+$/.test(req.params.path[0]!)) return next();
         return res.redirect(HTTP_STATUS_MOVED_PERMANENTLY, `/api/v${this.baseConfig.defaultAPIVersion}/${req.params.path.join('/')}`);
       })
       .use(async (req, res, next) => {
