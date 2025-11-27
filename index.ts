@@ -5,7 +5,6 @@ import { GatewayIntentBits, Status } from 'discord.js';
 import { readdir } from 'node:fs/promises';
 import { constants } from 'node:http2';
 import path from 'node:path';
-import { DB, NoCacheDB } from '@mephisto5558/mongoose-db';
 import { formTypes as softUIFormTypes } from 'dbd-soft-ui';
 import DBD from 'discord-dashboard';
 
@@ -209,7 +208,7 @@ export class WebServer<Ready extends boolean = boolean> {
     config?: Partial<WebServerConfig>, errorLoggingFunction?: WebServer<Ready>['logError']
   ): void {
     if (!client?.options.intents.has(GatewayIntentBits.Guilds)) throw new Error('Client must have the "Guilds" gateway intent.');
-    if (!(db instanceof DB) && !(db instanceof NoCacheDB)) throw new Error('Invalid DB');
+    if (!db?.update || !db.get) throw new Error('Invalid DB'); /* eslint-disable-line @typescript-eslint/no-unnecessary-condition */
     if (!keys?.secret) throw new Error('Missing discord application secret');
     if (!keys.dbdLicense) throw new Error('Missing dbdLicense. Get one here (free): https://assistantscenter.com/discord-dashboard/v2');
     if (!config?.domain?.startsWith('http://') && !this.config.domain.startsWith('https://')) throw new Error('config.domain must start with "http://" or "https://"!');
