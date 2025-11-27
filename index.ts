@@ -24,6 +24,8 @@ import type { Database } from './database.ts';
 import type { VoteSystemConfig, VoteSystemSettings } from './voteSystem.ts';
 import type { DashboardOptions, DashboardThemeOptions } from './webServer/index.ts';
 
+import type {} from './globals.ts' // load global type definitions into scope
+
 const DEFAULT_PORT = 8000;
 
 // Source: https://github.com/microsoft/TypeScript/issues/54451#issue-1732749888
