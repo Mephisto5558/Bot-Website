@@ -5,7 +5,7 @@ import { GatewayIntentBits, Status } from 'discord.js';
 import { readdir } from 'node:fs/promises';
 import { constants } from 'node:http2';
 import path from 'node:path';
-import DB, { NoCacheDB } from '@mephisto5558/mongoose-db';
+import { DB, NoCacheDB } from '@mephisto5558/mongoose-db';
 import { formTypes as softUIFormTypes } from 'dbd-soft-ui';
 import DBD from 'discord-dashboard';
 
@@ -45,8 +45,8 @@ export type dashboardSetting = {
   position: number;
   disableToggle?: boolean;
 
-  get?(this: WebServer, option: option, setting: Omit<optionOptions, 'newData'>): unknown;
-  set?(this: WebServer, option: option, setting: Omit<optionOptions, 'newData'> & { data: unknown }): unknown;
+  get?(this: WebServer, option: option, setting: optionOptions): unknown;
+  set?(this: WebServer, option: option, setting: optionOptions): unknown;
 
   /** if returns `undefined`, will interpret as `{ allowed: true }` */
   auth?: false | ((
@@ -62,13 +62,20 @@ export type allowedCheckOption = {
 export type optionOptions = {
   guild: { id: Discord.Snowflake; object?: Discord.Guild };
   user: { id: Discord.Snowflake };
-  newData?: unknown;
+  data?: unknown;
 };
 
-export type option = Omit<globalThis.option, 'optionId' | 'allowedCheck'> & {
+export type option = Omit<globalThis.option, 'optionId' | 'allowedCheck' | 'getActualSet' | 'setNew'> & {
   position: number;
   optionId: NonNullable<globalThis.option['optionId']>;
   allowedCheck?(options: allowedCheckOption): Promise<unknown>;
+
+  getActualSet?(options: optionOptions): Promise<unknown>;
+  setNew?(options: optionOptions): Promise<unknown>;
+};
+
+export type category = Omit<globalThis.category, 'categoryOptionsList'> & Pick<option, 'getActualSet' | 'setNew' | 'position'> & {
+  categoryOptionsList: option[];
 };
 
 type methods = 'get' | 'post' | 'put' | 'delete' | 'patch';
@@ -181,7 +188,7 @@ export class WebServer<Ready extends boolean = boolean> {
       errorPagesDir: this.config.errorPagesDir,
       theme: dashboardConfig.theme ?? this.#setupper.setupDashboardTheme(themeConfig),
       port: this.config.port, domain: this.config.domain,
-      settings: await this.#getSettings()
+      settings: await this.#getSettings() as globalThis.category[]
     });
     this.router = this.#setupper.setupRouter(this as WebServer<true>, this.config.customPagesPath);
     this.app = this.#setupper.setupApp(
@@ -212,9 +219,7 @@ export class WebServer<Ready extends boolean = boolean> {
   async #getSettings(): Promise<category[]> {
     if (!this.config.settingsPath) return [];
 
-    type category = globalThis.category & Pick<globalThis.option, 'getActualSet' | 'setNew'> & { position: number };
     const categoryOptionList: category[] = [];
-
     for (const subFolder of await readdir(this.config.settingsPath, { withFileTypes: true })) {
       if (!subFolder.isDirectory()) continue;
 
@@ -340,7 +345,7 @@ export class WebServer<Ready extends boolean = boolean> {
    * @param res
    * @param next
    * @returns */
-  #reqErrorHandler(err: Error | HttpError, req: Request, res: Response, next: NextFunction): void {
+  #reqErrorHandler(err: Error & { code?: unknown } | HttpError, req: Request, res: Response, next: NextFunction): void {
     if (err.code != 'ENOENT') this.logError(err);
 
     const status = 'statusCode' in err ? err.statusCode : constants.HTTP_STATUS_INTERNAL_SERVER_ERROR;
@@ -353,7 +358,7 @@ export class WebServer<Ready extends boolean = boolean> {
 
     try { return res.status(status).sendFile(filePath, { root: process.cwd() }); }
     catch (err) {
-      if (err.code != 'ENOENT') return this.#reqErrorHandler(err, req, res, next);
+      if (err instanceof Error && 'code' in err && err.code != 'ENOENT') return this.#reqErrorHandler(err, req, res, next);
     }
   }
 
