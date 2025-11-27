@@ -5,6 +5,7 @@ import { GatewayIntentBits, Status } from 'discord.js';
 import { readdir } from 'node:fs/promises';
 import { constants } from 'node:http2';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { formTypes as softUIFormTypes } from 'dbd-soft-ui';
 import DBD from 'discord-dashboard';
 
@@ -191,6 +192,8 @@ export class WebServer<Ready extends boolean = boolean> {
     });
     this.router = this.#setupper.setupRouter(this as WebServer<true>, this.config.customPagesPath);
     this.app = this.#setupper.setupApp(
+
+      // @ts-expect-error Works, but is a TODO.
       this.keys.secret, this.sessionStore,
       [this.router, this.dashboard.getApp() as express.Handler, this.#reqErrorHandler.bind(this)]
     );
@@ -224,7 +227,7 @@ export class WebServer<Ready extends boolean = boolean> {
 
       const
         index = (await import(
-          path.join(process.cwd(), this.config.settingsPath, subFolder.name, '_index.json')
+          pathToFileURL(path.join(process.cwd(), this.config.settingsPath, subFolder.name, '_index.json')).href, { with: { type: 'json' } }
         ) as { default: dashboardSetting }).default,
         optionList: option[] = [{
           optionId: `${index.id}.spacer`,
@@ -248,7 +251,7 @@ export class WebServer<Ready extends boolean = boolean> {
         if (!file.endsWith('.js')) continue;
 
         const setting = (await import(
-          path.join(process.cwd(), this.config.settingsPath, subFolder.name, file)
+          pathToFileURL(path.join(process.cwd(), this.config.settingsPath, subFolder.name, file)).href
         ) as { default: dashboardSetting }).default;
 
         if (setting.type == 'spacer') {
