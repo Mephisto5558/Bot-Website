@@ -19,7 +19,7 @@
   "author": "Mephisto5558",
   "type": "module",
   "main": "dist/index.js",
-  "types": "dist/globals.d.ts",
+  "types": "dist/index.d.ts",
   "files": [
     "dist"
   ],
