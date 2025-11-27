@@ -120,7 +120,7 @@ export class WebServerSetupper {
       },
       preloader: {
         image: '',
-        spinner: true,
+        spinner: false,
         text: 'Loading...'
       },
       meta: {
