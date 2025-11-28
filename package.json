@@ -1,6 +1,6 @@
 {
   "name": "@mephisto5558/bot-website",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "The website for my Discord Bot.",
   "keywords": [
     "expressjs",
