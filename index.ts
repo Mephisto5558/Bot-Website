@@ -15,6 +15,7 @@ import { MongoStore, WebServerSetupper } from './webServer/index.js';
 /* eslint-disable-next-line import-x/no-namespace */
 import type * as Discord from 'discord.js';
 import type { AnyDB } from '@mephisto5558/mongoose-db';
+import type { formTypes as DBDFormTypes_ } from 'discord-dashboard';
 import type { NextFunction, Request, Response } from 'express';
 import type express from 'express';
 import type { MemoryStore } from 'express-session';
@@ -30,15 +31,19 @@ export type * from './globals.js'; // load global type definitions into scope
 
 const DEFAULT_PORT = 8000;
 
+type DBDFormTypes = typeof DBDFormTypes_;
+type DBDCategory = ConstructorParameters<ReturnType<typeof DBD.UpdatedClass>>[0]['settings'][0];
+type DBDOption = DBDCategory['categoryOptionsList'][0];
+
 // Source: https://github.com/microsoft/TypeScript/issues/54451#issue-1732749888
 export type Omit<T, K extends keyof T> = { [P in keyof T as P extends K ? never : P]: T[P] };
 
 type Support = { mail?: string; discord?: string };
 type Keys = { secret: string; dbdLicense: string };
 
-type formTypes = Omit<globalThis.formTypes & typeof softUIFormTypes, 'embedBuilder'> & {
-  embedBuilder: ReturnType<globalThis.formTypes['embedBuilder']>;
-  _embedBuilder: globalThis.formTypes['embedBuilder'];
+type formTypes = Omit<DBDFormTypes & typeof softUIFormTypes, 'embedBuilder'> & {
+  embedBuilder: ReturnType<DBDFormTypes['embedBuilder']>;
+  _embedBuilder: DBDFormTypes['embedBuilder'];
 };
 
 export type dashboardSetting = {
@@ -69,16 +74,16 @@ export type optionOptions = {
   data?: unknown;
 };
 
-export type option = Omit<globalThis.option, 'optionId' | 'allowedCheck' | 'getActualSet' | 'setNew'> & {
+export type option = Omit<DBDOption, 'optionId' | 'allowedCheck' | 'getActualSet' | 'setNew'> & {
   position: number;
-  optionId: NonNullable<globalThis.option['optionId']>;
+  optionId: NonNullable<DBDOption['optionId']>;
   allowedCheck?(options: allowedCheckOption): Promise<unknown>;
 
   getActualSet?(options: optionOptions): Promise<unknown>;
   setNew?(options: optionOptions): Promise<unknown>;
 };
 
-export type category = Omit<globalThis.category, 'categoryOptionsList'> & Pick<option, 'getActualSet' | 'setNew' | 'position'> & {
+export type category = Omit<DBDCategory, 'categoryOptionsList'> & Pick<option, 'getActualSet' | 'setNew' | 'position'> & {
   categoryOptionsList: option[];
 };
 
@@ -193,7 +198,7 @@ export class WebServer<Ready extends boolean = boolean> {
       errorPagesDir: this.config.errorPagesDir,
       theme: dashboardConfig.theme ?? this.#setupper.setupDashboardTheme(themeConfig),
       port: this.config.port, domain: this.config.domain,
-      settings: await this.#getSettings() as globalThis.category[]
+      settings: await this.#getSettings() as DBDCategory[]
     });
     this.router = this.#setupper.setupRouter(this as WebServer<true>, this.config.customPagesPath);
     this.app = this.#setupper.setupApp(
