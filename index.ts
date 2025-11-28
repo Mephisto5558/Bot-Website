@@ -24,11 +24,9 @@ import type { Database } from './database.js';
 import type { VoteSystemConfig, VoteSystemSettings } from './voteSystem.js';
 import type { DashboardOptions, DashboardThemeOptions } from './webServer/index.js';
 
-/* eslint-disable-next-line import-x/no-unassigned-import, import-x/no-empty-named-blocks, import-x/order, unicorn/require-module-specifiers */
-import type {} from './globals.js'; // load global type definitions into scope
-
 export type { Database };
 export type * from './voteSystem.js';
+export type * from './globals.js'; // load global type definitions into scope
 
 const DEFAULT_PORT = 8000;
 
