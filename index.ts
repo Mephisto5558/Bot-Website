@@ -1,4 +1,4 @@
-/* eslint-disable import-x/extensions, sonarjs/cognitive-complexity, @typescript-eslint/no-unsafe-type-assertion */
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 /* eslint sonarjs/no-nested-functions: [warn, { threshold: 4 }] */
 
 import { GatewayIntentBits, Status } from 'discord.js';
@@ -20,11 +20,15 @@ import type express from 'express';
 import type { MemoryStore } from 'express-session';
 import type { HttpError } from 'http-errors';
 import type { Authenticator } from 'passport';
-import type { Database } from './database.ts';
-import type { VoteSystemConfig, VoteSystemSettings } from './voteSystem.ts';
-import type { DashboardOptions, DashboardThemeOptions } from './webServer/index.ts';
+import type { Database } from './database.js';
+import type { VoteSystemConfig, VoteSystemSettings } from './voteSystem.js';
+import type { DashboardOptions, DashboardThemeOptions } from './webServer/index.js';
 
-import type {} from './globals.ts' // load global type definitions into scope
+/* eslint-disable-next-line import-x/no-unassigned-import, import-x/no-empty-named-blocks, import-x/order, unicorn/require-module-specifiers */
+import type {} from './globals.js'; // load global type definitions into scope
+
+export type { Database };
+export type * from './voteSystem.js';
 
 const DEFAULT_PORT = 8000;
 
@@ -86,7 +90,8 @@ export type customPage = {
   permissionCheck?(this: express.Request): boolean | Promise<boolean>;
   title: string;
   static?: boolean;
-  run?: URL | string | number | boolean | ((this: WebServer<true>, arg1: express.Response, arg2: express.Request, arg3: express.NextFunction) => unknown);
+  run?: URL | string | number | boolean
+    | ((this: WebServer<true>, arg1: express.Response, arg2: express.Request, arg3: express.NextFunction) => unknown);
 };
 export type commands = { category: string; subTitle: string; aliasesDisabled: boolean; list: Record<string, unknown>[] }[];
 
