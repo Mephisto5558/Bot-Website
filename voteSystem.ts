@@ -267,13 +267,14 @@ export class VoteSystem {
     const featureReq: FeatureRequest = (await this.get(featureId))!;
 
     await this.db.delete('website', `requests.${featureId}`);
+
+    const mode = featureReq.pending && requestAuthor != userId ? 'denied' : 'deleted';
     void this.sendToWebhook(
-      this.settings.userChangeNotificationEmbed[featureReq.pending ? 'denied' : 'deleted'].title
-      + ` by ${requestAuthor == userId ? 'the author' : 'a dev'}`,
+      `${this.settings.userChangeNotificationEmbed[mode].title} by ${requestAuthor == userId ? 'the author' : 'a dev'}`,
       VoteSystem.formatDesc(featureReq, this.settings.webhookMaxVisibleBodyLength),
-      resolveColor(this.settings.userChangeNotificationEmbed[featureReq.pending ? 'denied' : 'deleted'].color)
+      resolveColor(this.settings.userChangeNotificationEmbed[mode].color)
     );
-    if (requestAuthor != userId) void this.notifyAuthor(featureReq, featureReq.pending ? 'denied' : 'deleted');
+    if (requestAuthor != userId) void this.notifyAuthor(featureReq, mode);
 
     return { success: true };
   }
