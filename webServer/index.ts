@@ -46,7 +46,7 @@ type MarkOptional<T, K extends keyof T> = Partial<Pick<T, K>> & Omit<T, K>;
 
 export type DashboardThemeOptions = MarkOptional<Parameters<typeof SoftUITheme>[0], 'websiteName' | 'colorScheme' | 'icons' | 'preloader' | 'meta'>;
 
-export type DashboardOptions = {
+export type DashboardOptions = Exclude<{
   errorPagesDir?: string | undefined;
 
   /** HTML code for the 404 page */
@@ -57,7 +57,7 @@ export type DashboardOptions = {
   /* eslint-disable-next-line sonarjs/max-union-size */// @ts-expect-error -- Not all options are documented
   'acceptPrivacyPolicy' | 'minimizedConsoleLogs' | 'redirectUri' | 'noCreateServer' | 'useUnderMaintenance'
   | 'useCategorySet' | 'useTheme404' | 'bot' | 'client' | 'invite' | 'theme' | 'underMaintenance'
->;
+>, 'port' | 'domain' | 'settings'>;
 
 
 export class WebServerSetupper {
