@@ -41,7 +41,9 @@ export type VoteSystemSettings = {
   userChangeNotificationEmbed?: UserChangeNotificationEmbed;
 };
 
-export type VoteSystemConfig = { domain: string; port?: number; votingPath: string; webhookUrl?: string; ownerIds?: string[] };
+export type VoteSystemConfig = {
+  domain: string; port?: number; votingPath: string; webhookUrl?: string; ownerIds?: string[]; autoApproveOwnerRequests?: boolean;
+};
 
 export class VoteSystem {
   /**
@@ -161,7 +163,9 @@ export class VoteSystem {
     const err = VoteSystem.validateContent(this.settings, title, body);
     if (err) return err;
 
-    const featureRequestAutoApprove = await this.db.get('userSettings', `${userId}.featureRequestAutoApprove`);
+    const featureRequestAutoApprove = (this.config.autoApproveOwnerRequests && this.config.ownerIds?.includes(userId))
+      /* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- false positive */
+      || await this.db.get('userSettings', `${userId}.featureRequestAutoApprove`);
     if (
       !featureRequestAutoApprove
       && Object.keys(await this.db.get('website', 'requests'))
