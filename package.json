@@ -43,7 +43,8 @@
     "passport-discord-auth": "^1.2.0"
   },
   "devDependencies": {
-    "@mephisto5558/eslint-config": "github:Mephisto5558/ESLint-Config",
+    "@mephisto5558/better-types": "latest",
+    "@mephisto5558/eslint-config": "latest",
     "@mephisto5558/mongoose-db": "latest",
     "@types/compression": "1.x",
     "@types/escape-html": "1.x",

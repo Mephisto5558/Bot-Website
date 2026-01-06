@@ -25,7 +25,7 @@ import type { Express, Handler, NextFunction, Request, RequestHandler, Response,
 import type { Session } from 'express-session';
 import type { Profile, ProfileGuild } from 'passport-discord-auth';
 import type { Database, sessionId } from '../database.js';
-import type { Omit, WebServer, customPage } from '../index.js';
+import type { WebServer, customPage } from '../index.js';
 
 
 export { default as MongoStore } from './mongoStore.js';
@@ -42,7 +42,7 @@ const
   VIEW_COOLDOWN_MS = 3e5; // 5min in ms
 
 
-type MarkOptional<T, K extends keyof T> = Partial<Pick<T, K>> & Omit<T, K>;
+type MarkOptional<T, K extends keyof T> = Partial<Pick<T, K>> & StrictOmit<T, K>;
 
 export type DashboardThemeOptions = MarkOptional<Parameters<typeof SoftUITheme>[0], 'websiteName' | 'colorScheme' | 'icons' | 'preloader' | 'meta'>;
 

@@ -35,13 +35,10 @@ type DBDFormTypes = typeof DBDFormTypes_;
 type DBDCategory = ConstructorParameters<ReturnType<typeof DBD.UpdatedClass>>[0]['settings'][0];
 type DBDOption = DBDCategory['categoryOptionsList'][0];
 
-// Source: https://github.com/microsoft/TypeScript/issues/54451#issue-1732749888
-export type Omit<T, K extends keyof T> = { [P in keyof T as P extends K ? never : P]: T[P] };
-
 type Support = { mail?: string; discord?: string };
 type Keys = { secret: string; dbdLicense: string };
 
-type formTypes = Omit<DBDFormTypes & typeof softUIFormTypes, 'embedBuilder'> & {
+type formTypes = StrictOmit<DBDFormTypes & typeof softUIFormTypes, 'embedBuilder'> & {
   embedBuilder: ReturnType<DBDFormTypes['embedBuilder']>;
   _embedBuilder: DBDFormTypes['embedBuilder'];
 };
@@ -74,7 +71,7 @@ export type optionOptions = {
   data?: unknown;
 };
 
-export type option = Omit<DBDOption, 'optionId' | 'allowedCheck' | 'getActualSet' | 'setNew'> & {
+export type option = StrictOmit<DBDOption, 'optionId' | 'allowedCheck' | 'getActualSet' | 'setNew'> & {
   position: number;
   optionId: NonNullable<DBDOption['optionId']>;
   allowedCheck?(options: allowedCheckOption): Promise<unknown>;
@@ -83,7 +80,7 @@ export type option = Omit<DBDOption, 'optionId' | 'allowedCheck' | 'getActualSet
   setNew?(options: optionOptions): Promise<unknown>;
 };
 
-export type category = Omit<DBDCategory, 'categoryOptionsList'> & Pick<option, 'getActualSet' | 'setNew' | 'position'> & {
+export type category = StrictOmit<DBDCategory, 'categoryOptionsList'> & Pick<option, 'getActualSet' | 'setNew' | 'position'> & {
   categoryOptionsList: option[];
 };
 

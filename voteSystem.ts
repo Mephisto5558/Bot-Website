@@ -8,7 +8,6 @@ import { sanitize } from 'express-xss-sanitizer';
 import type * as Discord from 'discord.js';
 import type { AnyDB } from '@mephisto5558/mongoose-db';
 import type { Database } from './database.js';
-import type { Omit } from './index.js';
 
 
 const
@@ -90,7 +89,7 @@ export class VoteSystem {
   client: Discord.Client<true>;
   db: AnyDB<Database>;
   config: VoteSystemConfig;
-  settings: Required<Omit<VoteSystemSettings, 'userChangeNotificationEmbed'>> & {
+  settings: Required<StrictOmit<VoteSystemSettings, 'userChangeNotificationEmbed'>> & {
     userChangeNotificationEmbed: Record<keyof UserChangeNotificationEmbed, Required<UserChangeNotificationEmbed[keyof UserChangeNotificationEmbed]>>;
   } = {
     /* eslint-disable @typescript-eslint/no-magic-numbers -- default values */
