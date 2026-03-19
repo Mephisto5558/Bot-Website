@@ -13,7 +13,7 @@ import SoftUITheme from 'dbd-soft-ui';
 import DBD from 'discord-dashboard';
 import escapeHTML from 'escape-html';
 import express from 'express';
-import rateLimit from 'express-rate-limit';
+import { rateLimit } from 'express-rate-limit';
 import session from 'express-session';
 import { xss } from 'express-xss-sanitizer';
 import { Authenticator } from 'passport';
@@ -24,11 +24,11 @@ import type { AnyDB } from '@mephisto5558/mongoose-db';
 import type { Express, Handler, NextFunction, Request, RequestHandler, Response, Router } from 'express';
 import type { Session } from 'express-session';
 import type { Profile, ProfileGuild } from 'passport-discord-auth';
-import type { Database, sessionId } from '../database.js';
-import type { WebServer, customPage } from '../index.js';
+import type { Database, sessionId } from '../database.ts';
+import type { WebServer, customPage } from '../index.ts';
 
 
-export { default as MongoStore } from './mongoStore.js';
+export { default as MongoStore } from './mongoStore.ts';
 export type DBSession = NonNullable<Database['website']['sessions'][sessionId]>;
 
 const
@@ -302,7 +302,7 @@ export class WebServerSetupper {
         failureRedirect: this.authUrl,
         successRedirect: 'redirectUrl' in req.query && req.query.redirectUrl ? req.query.redirectUrl as string : '/'
       })(req, res, next))
-      .use('/auth/logout', (req, res, next) => req.logOut(err => (err ? next(err) : res.sendStatus(HTTP_STATUS_OK))))
+      .use('/auth/logout', (req, res, next) => req.logOut(err => void (err ? next(err) : res.sendStatus(HTTP_STATUS_OK))))
       .use(
         async (req, _, next) => {
           // only track normal GET requests
@@ -338,7 +338,7 @@ export class WebServerSetupper {
   ): void {
     if (!data) return next();
 
-    /* eslint-disable-next-line @typescript-eslint/no-shadow */
+    /* eslint-disable-next-line @typescript-eslint/no-shadow, @typescript-eslint/strict-void-return */
     return WebServerSetupper.runParsed(req, res, next, data, async (req, res, data) => {
       if (data.method && !(typeof data.method == 'string' ? [data.method] : data.method).some(e => e.toUpperCase() == req.method)) {
         return res

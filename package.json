@@ -3,9 +3,9 @@
   "version": "3.1.0",
   "description": "The website for my Discord Bot.",
   "keywords": [
-    "expressjs",
     "bot-website",
-    "dashboard"
+    "dashboard",
+    "expressjs"
   ],
   "homepage": "https://github.com/Mephisto5558/Bot-Website#readme",
   "bugs": {
@@ -24,9 +24,11 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "npm run clean && tsc --build src",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true });\"",
+    "lint": "eslint . --cache --cache-location ./node_modules/.cache/eslint/ >eslint.log",
     "test": "echo \"Error: no test specified\"",
-    "watch": "tsc --watch"
+    "watch": "npm run build -- --watch"
   },
   "dependencies": {
     "compression": "^1.8.1",
@@ -43,7 +45,6 @@
     "passport-discord-auth": "^1.2.0"
   },
   "devDependencies": {
-    "@mephisto5558/better-types": "latest",
     "@mephisto5558/eslint-config": "latest",
     "@mephisto5558/mongoose-db": "latest",
     "@types/compression": "1.x",
@@ -60,5 +61,12 @@
   },
   "engines": {
     "node": ">=20.11.0"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "onFail": "error",
+      "version": ">=20.11.0"
+    }
   }
 }

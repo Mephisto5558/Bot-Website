@@ -9,8 +9,8 @@ import { pathToFileURL } from 'node:url';
 import { formTypes as softUIFormTypes } from 'dbd-soft-ui';
 import DBD from 'discord-dashboard';
 
-import { VoteSystem } from './voteSystem.js';
-import { MongoStore, WebServerSetupper } from './webServer/index.js';
+import { VoteSystem } from './voteSystem.ts';
+import { MongoStore, WebServerSetupper } from './webServer/index.ts';
 
 /* eslint-disable-next-line import-x/no-namespace */
 import type * as Discord from 'discord.js';
@@ -19,15 +19,16 @@ import type { formTypes as DBDFormTypes_ } from 'discord-dashboard';
 import type { NextFunction, Request, Response } from 'express';
 import type express from 'express';
 import type { MemoryStore } from 'express-session';
+/* eslint-disable-next-line import-x/no-extraneous-dependencies -- false positive: `@types/http-errors` is installed. */
 import type { HttpError } from 'http-errors';
 import type { Authenticator } from 'passport';
-import type { Database } from './database.js';
-import type { VoteSystemConfig, VoteSystemSettings } from './voteSystem.js';
-import type { DashboardOptions, DashboardThemeOptions } from './webServer/index.js';
+import type { Database } from './database.ts';
+import type { VoteSystemConfig, VoteSystemSettings } from './voteSystem.ts';
+import type { DashboardOptions, DashboardThemeOptions } from './webServer/index.ts';
 
 export type { Database };
-export type * from './voteSystem.js';
-export type * from './globals.js'; // load global type definitions into scope
+export type * from './voteSystem.ts';
+export type * from './globals.ts'; // load global type definitions into scope
 
 const DEFAULT_PORT = 8000;
 

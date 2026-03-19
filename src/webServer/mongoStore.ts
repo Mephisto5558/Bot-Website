@@ -1,9 +1,10 @@
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
+/* eslint-disable @typescript-eslint/strict-void-return, @typescript-eslint/no-unsafe-type-assertion */
+
 import { MemoryStore } from 'express-session';
 import type { AnyDB } from '@mephisto5558/mongoose-db';
 import type { Profile } from 'passport-discord-auth';
-import type { Database } from '../database.js';
-import type { DBSession } from './index.js';
+import type { Database } from '../database.ts';
+import type { DBSession } from './index.ts';
 
 
 export default class MongoStore extends MemoryStore {

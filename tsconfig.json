@@ -4,21 +4,22 @@
     "node_modules"
   ],
   "compilerOptions": {
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "target": "esnext",
     "lib": [
       "ESNext"
     ],
-    "allowJs": false,
+    "allowImportingTsExtensions": true,
     "declaration": true,
     "exactOptionalPropertyTypes": true,
     "libReplacement": true,
+    "noEmit": true,
     "noImplicitOverride": true,
     "noUncheckedIndexedAccess": true,
     "noUncheckedSideEffectImports": true,
-    "outDir": "dist",
+    "rewriteRelativeImportExtensions": true,
     "skipLibCheck": true,
-    "strict": true,
+    "strict": true
   }
 }

@@ -1,7 +1,7 @@
 import type { Guild, User } from 'discord.js';
 import type { Cookie } from 'express-session';
 import type { Profile } from 'passport-discord-auth';
-import type { FeatureRequest } from './voteSystem.js';
+import type { FeatureRequest } from './voteSystem.ts';
 
 /* eslint-disable-next-line sonarjs/redundant-type-aliases -- documentation */
 export type sessionId = string;

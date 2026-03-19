@@ -7,7 +7,7 @@ import { sanitize } from 'express-xss-sanitizer';
 /* eslint-disable-next-line import-x/no-namespace */
 import type * as Discord from 'discord.js';
 import type { AnyDB } from '@mephisto5558/mongoose-db';
-import type { Database } from './database.js';
+import type { Database } from './database.ts';
 
 
 const
