@@ -46,7 +46,7 @@
     "passport-discord-auth": "^1.2.0"
   },
   "devDependencies": {
-    "@mephisto5558/eslint-config": "file:../eslint-config/mephisto5558-eslint-config-5.1.4.tgz",
+    "@mephisto5558/eslint-config": "latest",
     "@mephisto5558/mongoose-db": "latest",
     "@types/compression": "1.x",
     "@types/escape-html": "1.x",
@@ -57,8 +57,7 @@
     "@types/http-errors": "^2.0.5",
     "@types/node": "20.x",
     "@types/passport": "1.x",
-    "@types/passport-oauth2": "1.x",
-    "typescript": "latest"
+    "@types/passport-oauth2": "1.x"
   },
   "engines": {
     "node": ">=20.11.0"
