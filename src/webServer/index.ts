@@ -206,10 +206,14 @@ export class WebServerSetupper {
     /* eslint-disable-next-line new-cap -- Router is a function that returns a class instance */
     const router = express.Router()
 
-      // `@types/express-serve-static-core` has a to-do to add typing for regex paths
-      .use('/api{/*path}', (req: Request<{ path?: string[] }>, res, next) => {
-        if (!req.params.path || /^v\d+$/.test(req.params.path[0]!)) return next();
-        return res.redirect(HTTP_STATUS_MOVED_PERMANENTLY, `/api/v${this.baseConfig.defaultAPIVersion}/${req.params.path.join('/')}`);
+      .use('/api{/*path}', (req: Request, res, next) => {
+        const reqPath = req.params.path;
+        if (!reqPath || /^v\d+$/.test(reqPath[0]!)) return next();
+
+        return res.redirect(
+          HTTP_STATUS_MOVED_PERMANENTLY,
+          `/api/v${this.baseConfig.defaultAPIVersion}/${Array.isArray(reqPath) ? reqPath.join('/') : reqPath}`
+        );
       })
       .use(async (req, res, next) => {
         Object.defineProperty(req.session, 'guilds', { // Dashboard

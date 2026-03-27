@@ -1,25 +1,3 @@
 {
-  "exclude": [
-    "dist",
-    "node_modules"
-  ],
-  "compilerOptions": {
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "target": "esnext",
-    "lib": [
-      "ESNext"
-    ],
-    "allowImportingTsExtensions": true,
-    "declaration": true,
-    "exactOptionalPropertyTypes": true,
-    "libReplacement": true,
-    "noEmit": true,
-    "noImplicitOverride": true,
-    "noUncheckedIndexedAccess": true,
-    "noUncheckedSideEffectImports": true,
-    "rewriteRelativeImportExtensions": true,
-    "skipLibCheck": true,
-    "strict": true
-  }
+  "extends": "@mephisto5558/eslint-config/tsconfigs/node/tsconfig.check.json"
 }

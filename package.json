@@ -21,10 +21,11 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
+    "!**/*.tsbuildinfo",
     "dist"
   ],
   "scripts": {
-    "build": "npm run clean && tsc --build src",
+    "build": "npm run clean && tsc -p ./tsconfig.build.json",
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true });\"",
     "lint": "eslint . --cache --cache-location ./node_modules/.cache/eslint/ >eslint.log",
     "test": "echo \"Error: no test specified\"",
@@ -45,7 +46,7 @@
     "passport-discord-auth": "^1.2.0"
   },
   "devDependencies": {
-    "@mephisto5558/eslint-config": "latest",
+    "@mephisto5558/eslint-config": "file:../eslint-config/mephisto5558-eslint-config-5.1.4.tgz",
     "@mephisto5558/mongoose-db": "latest",
     "@types/compression": "1.x",
     "@types/escape-html": "1.x",
