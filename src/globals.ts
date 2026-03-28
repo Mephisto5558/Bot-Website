@@ -1,8 +1,6 @@
 import type { Guild } from 'discord.js';
 import type { Profile as PProfile } from 'passport-discord-auth';
 
-import type * as __ from '@mephisto5558/better-types'; /* eslint-disable-line import-x/order, import-x/no-namespace -- load in global definitions */
-
 /* eslint-disable @typescript-eslint/ban-ts-comment -- depending on the module resolution, one of these might not error out.
   Using `../../` because the content lands in `dist/` */
 // @ts-expect-error
