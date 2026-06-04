@@ -25,7 +25,7 @@ import type { Express, Handler, NextFunction, Request, RequestHandler, Response,
 import type { Session } from 'express-session';
 import type { Profile, ProfileGuild } from 'passport-discord-auth';
 import type { Database, sessionId } from '../database.ts';
-import type { WebServer, customPage } from '../index.ts';
+import type { CustomPage, WebServer } from '../index.ts';
 
 
 export { default as MongoStore } from './mongoStore.ts';
@@ -235,7 +235,7 @@ export class WebServerSetupper {
           return res.redirect(HTTP_STATUS_FORBIDDEN, `/error/${HTTP_STATUS_FORBIDDEN}`);
 
         let
-          data: customPage | undefined,
+          data: CustomPage | undefined,
           subDirs: Dirent[] | undefined;
 
         try { subDirs = await readdir(parsedPath.dir, { withFileTypes: true }); }
@@ -258,7 +258,7 @@ export class WebServerSetupper {
 
           data = (await import(
             pathToFileURL(path.join(subDir.parentPath, subDir.name)).href
-          ) as { default: customPage }).default;
+          ) as { default: CustomPage }).default;
         }
 
         return WebServerSetupper.handleCustomSite(webServer, req, res, next, data);
@@ -338,7 +338,7 @@ export class WebServerSetupper {
 
   static handleCustomSite(
     webServer: WebServer<true>, req: express.Request, res: express.Response, next: express.NextFunction,
-    data?: customPage
+    data?: CustomPage
   ): void {
     if (!data) return next();
 
@@ -374,7 +374,7 @@ export class WebServerSetupper {
         const name = file.isFile() ? path.basename(file.name, path.extname(file.name)) : file.name;
 
         let title: string | undefined;
-        try { ({ title } = await import(file.parentPath) as customPage); }
+        try { ({ title } = await import(file.parentPath) as CustomPage); }
         catch { /** handled by `title ??=` */ }
 
         title ??= name[0]!.toUpperCase() + name.slice(1).replaceAll(/[-_]/g, ' ');
@@ -384,7 +384,7 @@ export class WebServerSetupper {
       }))).join('') + '</div>';
   }
 
-  static runParsed<REQ extends Request, RES extends Response, PAGE extends customPage>(
+  static runParsed<REQ extends Request, RES extends Response, PAGE extends CustomPage>(
     req: REQ, res: RES, next: NextFunction, data: PAGE,
     fn: (req: REQ, res: RES, data: PAGE) => void
   ): void {

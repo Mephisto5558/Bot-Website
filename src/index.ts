@@ -44,7 +44,7 @@ type formTypes = StrictOmit<DBDFormTypes & typeof softUIFormTypes, 'embedBuilder
   _embedBuilder: DBDFormTypes['embedBuilder'];
 };
 
-export type dashboardSetting = {
+export type DashboardSetting = {
   id: string;
   name: string;
   description: string;
@@ -86,7 +86,7 @@ export type category = StrictOmit<DBDCategory, 'categoryOptionsList'> & Pick<opt
 };
 
 type methods = 'get' | 'post' | 'put' | 'delete' | 'patch';
-export type customPage = {
+export type CustomPage = {
   method?: methods | methods[];
   permissionCheck?(this: express.Request): boolean | Promise<boolean>;
   title: string;
@@ -236,7 +236,7 @@ export class WebServer<Ready extends boolean = boolean> {
       const
         index = (await import(
           pathToFileURL(path.join(process.cwd(), this.config.settingsPath, subFolder.name, '_index.json')).href, { with: { type: 'json' } }
-        ) as { default: dashboardSetting }).default,
+        ) as { default: DashboardSetting }).default,
         optionList: option[] = [{
           optionId: `${index.id}.spacer`,
           title: 'Important!',
@@ -260,7 +260,7 @@ export class WebServer<Ready extends boolean = boolean> {
 
         const setting = (await import(
           pathToFileURL(path.join(process.cwd(), this.config.settingsPath, subFolder.name, file)).href
-        ) as { default: dashboardSetting }).default;
+        ) as { default: DashboardSetting }).default;
 
         if (setting.type == 'spacer') {
           optionList.push({
