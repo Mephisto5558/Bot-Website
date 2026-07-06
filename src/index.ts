@@ -85,11 +85,11 @@ export type category = StrictOmit<DBDCategory, 'categoryOptionsList'> & Pick<opt
   categoryOptionsList: option[];
 };
 
-type methods = 'get' | 'post' | 'put' | 'delete' | 'patch';
+type methods = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 export type CustomPage = {
   method?: methods | methods[];
   permissionCheck?(this: express.Request): boolean | Promise<boolean>;
-  title: string;
+  title?: string;
   static?: boolean;
   run?: URL | string | number | boolean
     | ((this: WebServer<true>, arg1: express.Response, arg2: express.Request, arg3: express.NextFunction) => unknown);
