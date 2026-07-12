@@ -141,7 +141,7 @@ export class VoteSystem {
   }
 
   async getMany(
-    amount: number, offset = 0, filter = '', includePending = false, userId: Discord.Snowflake | '' = ''
+    amount = 0, offset = 0, filter = '', includePending = false, userId: Discord.Snowflake | '' = ''
   ): Promise<{ cards: FeatureRequest[]; moreAvailable: boolean }> {
     /* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- left side is a boolean check */
     const cards = (await this.fetchAll()).filter(e => ((includePending && this.config.ownerIds?.includes(userId)) || !e.pending)
@@ -153,12 +153,13 @@ export class VoteSystem {
     };
   }
 
-  async add(title: string, body: string, userId: Discord.Snowflake): Promise<FeatureRequest | RequestError> {
+  async add(title?: string, body?: string, userId?: Discord.Snowflake): Promise<FeatureRequest | RequestError> {
     const error = await this.validate(userId);
     if (error) return error;
+    if (!userId) return undefined as never; // typeguard, handled in validate()
 
-    title = sanitize(title.trim());
-    body = sanitize(body.trim());
+    title = sanitize(title?.trim() ?? '');
+    body = sanitize(body?.trim() ?? '');
 
     const err = VoteSystem.validateContent(this.settings, title, body);
     if (err) return err;
@@ -191,9 +192,10 @@ export class VoteSystem {
     return request;
   }
 
-  async approve(featureId: FeatureRequest['id'], userId: Discord.Snowflake): Promise<FeatureRequest | RequestError> {
-    const error = await this.validate(userId, true);
+  async approve(featureId?: FeatureRequest['id'], userId?: Discord.Snowflake): Promise<FeatureRequest | RequestError> {
+    const error = await this.validate(userId, true, featureId);
     if (error) return error;
+    if (!featureId || !userId) return undefined as never; // typeguard, handled in validate()
 
     const featureReq = await this.get(featureId);
     if (!featureReq?.pending) return { errorCode: HTTP_STATUS_CONFLICT, error: 'This feature request is already approved.' };
@@ -213,11 +215,12 @@ export class VoteSystem {
     return featureReq;
   }
 
-  async update(features: FeatureRequest | FeatureRequest[], userId: Discord.Snowflake): Promise<
+  async update(features?: FeatureRequest | FeatureRequest[], userId?: Discord.Snowflake): Promise<
     { success: true } | RequestError | { errorCode: typeof HTTP_STATUS_BAD_REQUEST; errors: { id: FeatureRequest['id']; error: string }[] }
   > {
-    const error = await this.validate(userId, true);
+    const error = await (Array.isArray(features) ? this.validate(userId, true) : this.validate(userId, true, features?.id));
     if (error) return error;
+    if (!features || !userId) return undefined as never; // typeguard, handled in validate()
 
     if (!Array.isArray(features)) features = [features];
 
@@ -260,12 +263,13 @@ export class VoteSystem {
     return errorList.length ? { errorCode: HTTP_STATUS_BAD_REQUEST, errors: errorList } : { success: true };
   }
 
-  async delete(featureId: FeatureRequest['id'], userId: Discord.Snowflake): Promise<{ success: true } | RequestError> {
+  async delete(featureId?: FeatureRequest['id'], userId?: Discord.Snowflake): Promise<{ success: true } | RequestError> {
     const
-      requestAuthor = VoteSystem.getRequestAuthor(featureId),
+      requestAuthor = featureId ? VoteSystem.getRequestAuthor(featureId) : '',
       error = await this.validate(userId, requestAuthor || false, featureId);
 
     if (error) return error;
+    if (!featureId || !userId) return undefined as never; // typeguard, handled in validate()
 
     /* eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- gets checked for validity in `this.validate()` */
     const featureReq: FeatureRequest = (await this.get(featureId))!;
@@ -283,9 +287,11 @@ export class VoteSystem {
     return { success: true };
   }
 
-  async addVote(featureId: FeatureRequest['id'], userId: Discord.Snowflake, type: 'up' | 'down' = 'up'): Promise<FeatureRequest | RequestError> {
+  async addVote(featureId?: FeatureRequest['id'], userId?: Discord.Snowflake, type: 'up' | 'down' = 'up'): Promise<FeatureRequest | RequestError> {
     const error = await this.validate(userId, false, featureId);
     if (error) return error;
+    if (!featureId || !userId) return undefined as never; // typeguard, handled in validate()
+
     if (!['up', 'down'].includes(type)) return { errorCode: HTTP_STATUS_BAD_REQUEST, error: 'Invalid vote type. Use "up" or "down"' };
 
     const lastVoted = await this.db.get('userSettings', `${userId}.lastVoted`);
