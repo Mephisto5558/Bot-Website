@@ -143,7 +143,7 @@ A [favicon](https://en.wikipedia.org/wiki/Favicon) can be set by creating a cust
 For example, if you want your discord client's avatar as favicon:
 ```js
 // favicon.ico.js
-module.exports = {
+export default {
   run: function (res) { return res.redirect(this.client.user.displayAvatarURL()); }
 };
 ```
