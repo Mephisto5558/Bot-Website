@@ -42,6 +42,7 @@
     "express-rate-limit": "^8.1.0",
     "express-session": "^1.18.2",
     "express-xss-sanitizer": "^2.0.1",
+    "node-fetch": "^3.3.2",
     "passport": "^0.7.0",
     "passport-discord-auth": "^1.2.0"
   },

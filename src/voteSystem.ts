@@ -3,6 +3,7 @@
 import { Colors, DiscordAPIError, resolveColor } from 'discord.js';
 import { constants } from 'node:http2';
 import { sanitize } from 'express-xss-sanitizer';
+import fetch from 'node-fetch';
 
 /* eslint-disable-next-line import-x/no-namespace */
 import type * as Discord from 'discord.js';
